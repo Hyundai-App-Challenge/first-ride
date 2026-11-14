@@ -16,6 +16,8 @@
 
 ## 알아 둘 것
 
+- **VC 통신 실패**: 세션 연결·상태 조회·값 변경은 HTTP 4xx/5xx나 연결 오류 때 비정상 종료한다. `check-crs01.sh`는 신호 주입 실패 시 이전 값을 판정하지 않고 즉시 멈춘다.
+
 - **대상 앱**: `install.sh`, `signals.sh`, `check-crs01.sh`는 `APP_ID`로 대상을 지정한다(기본 `com.firstride`). APK의 applicationId와 같은 값을 쓴다. 패키지에 suffix가 붙어도 Activity의 코드 네임스페이스는 `com.firstride`다. `ACTIVITY`는 전체 이름이나 `.measure.MeasureActivity`를 받는다.
 - **기기 선택**: 먼저 `adb devices`로 확인하고 `ANDROID_SERIAL`을 지정한다. `ADB`는 실행 파일 경로이며 인수를 넣지 않는다.
 - **Git Bash 예시**(기기 번호는 `adb devices`로 확인한 값):
