@@ -17,9 +17,14 @@ import com.firstride.engine.judge.StepRunner
 import com.firstride.engine.judge.observeRestore
 import com.firstride.engine.judge.snapshotBefore
 import com.firstride.engine.progress.CourseResult
+import com.firstride.engine.judge.Phase
+import com.firstride.engine.judge.stepView
 import com.firstride.engine.signal.SignalId
 import com.firstride.engine.signal.SignalValue
+import com.firstride.engine.voice.SttPort
+import com.firstride.engine.voice.VoiceAction
 import com.firstride.engine.voice.VoiceCoordinator
+import com.firstride.engine.voice.applyVoiceAction
 import com.firstride.engine.voice.narrateCourse
 import com.firstride.engine.voice.narrateStep
 import kotlinx.coroutines.Deferred
@@ -27,13 +32,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -79,6 +87,17 @@ class AppViewModel(
 
     /** 방금 시작한 코스의 시작 전 값(FR-14). 메모리에만 두고 저장하지 않는다. */
     private var restoreBefore: Pair<String, Deferred<Map<SignalId, SignalValue>>>? = null
+
+    /** 음성 설정(SCR-10). 저장된 값을 읽기 전에는 켜짐으로 본다. */
+    val voiceEnabled: StateFlow<Boolean> = container.settings.voiceEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    /** SCR-04의 음성 표시. [listening]은 "듣는 중"(POL-V-13), [off]는 "음성 꺼짐"(AC-06-6). */
+    data class VoiceStatus(val listening: Boolean = false, val off: Boolean = false)
+    private val _voiceStatus = MutableStateFlow(VoiceStatus())
+    val voiceStatus: StateFlow<VoiceStatus> = _voiceStatus.asStateFlow()
+
+    /** 듣기 어댑터. W-23이 들어오기 전에는 없고, 없으면 듣지 않는다. */
+    private val stt: SttPort? = null
 
     private var startup: Job? = null
     private var practice: Job? = null
@@ -138,8 +157,19 @@ class AppViewModel(
         _screen.value = Screen.Step(course.id)
         restoreBefore = course.id to viewModelScope.async { snapshotBefore(course, container.signals) }
         practice = viewModelScope.launch {
-            val voice = VoiceCoordinator(container.tts).also { this@AppViewModel.voice = it }
+            val voice = VoiceCoordinator(
+                container.tts,
+                stt = stt,
+                voiceEnabled = { voiceEnabled.value },
+                isStepDone = { runner.step.value?.runner?.state?.value?.phase == Phase.DONE },
+                onAction = { onVoiceAction(it, course, runner) },
+            ).also { this@AppViewModel.voice = it }
             val speaking = launch { voice.run() }
+            val status = launch {
+                combine(voice.listening, voice.available, voice.sttAvailable, voiceEnabled) { listening, speakOk, listenOk, on ->
+                    VoiceStatus(listening, off = !(speakOk && listenOk && on))
+                }.collect { _voiceStatus.value = it }
+            }
             val narrating = launch { narrateCourse(runner, course, texts[course.id], voice) }
             val tracer = launch {
                 runner.step.collectLatest { p -> p?.runner?.state?.collect { Variant.trace("step ${p.index + 1}/${p.total} ${it.phase}") } }
@@ -148,6 +178,8 @@ class AppViewModel(
             tracer.cancel()
             narrating.cancel()
             speaking.cancel()
+            status.cancel()
+            _voiceStatus.value = VoiceStatus()
             this@AppViewModel.voice = null
             _runner.value = null
             _screen.value = Screen.CourseDone(course.id)
@@ -167,7 +199,7 @@ class AppViewModel(
         _followUp.value = runner
         _screen.value = Screen.FollowUp(course.id)
         practice = viewModelScope.launch {
-            val voice = VoiceCoordinator(container.tts).also { this@AppViewModel.voice = it }
+            val voice = VoiceCoordinator(container.tts, voiceEnabled = { voiceEnabled.value }).also { this@AppViewModel.voice = it }
             launch { voice.run() }      // 끝난 뒤에도 마지막 문구를 읽을 수 있게 취소될 때까지 둔다
             runner.run()
         }
@@ -194,6 +226,18 @@ class AppViewModel(
     /** "다시 듣기"와 "어디 있어요". 3초 안의 같은 문구도 사용자가 요청한 것은 읽는다(POL-V-3의 예외). */
     fun say(text: String) {
         voice?.announce(text, force = true)
+    }
+
+    /** 음성 동작을 터치 버튼과 같은 일로 옮긴다(POL-V-15). 지금 단계의 화면 문구를 기준으로 읽는다. */
+    private fun onVoiceAction(action: VoiceAction, course: CourseDefinition, runner: CourseRunner) {
+        val p = runner.step.value ?: return
+        val def = course.steps[p.index]
+        applyVoiceAction(action, p.runner, stepView(p.runner.state.value, def, texts[course.id]?.steps?.get(def.id)), ::say)
+    }
+
+    /** SCR-10 음성 켜기/끄기. 기록 지우기로 지워지지 않는다(POL-S-5). */
+    fun setVoiceEnabled(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setVoiceEnabled(enabled) }
     }
 
     /** "그만하기": 기록하지 않고 홈으로(POL-R-6). 이어서 하기도 묻지 않는다. */
@@ -240,6 +284,7 @@ class AppViewModel(
         practice?.cancel()
         practice = null
         voice = null
+        _voiceStatus.value = VoiceStatus()
         _runner.value = null
         _followUp.value = null
         if (wasRunning) container.tts.stop()

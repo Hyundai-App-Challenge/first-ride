@@ -3,10 +3,12 @@ package com.firstride.app
 import android.content.Context
 import com.firstride.engine.drive.DrivingGate
 import com.firstride.engine.progress.ProgressStore
+import com.firstride.engine.settings.SettingsStore
 import com.firstride.engine.signal.SignalSource
 import com.firstride.engine.voice.TtsPort
 import com.firstride.platform.drive.CarDrivingGate
 import com.firstride.platform.progress.DataStoreProgressStore
+import com.firstride.platform.settings.DataStoreSettingsStore
 import com.firstride.platform.vehicle.VehicleConnection
 import com.firstride.platform.voice.PleosTts
 
@@ -26,6 +28,8 @@ class AppContainer(context: Context) {
     val signals: SignalSource = Variant.signalSource(app) { vehicle.signals }
     val tts: TtsPort by lazy { PleosTts(app) }
     val progress: ProgressStore = DataStoreProgressStore.create(app)
+    /** 설정값(음성 켜기/끄기). 기록과 다른 파일이라 기록 지우기로 지워지지 않는다(POL-S-5). */
+    val settings: SettingsStore = DataStoreSettingsStore.create(app)
     /** 주행 제한. 가짜 신호원을 쓰는 debug 빌드에서도 에뮬레이터의 실제 값(VC 기어)을 쓴다. */
     val drivingGate: DrivingGate = CarDrivingGate(app)
     /** 실습이 끊긴 시각을 재는 시계. 기기 시간 변경에 흔들리지 않는 부팅 후 경과 시간. */

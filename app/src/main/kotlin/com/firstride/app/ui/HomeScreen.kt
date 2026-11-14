@@ -25,7 +25,9 @@ import androidx.compose.ui.unit.dp
 import com.firstride.R
 import com.firstride.engine.course.CourseDefinition
 import com.firstride.engine.progress.CourseResult
+import com.firstride.engine.check.supportedLights
 import com.firstride.engine.progress.ProgressStore
+import com.firstride.engine.signal.SignalSource
 
 /** 대표 코스. 기록이 하나도 없을 때만 "여기서 시작"으로 강조한다(POL-C-6). */
 const val REPRESENTATIVE_COURSE = "CRS-01"
@@ -43,10 +45,14 @@ fun HomeScreen(
     progress: ProgressStore,
     onOpen: (CourseDefinition) -> Unit,
     onSettings: () -> Unit,
+    signals: SignalSource,
+    onLightsCheck: () -> Unit,
 ) {
     val results by produceState<Map<String, CourseResult>?>(null, courses) {
         value = courses.associate { it.id to progress.result(it.id) }
     }
+    // 소등 확인은 세 등이 모두 미지원이면 버튼을 숨긴다(AC-10-6).
+    val lightsAvailable by produceState(false, signals) { value = supportedLights(signals).isNotEmpty() }
     Column(Modifier.fillMaxSize().padding(32.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineMedium)
@@ -55,7 +61,13 @@ fun HomeScreen(
         Spacer(Modifier.height(24.dp))
         val loaded = results
         when {
-            courses.isEmpty() -> Text(stringResource(R.string.no_supported_courses), style = MaterialTheme.typography.bodyLarge)
+            courses.isEmpty() -> {
+                Text(stringResource(R.string.no_supported_courses), style = MaterialTheme.typography.bodyLarge)
+                if (lightsAvailable) {
+                    Spacer(Modifier.height(16.dp))
+                    BigButton(stringResource(R.string.home_lights_check), onLightsCheck, Modifier.fillMaxWidth())
+                }
+            }
             loaded == null -> CircularProgressIndicator()
             else -> {
                 val firstRun = loaded.values.all { it == CourseResult.NOT_STARTED }
@@ -63,6 +75,7 @@ fun HomeScreen(
                     courses.forEach { c ->
                         CourseCard(c, loaded.getValue(c.id), highlight = firstRun && c.id == REPRESENTATIVE_COURSE, onClick = { onOpen(c) })
                     }
+                    if (lightsAvailable) BigButton(stringResource(R.string.home_lights_check), onLightsCheck, Modifier.fillMaxWidth())
                 }
             }
         }

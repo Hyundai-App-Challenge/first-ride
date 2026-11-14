@@ -1,0 +1,29 @@
+{
+  "id": "CRS-03",
+  "name": "전조등·미등",
+  "estimatedSeconds": 90,
+  "summary": "어두울 때 앞을 비추고 내 차를 알리는 등을 켜고 끄는 방법을 익혀요.",
+  "steps": [
+    {
+      "id": "CRS-03-S1",
+      "action": [
+        { "signal": "light.tailLamp", "equals": "ON", "label": "미등" }
+      ],
+      "doneText": "좋아요. 미등이 켜졌어요."
+    },
+    {
+      "id": "CRS-03-S2",
+      "action": [
+        { "signal": "light.lowBeam", "equals": "ON", "label": "전조등" }
+      ],
+      "doneText": "좋아요. 전조등이 켜졌어요."
+    },
+    {
+      "id": "CRS-03-S3",
+      "action": [
+        { "signal": "light.lowBeam", "equals": "OFF", "label": "전조등" }
+      ],
+      "doneText": "좋아요. 전조등이 꺼졌어요."
+    }
+  ]
+}
