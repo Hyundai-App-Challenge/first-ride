@@ -89,3 +89,19 @@
 - Pleos Connect v2.1.0 / emulator-5554 / com.firstride.qa39에서 실제 STT 측정: #1 Error 15990ms, #2 Error 15007ms, #3 1500ms 후 취소와 cleanup 확인. 인식 원문을 출력하는 두 호출 모두 요약 함수를 사용한다.
 
 실제 발화의 Text 경로는 이번 실행에서 만들지 않았으며, 임의 원문 비노출은 단위 테스트로 확인했다. 외부 SDK가 자체적으로 남기는 로그의 변경·비저장 보장과 세 어휘 정확도 검증은 이 수정에 포함하지 않는다.
+
+
+# W-53 원상 복귀 안내 미응답 제한 검증
+
+검증일: 2026-11-15.
+
+| 요구사항 | 실행 | 결과 |
+|---|---|---|
+| 미응답 조회 제한·다른 신호 보존 | RestoreTest에 한 신호 무응답 주입 | 모든 조회가 동시에 시작되고 3초에 정상 기준 값만 반환. 대기 작업 0개 |
+| 최초 관찰 미응답·늦은 값 | 무응답 Flow 뒤 실제 ON 전송 | 3초 후 해당 신호만 unverified, 실제 값 후 changed로 갱신 |
+| 취소 정리·빈 종료 | 조회 취소, 첫 값 전 관찰 취소, emptyFlow | 남은 작업/구독 0개, 빈 응답을 복구 완료로 단정하지 않음 |
+| 정상 신호 유지 | 초기 정상 값 뒤 가상 시간 60초 | 값이 같아도 TIMEOUT으로 바꾸지 않으며 다음 변경도 반영 |
+| 전체 통합 구성 | `gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug` | engine 174, platform 41, app 10개 통과, debug 빌드 성공 |
+| 실제 원상 복귀 | Pleos Connect v2.1.0 / emulator-5554 / com.firstride.qa39 / real | CRS-01 완료 후 제상·에어컨 목록, VC로 원래 OFF 복구 후 목록 제거, 홈 복귀 후 active=0 |
+
+신규 회귀 테스트는 6개다. 수정 전 첫 4개를 실행했을 때 병렬 조회·최초 관찰 미응답 두 테스트가 실패했고, 수정 후 기존 5개와 신규 6개 모두 통과했다. SDK 미응답은 단위 테스트로 주입했으며 실제 에뮬레이터 SDK 장애·실차는 재현하지 않았다. 실제 SDK 검증 후 QA 신호원을 fake로 복구했다.
