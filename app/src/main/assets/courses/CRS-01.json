@@ -22,5 +22,11 @@
       ],
       "doneText": "좋아요. 김서림 제거가 켜졌어요."
     }
-  ]
+  ],
+  "followUps": [
+    { "id": "CRS-01-F1", "condition": { "signal": "hvac.maxDefrost", "equals": "ON", "label": "최대 제상" } },
+    { "id": "CRS-01-F2", "condition": { "signal": "hvac.fanSpeed", "atMax": true, "label": "풍량 최대" } },
+    { "id": "CRS-01-F3", "condition": { "signal": "hvac.temperature", "atMax": true, "label": "온도 최고" } }
+  ],
+  "exhaustedText": "앱이 안내할 수 있는 조치는 모두 했어요. 김이 계속 남으면 취급설명서를 확인하거나 정비소에 문의하세요."
 }
