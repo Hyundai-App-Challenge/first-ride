@@ -64,7 +64,7 @@ fun FollowUpScreen(
             val single = remember(s.step) { CourseDefinition(course.id, course.name, 0, listOf(s.step)) }
             val singleTexts = remember(s.step, text) { ModelCourseText(course.id, listOfNotNull(text?.let { s.step.id to it }).toMap()) }
             LaunchedEffect(s.step.id) { vm.narrateFollowUp(s.progress.runner, s.step, text) }
-            StepContent(s.progress, single, singleTexts, loadImage, onSpeak = vm::say, onQuit = vm::quitFollowUp)
+            StepContent(s.progress, single, singleTexts, loadImage, onSpeak = vm::say, onQuit = vm::quitFollowUp, voice = AppViewModel.VoiceStatus())
         }
         FollowUpState.Asking -> {
             val ask = stringResource(R.string.followup_ask)
