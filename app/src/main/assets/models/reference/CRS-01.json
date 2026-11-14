@@ -1,0 +1,17 @@
+{
+  "courseId": "CRS-01",
+  "steps": {
+    "CRS-01-S1": {
+      "instruction": "앞유리 김서림 제거 버튼을 누르세요.",
+      "locatorText": "공조 조작부 왼쪽 위, 부채꼴 모양 버튼이에요.",
+      "locatorAsset": "assets/hvac_front_defrost.webp",
+      "conditionLocators": {
+        "hvac.ac": "assets/hvac_ac.webp",
+        "hvac.recirculation": "assets/hvac_recirculation.webp"
+      },
+      "misoperationLocators": {
+        "recirc": "assets/hvac_recirculation.webp"
+      }
+    }
+  }
+}
