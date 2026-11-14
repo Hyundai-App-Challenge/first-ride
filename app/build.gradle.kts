@@ -7,7 +7,7 @@ plugins {
 }
 
 // 서명 값은 저장소 밖의 파일에서 읽는다. 기본 위치는 ~/.android-keys/keystore.properties,
-// 다른 곳에 두었으면 -Pfirstride.signing=<경로>로 넘긴다. 파일이 없으면 release APK는 서명되지 않는다.
+// 다른 곳에 두었으면 -Pfirstride.signing=<경로>로 넘긴다. 파일이 없으면 release 빌드는 멈춘다.
 val signingFile = file(
     providers.gradleProperty("firstride.signing").orNull
         ?: "${System.getProperty("user.home")}/.android-keys/keystore.properties"
@@ -80,4 +80,11 @@ val copyReleaseApk by tasks.registering(Copy::class) {
     into(rootProject.layout.projectDirectory.dir("apk"))
     rename { apkName }
 }
-afterEvaluate { tasks.named("assembleRelease") { finalizedBy(copyReleaseApk) } }
+// 서명 파일이 없으면 서명 안 된(설치 불가) release APK가 조용히 나오므로 패키징 전에 멈춘다. debug 빌드와 CI는 영향이 없다.
+val requireSigning by tasks.registering {
+    doLast { check(signing != null) { "release 서명 파일이 없습니다: $signingFile (-Pfirstride.signing=<경로>로 지정)" } }
+}
+afterEvaluate {
+    tasks.named("assembleRelease") { finalizedBy(copyReleaseApk) }
+    tasks.named("packageRelease") { dependsOn(requireSigning) }
+}
