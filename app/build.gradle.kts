@@ -66,7 +66,13 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    testImplementation(testFixtures(project(":engine")))
+    testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }
+
+tasks.withType<Test>().configureEach { useJUnitPlatform() }
 
 // release APK를 apk/ 폴더에 제출용 이름으로 복사한다.
 val copyReleaseApk by tasks.registering(Copy::class) {
