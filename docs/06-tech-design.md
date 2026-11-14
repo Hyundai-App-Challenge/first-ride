@@ -631,15 +631,15 @@ GitHub Actions에서 `./gradlew :engine:test`를 돌린다. 에뮬레이터가 �
 | `hvac.ac` | `getHvac()` | `getHvacAcState` | `registerHvacAcState` | 메서드 확인 |
 | `hvac.recirculation` | `getHvac()` | `getHvacRecirculationState` | `registerHvacRecirculationState` | 메서드 확인 (2026-11-14) |
 | `hvac.fanSpeed` | `getHvac()` | `getHvacFanSpeed` | `registerHvacFanSpeed` | 메서드 확인 |
-| `hvac.fanDirection` | `getHvac()` | `getHvacFanDirection` | **없음 → 폴링** | 구독 메서드가 목록에 없음 |
+| `hvac.fanDirection` | `getHvac()` | `getHvacFanDirection` | **없음 → 폴링** | 실측 확정 (11-14, T5). 토큰은 `FanDirectionType` 이름 |
 | `light.lowBeam` | `getLight()` | `getCurrentLowBeamLightState` | `registerLowBeamLightState` | 실측 확정 (11-14). `LightStateListener.onLightStateUpdated`, 영역 없음 |
 | `light.tailLamp` | `getLight()` | `getCurrentTailLampLightState` | `registerTailLampLightState` | 실측 확정 (11-14) |
 | `light.cabin` | `getLight()` | `getCurrentCabinLightState` | `registerCabinLightState` | 실측 확정 (11-14) |
 | `wiper.state` | `getWiper()` | `getCurrentWiperSwitch(WindowArea(FRONT_WINDSHIELD))` | **없음 → 폴링** | 실측 확정 (11-14). 단은 스위치 값에만 있다. `registerWiperState`는 ON/OFF뿐이라 쓰지 않는다 |
-| `turnSignal.state` | `getTurnSignal()` | `getCurrentTurnSignalState` | `registerTurnSignalState` | 메서드 확인 (2026-11-14) |
-| `window.driverPosition` | `getWindow()` | `getCurrentWindowPosition` | `registerWindowPosition` | 메서드 확인 (2026-11-14). 영역 인자 사용 |
-| `window.lock` | `getWindow()` | `getCurrentWindowLockState` | `registerWindowLockState` | 메서드 확인 (2026-11-14) |
-| `door.lock` | `getDoor()` | `getDoorLockState` | `registerDoorLockState` | 메서드 확인 (2026-11-14) |
+| `turnSignal.state` | `getTurnSignal()` | `getCurrentTurnSignalState` | `registerTurnSignalState` | 실측 확정 (11-14). `TurnSignalValue` OFF/LEFT/RIGHT → 같은 이름 토큰. 영역 없음. VC Blink·Flash 모두 LEFT/RIGHT |
+| `window.driverPosition` | `getWindow()` | `getCurrentWindowPosition` | `registerWindowPosition` | 실측 확정 (11-14). 영역 `WindowArea(ROW_1_LEFT)`(창문마다 따로). 값 0~10, **클수록 열림**(VC 0~100의 1/10: 50 → 5). 범위 `0..10`. 동승석 창문을 바꾸면 값이 오지 않는다 |
+| `window.lock` | `getWindow()` | `getCurrentWindowLockState` | `registerWindowLockState` | 실측 확정 (11-14). 영역은 네 창문을 묶은 것(운전석 포함)과 뒷좌석 왼쪽·오른쪽 각각. 어댑터는 묶은 영역을 쓴다. `Boolean` true → `ON`. VC Window Lock(All)로 바뀌고, 뒷좌석 하나만 잠그면 바뀌지 않는다 |
+| `door.lock` | `getDoor()` | `getDoorLockState` | `registerDoorLockState` | 실측 확정 (11-14). 영역은 네 문을 묶은 것(그 밖에 후드). `Boolean` true → `LOCKED` |
 | `hvac.maxDefrost` | `getHvac()` | `getHvacMaxDefrostState` | `registerHvacMaxDefrostState` | 메서드 확인 (2026-11-14). VC의 Climate 카드 목록에 최대 제상이 없어 에뮬레이터에서 값을 바꿀 수 있는지 **[실측 T16]** |
 | `hvac.temperature` | `getHvac()` | `getHvacTemperature` | `registerHvacTemperature` | 메서드 확인. 운전석·동승석 영역 인자 사용. VC 범위 16~30℃, 0.5℃ 단위 |
 
