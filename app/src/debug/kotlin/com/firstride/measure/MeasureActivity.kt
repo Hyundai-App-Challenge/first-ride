@@ -114,9 +114,9 @@ class MeasureActivity : ComponentActivity() {
             try {
                 repeat(2) { i ->
                     val t = SystemClock.elapsedRealtime()
-                    log("stt listen#${i + 1} -> ${stt.listenOnce()} after ${SystemClock.elapsedRealtime() - t}ms")
+                    log("stt listen#${i + 1} -> ${stt.listenOnce().measurementLabel()} after ${SystemClock.elapsedRealtime() - t}ms")
                 }
-                val job = launch { log("stt listen#3 -> ${stt.listenOnce()}") }
+                val job = launch { log("stt listen#3 -> ${stt.listenOnce().measurementLabel()}") }
                 delay(1500)
                 log("stt cancel listen#3 at +1500ms")
                 job.cancelAndJoin()
