@@ -8,10 +8,9 @@ import java.io.File
 /**
  * debug 빌드: 기본은 가짜 신호원(개발자 패널로 값을 바꾼다). 앱 파일 폴더에 [REAL_FLAG] 파일이 있으면 차량 SDK를 쓴다.
  *
- *   adb shell run-as com.firstride touch files/real_signals   # 차량 SDK
- *   adb shell run-as com.firstride rm files/real_signals      # 가짜 신호원
- *
- * 바꾼 뒤에는 앱을 다시 시작한다(am force-stop).
+ *   tools/signals.sh real   # 차량 SDK
+ *   tools/signals.sh fake   # 가짜 신호원
+
  */
 internal object Variant {
     const val REAL_FLAG = "real_signals"
