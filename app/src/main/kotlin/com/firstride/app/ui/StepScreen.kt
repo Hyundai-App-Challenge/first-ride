@@ -65,7 +65,7 @@ private fun Centered(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun StepContent(
+internal fun StepContent(
     p: StepProgress,
     course: CourseDefinition,
     texts: ModelCourseText?,

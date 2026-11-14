@@ -4,6 +4,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.firstride.app.ui.ConnectionErrorScreen
@@ -49,7 +50,12 @@ fun AppNavigation(vm: AppViewModel, texts: Map<String, ModelCourseText>, loadIma
             onSettings = { vm.navigate(Screen.Settings) },
         )
         is Screen.CourseIntro -> WithCourse(visible, s.courseId, onMissing = { vm.navigate(Screen.Home) }) { course ->
-            CourseIntroScreen(course, onStart = { vm.startCourse(course) }, onBack = { vm.navigate(Screen.Home) })
+            CourseIntroScreen(
+                course,
+                onStart = { vm.startCourse(course) },
+                onBack = { vm.navigate(Screen.Home) },
+                onFollowUp = { vm.startFollowUp(course) },
+            )
         }
         is Screen.Step -> StepScreen(
             runner = runner,
@@ -67,10 +73,14 @@ fun AppNavigation(vm: AppViewModel, texts: Map<String, ModelCourseText>, loadIma
                 onNext = { visible.getOrNull(visible.indexOf(course) + 1)?.let { vm.navigate(Screen.CourseIntro(it.id)) } },
                 onRetry = { vm.startCourse(course) },
                 onHome = { vm.navigate(Screen.Home) },
+                restore = remember(course.id) { vm.restoreReport(course) },
+                onFollowUp = { vm.startFollowUp(course) },
             )
         }
         Screen.LightsCheck -> LightsCheckScreen(vm)
-        is Screen.FollowUp -> FollowUpScreen(vm, s)
+        is Screen.FollowUp -> WithCourse(visible, s.courseId, onMissing = { vm.navigate(Screen.Home) }) { course ->
+            FollowUpScreen(vm, s, course, texts[s.courseId], loadImage)
+        }
     }
 }
 
