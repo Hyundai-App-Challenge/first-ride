@@ -24,6 +24,9 @@ import java.util.concurrent.atomic.AtomicInteger
 internal object Variant {
     const val REAL_FLAG = "real_signals"
 
+    /** debug는 차 이미지가 없어도 무대를 보여, 화면 배치를 확인할 수 있게 한다. */
+    const val showEmptyCarStage = true
+
     /** 개발자 패널이 값을 바꿀 때 쓰는 가짜 신호원. 차량 SDK를 쓰는 중이면 null. */
     var fake: FakeSignalSource? = null
         private set

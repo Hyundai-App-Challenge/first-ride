@@ -7,6 +7,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.firstride.app.start.CarModel
+import com.firstride.app.ui.CarImages
+import com.firstride.app.ui.CarStageState
 import com.firstride.app.ui.ConnectionErrorScreen
 import com.firstride.app.ui.CourseDoneScreen
 import com.firstride.app.ui.CourseIntroScreen
@@ -18,7 +21,6 @@ import com.firstride.app.ui.SettingsScreen
 import com.firstride.app.ui.StartScreen
 import com.firstride.app.ui.StepScreen
 import com.firstride.engine.course.CourseDefinition
-import com.firstride.engine.course.ModelCourseText
 import com.firstride.engine.drive.DriveState
 
 /**
@@ -26,7 +28,15 @@ import com.firstride.engine.drive.DriveState
  * 새 화면은 [Screen]에 값을 더하고 여기에 한 줄을 더한다. 화면 파일끼리는 서로 고치지 않는다.
  */
 @Composable
-fun AppNavigation(vm: AppViewModel, texts: Map<String, ModelCourseText>, loadImage: (String) -> ImageBitmap?) {
+fun AppNavigation(
+    vm: AppViewModel,
+    cars: List<CarModel>,
+    carImages: CarImages,
+    emptyCarHint: String?,
+    loadImage: (String) -> ImageBitmap?,
+) {
+    val texts by vm.texts.collectAsStateWithLifecycle()
+    val carModel by vm.carModel.collectAsStateWithLifecycle()
     val screen by vm.screen.collectAsStateWithLifecycle()
     val catalog by vm.catalog.collectAsStateWithLifecycle()
     val drive by vm.driveState.collectAsStateWithLifecycle()
@@ -52,6 +62,7 @@ fun AppNavigation(vm: AppViewModel, texts: Map<String, ModelCourseText>, loadIma
             onSettings = { vm.navigate(Screen.Settings) },
             signals = vm.container.signals,
             onLightsCheck = { vm.navigate(Screen.LightsCheck) },
+            car = CarStageState(cars, carModel, vm::selectCarModel, carImages, emptyCarHint),
         )
         is Screen.CourseIntro -> WithCourse(visible, s.courseId, onMissing = { vm.navigate(Screen.Home) }) { course ->
             CourseIntroScreen(

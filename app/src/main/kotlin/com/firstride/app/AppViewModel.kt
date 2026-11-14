@@ -3,6 +3,7 @@ package com.firstride.app
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.firstride.app.practice.Interruption
+import com.firstride.app.start.CourseTexts
 import com.firstride.app.start.StartupResult
 import com.firstride.app.start.checkCourses
 import com.firstride.engine.course.CourseDefinition
@@ -55,8 +56,8 @@ import kotlinx.coroutines.launch
  */
 class AppViewModel(
     val container: AppContainer,
-    /** 코스 ID별 차종 문구. 단계 상태를 읽어 줄 때 쓴다(FR-05). */
-    private val texts: Map<String, ModelCourseText>,
+    /** 차종 폴더 이름 → 코스 ID별 차종 문구. 단계 상태를 읽어 줄 때 쓴다(FR-05). */
+    private val loadTexts: (String) -> Map<String, ModelCourseText>,
     private val courses: () -> List<CourseDefinition>,
 ) : ViewModel() {
     private val _screen = MutableStateFlow<Screen>(Screen.Start)
@@ -98,6 +99,19 @@ class AppViewModel(
 
     /** 듣기 어댑터. W-23이 들어오기 전에는 없고, 없으면 듣지 않는다. */
     private val stt: SttPort? = null
+
+    /** 홈에서 고른 차종. 안내 문구와 위치 그림이 이 차종의 것으로 바뀐다(없으면 기준 차종). */
+    private val _carModel = MutableStateFlow(CourseTexts.MODEL_DIR)
+    val carModel: StateFlow<String> = _carModel.asStateFlow()
+    private val _texts = MutableStateFlow(loadTexts(CourseTexts.MODEL_DIR))
+    val texts: StateFlow<Map<String, ModelCourseText>> = _texts.asStateFlow()
+
+    /** 실습 중에는 바꾸지 않는다. 단계 문구가 도중에 바뀌면 안 된다. */
+    fun selectCarModel(id: String) {
+        if (_runner.value != null || _followUp.value != null || id == _carModel.value) return
+        _carModel.value = id
+        _texts.value = loadTexts(id)
+    }
 
     private var startup: Job? = null
     private var practice: Job? = null
@@ -170,7 +184,7 @@ class AppViewModel(
                     VoiceStatus(listening, off = !(speakOk && listenOk && on))
                 }.collect { _voiceStatus.value = it }
             }
-            val narrating = launch { narrateCourse(runner, course, texts[course.id], voice) }
+            val narrating = launch { narrateCourse(runner, course, _texts.value[course.id], voice) }
             val tracer = launch {
                 runner.step.collectLatest { p -> p?.runner?.state?.collect { Variant.trace("step ${p.index + 1}/${p.total} ${it.phase}") } }
             }
@@ -232,7 +246,7 @@ class AppViewModel(
     private fun onVoiceAction(action: VoiceAction, course: CourseDefinition, runner: CourseRunner) {
         val p = runner.step.value ?: return
         val def = course.steps[p.index]
-        applyVoiceAction(action, p.runner, stepView(p.runner.state.value, def, texts[course.id]?.steps?.get(def.id)), ::say)
+        applyVoiceAction(action, p.runner, stepView(p.runner.state.value, def, _texts.value[course.id]?.steps?.get(def.id)), ::say)
     }
 
     /** SCR-10 음성 켜기/끄기. 기록 지우기로 지워지지 않는다(POL-S-5). */

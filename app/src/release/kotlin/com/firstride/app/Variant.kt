@@ -7,6 +7,9 @@ import com.firstride.engine.signal.SignalSource
 internal object Variant {
     fun signalSource(context: Context, vehicle: () -> SignalSource): SignalSource = vehicle()
 
+    /** release는 차 이미지가 없으면 무대를 숨긴다. */
+    const val showEmptyCarStage = false
+
     /** release는 진행 기록을 로그에 남기지 않는다(POL-S-7). */
     fun trace(message: String) = Unit
 }

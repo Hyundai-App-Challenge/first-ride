@@ -6,14 +6,20 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.firstride.app.AppNavigation
 import com.firstride.app.AppViewModel
 import com.firstride.app.FirstRideApp
+import com.firstride.app.start.CarCatalog
 import com.firstride.app.start.CourseCatalog
 import com.firstride.app.start.CourseTexts
+import com.firstride.app.Variant
+import com.firstride.app.ui.CarImages
 import com.firstride.app.ui.DevPanel
 import com.firstride.app.ui.FirstRideTheme
 
@@ -21,7 +27,7 @@ import com.firstride.app.ui.FirstRideTheme
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels {
         viewModelFactory {
-            initializer { AppViewModel((application as FirstRideApp).container, CourseTexts.load(assets)) { CourseCatalog.load(assets) } }
+            initializer { AppViewModel((application as FirstRideApp).container, { model -> CourseTexts.load(assets, model) }) { CourseCatalog.load(assets) } }
         }
     }
 
@@ -37,8 +43,14 @@ class MainActivity : ComponentActivity() {
             FirstRideTheme {
                 Box {
                     Surface {
-                        val texts = remember { CourseTexts.load(assets) }
-                        AppNavigation(vm, texts, loadImage = { path -> CourseTexts.loadImage(assets, path) })
+                        val cars = remember { CarCatalog.list(assets) }
+                        val carImages = remember { CarImages({ m, i -> CarCatalog.frame(assets, m, i) }, { m -> CarCatalog.interior(assets, m) }) }
+                        val model by vm.carModel.collectAsStateWithLifecycle()
+                        AppNavigation(
+                            vm, cars, carImages,
+                            emptyCarHint = if (Variant.showEmptyCarStage) stringResource(R.string.car_stage_empty_debug) else null,
+                            loadImage = { path -> CourseTexts.loadImage(assets, path, model) },
+                        )
                     }
                     DevPanel()
                 }

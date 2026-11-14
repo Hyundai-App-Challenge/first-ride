@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 홈의 360도 차 화면. 이 파일은 차 화면만 고친다. -->
+    <string name="car_view_exterior">외관</string>
+    <string name="car_view_interior">실내</string>
+    <string name="car_stage_description">%1$s 외관. 좌우로 밀어 돌려 볼 수 있어요.</string>
+    <string name="car_stage_interior_description">%1$s 실내. 좌우로 밀어 둘러볼 수 있어요.</string>
+    <!-- debug 빌드에서 차 이미지가 아직 없을 때만 보인다 -->
+    <string name="car_stage_empty_debug">assets/cars/차종이름/ 폴더에 ext_000.webp부터 번호순 이미지를 넣으면 여기에 나타나요.</string>
+</resources>
