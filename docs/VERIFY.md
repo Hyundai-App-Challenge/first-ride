@@ -131,3 +131,15 @@
 - 첫 재실행은 홈 준비 전에 설정을 눌러 진입에 실패했다. 홈 확인 대기를 추가한 뒤 위 전체 경로가 통과했다.
 
 실제 SDK 미응답/지연 장애는 단위 테스트로만 주입했다. 실제 차량과 전체 미지원 SDK는 실측하지 않았다.
+
+
+# W-56 STT 미연결 가용성 표시 검증
+
+검증일: 2026-11-15.
+
+- 신규 VoiceCoordinatorTest 2개가 수정 전 실패했다. STT 미연결과 listenEnabled=false에서 초기 sttAvailable=false를 확인하며 TTS 안내는 정상 유지한다. 듣기 비활성 시 SDK 듣기 요청은 0회다.
+- 수정 후 `gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug` 통과(engine 182, platform 41, app 10개, 실패 0).
+- Pleos Connect v2.1.0 / emulator-5554 / com.firstride.qa39에서 fake 차량 신호 + 실제 TTS SDK로 확인했다. 단계 화면에 음성 진행 꺼짐·터치 진행 문구가 표시되고, SDK doSpeak 안내 요청을 확인했다. 듣는 중 표시는 없고 터치 건너뛰기로 2단계에 도달한 뒤 그만하기로 홈 복귀했다.
+- 캡처로 안내 문구와 단계·버튼이 함께 보이는 것을 확인했다. 화면 배치와 off 필드 의미를 유지해 동료 디자인의 MicButton 활성화 조건과 호환한다.
+
+이 실행은 실제 차량 신호 판정·사람의 발화 검증을 대신하지 않는다. 앱의 stt=null은 유지한다.

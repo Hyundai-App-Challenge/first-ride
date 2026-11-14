@@ -95,12 +95,12 @@ class AppViewModel(
     /** 음성 설정(SCR-10). 저장된 값을 읽기 전에는 켜짐으로 본다. */
     val voiceEnabled: StateFlow<Boolean> = container.settings.voiceEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
-    /** SCR-04의 음성 표시. [listening]은 "듣는 중"(POL-V-13), [off]는 "음성 꺼짐"(AC-06-6). */
-    data class VoiceStatus(val listening: Boolean = false, val off: Boolean = false)
+    /** SCR-04의 음성 진행 표시. [listening]은 "듣는 중"(POL-V-13), [off]는 진행 불가(AC-06-6). */
+    data class VoiceStatus(val listening: Boolean = false, val off: Boolean = true)
     private val _voiceStatus = MutableStateFlow(VoiceStatus())
     val voiceStatus: StateFlow<VoiceStatus> = _voiceStatus.asStateFlow()
 
-    /** 듣기 어댑터. W-23이 들어오기 전에는 없고, 없으면 듣지 않는다. */
+    /** 실제 발화 정확도 게이트(T9) 통과 전까지 연결하지 않는다. null이면 TTS 안내와 터치만 쓴다. */
     private val stt: SttPort? = null
 
     private var startup: Job? = null
