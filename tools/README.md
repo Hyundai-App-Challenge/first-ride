@@ -24,3 +24,4 @@
 - **로그 태그(debug 빌드만)**: `FR-TRACE` 화면 전환과 단계 상태, `FR-SIGNALS` 신호 구독 수, `FR-MEASURE` 실측 화면. release 빌드는 남기지 않는다(POL-S-7).
 - **실측 화면**: `adb shell am start -n com.firstride/.measure.MeasureActivity` (debug). `--ez tts true`면 TTS 확인, `--ez stt true`면 STT 확인.
 - **시간 재기**: logcat 시각(에뮬레이터)과 PC 시각은 어긋나고 중간에 튄다. 지연은 `adb shell 'echo $EPOCHREALTIME'`로 에뮬레이터 시계 기준으로 잰다.
+- **단계 빨리 넘기기(debug, 가짜 신호원)**: 단계 화면 오른쪽 아래의 "지금 단계 조작"을 누르면 그 단계의 목표 조작을 가짜 신호원에 대신 넣는다. 신호 이름을 몰라도 되고 VC도 필요 없다. `tools/tap.sh "지금 단계 조작"`으로도 누를 수 있다. 값만 바꾸고 판정은 신호로 하므로 완료 화면까지 평소와 같은 길을 지난다. 차량 SDK 신호(`signals.sh real`)에서는 보이지 않고 release에는 없다.
