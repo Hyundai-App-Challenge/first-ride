@@ -1,20 +1,20 @@
 package com.firstride.app.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -37,7 +37,7 @@ fun minutesOf(seconds: Int): Int = maxOf(1, (seconds + 59) / 60)
 
 /**
  * SCR-02 홈. 지원되는 코스를 코스 번호 순으로 보여 준다(POL-C-5). 점수·등급·순위가 없다(AC-03-4).
- * 묶음 구분과 배지는 3단계(FR-09)에서 더한다.
+ * 묶음 구분과 배지는 3단계(FR-09)에서 더한다. 가로형은 왼쪽 목록, 오른쪽 640dp 칸(문서 5-2절).
  */
 @Composable
 fun HomeScreen(
@@ -53,47 +53,66 @@ fun HomeScreen(
     }
     // 소등 확인은 세 등이 모두 미지원이면 버튼을 숨긴다(AC-10-6).
     val lightsAvailable by produceState(false, signals) { value = supportedLights(signals).isNotEmpty() }
-    Column(Modifier.fillMaxSize().padding(32.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineMedium)
-            TextButton(onClick = onSettings) { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.labelLarge) }
-        }
-        Spacer(Modifier.height(24.dp))
-        val loaded = results
-        when {
-            courses.isEmpty() -> {
-                Text(stringResource(R.string.no_supported_courses), style = MaterialTheme.typography.bodyLarge)
-                if (lightsAvailable) {
-                    Spacer(Modifier.height(16.dp))
-                    BigButton(stringResource(R.string.home_lights_check), onLightsCheck, Modifier.fillMaxWidth())
+    Column(Modifier.fillMaxSize()) {
+        TopBar(
+            title = stringResource(R.string.app_name),
+            right = { TextButton(stringResource(R.string.settings_title), onSettings) },
+        )
+        BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = Space.screenH, vertical = Space.screenV)) {
+            val wide = maxWidth >= Size.wideBreakpoint
+            val lights: @Composable (Modifier) -> Unit = { m ->
+                if (lightsAvailable) SecondaryButton(stringResource(R.string.home_lights_check), onLightsCheck, m.fillMaxWidth())
+            }
+            val list: @Composable (Modifier) -> Unit = { m ->
+                Column(m.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(Modifier.height(Space.s))
+                    val loaded = results
+                    when {
+                        courses.isEmpty() -> Text(stringResource(R.string.no_supported_courses), style = MaterialTheme.typography.bodyLarge)
+                        loaded == null -> Spinner()
+                        else -> {
+                            val firstRun = loaded.values.all { it == CourseResult.NOT_STARTED }
+                            courses.forEach { c ->
+                                CourseCard(c, loaded.getValue(c.id), highlight = firstRun && c.id == REPRESENTATIVE_COURSE, onClick = { onOpen(c) })
+                            }
+                        }
+                    }
                 }
             }
-            loaded == null -> CircularProgressIndicator()
-            else -> {
-                val firstRun = loaded.values.all { it == CourseResult.NOT_STARTED }
-                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    courses.forEach { c ->
-                        CourseCard(c, loaded.getValue(c.id), highlight = firstRun && c.id == REPRESENTATIVE_COURSE, onClick = { onOpen(c) })
-                    }
-                    if (lightsAvailable) BigButton(stringResource(R.string.home_lights_check), onLightsCheck, Modifier.fillMaxWidth())
+            if (wide) {
+                Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(40.dp)) {
+                    list(Modifier.weight(1f).fillMaxHeight())
+                    Column(Modifier.width(640.dp).fillMaxHeight(), verticalArrangement = Arrangement.Bottom) { lights(Modifier) }
+                }
+            } else {
+                Column(Modifier.fillMaxSize()) {
+                    list(Modifier.weight(1f))
+                    if (lightsAvailable) Spacer(Modifier.height(Space.ml))
+                    lights(Modifier)
                 }
             }
         }
     }
 }
 
+/** 코스 카드. 카드 전체가 터치 대상이다. 첫 실행의 대표 코스는 테두리와 이름표로 강조한다. */
 @Composable
 private fun CourseCard(course: CourseDefinition, result: CourseResult, highlight: Boolean, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(24.dp)) {
-            if (highlight) {
-                Text(stringResource(R.string.home_start_here), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            }
-            Text(course.name, style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                Text(stringResource(R.string.course_minutes, minutesOf(course.estimatedSeconds)), style = MaterialTheme.typography.bodyLarge)
+    CardButton(onClick, highlight = highlight) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.ml)) {
+            Column(Modifier.weight(1f)) {
+                Text(course.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 Text(
+                    stringResource(R.string.course_minutes, minutesOf(course.estimatedSeconds)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (highlight) {
+                Pill(stringResource(R.string.home_start_here), color = MaterialTheme.colorScheme.primary, border = MaterialTheme.colorScheme.primary)
+            } else {
+                Pill(
                     stringResource(
                         when (result) {
                             CourseResult.NOT_STARTED -> R.string.course_status_not_started
@@ -101,7 +120,6 @@ private fun CourseCard(course: CourseDefinition, result: CourseResult, highlight
                             CourseResult.COMPLETED -> R.string.course_status_completed
                         },
                     ),
-                    style = MaterialTheme.typography.bodyLarge,
                 )
             }
         }

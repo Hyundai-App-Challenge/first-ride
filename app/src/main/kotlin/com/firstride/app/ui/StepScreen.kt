@@ -1,30 +1,26 @@
 package com.firstride.app.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,58 +76,52 @@ internal fun StepContent(
     val def = course.steps[p.index]
     val view = stepView(state, def, texts?.steps?.get(def.id))
 
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val wide = maxWidth > maxHeight       // 가로형은 두 칸(POL-U-1). 늘어나는 것은 위치 안내의 크기다(POL-U-2)
-        Column(Modifier.fillMaxSize().padding(24.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.step_progress, p.index + 1, p.total), style = MaterialTheme.typography.titleMedium)
-                TextButton(onClick = onQuit) { Text(stringResource(R.string.step_quit), style = MaterialTheme.typography.labelLarge) }
-            }
-            VoiceIndicator(voice)
-            Spacer(Modifier.height(12.dp))
-            if (wide) {
-                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                        MessageBlock(view)
-                        Spacer(Modifier.height(16.dp))
-                        ConditionList(view)
-                        Spacer(Modifier.height(16.dp))
-                        Controls(view, p, onSpeak)
+    Column(Modifier.fillMaxSize()) {
+        TopBar(
+            title = course.name,
+            left = { TextButton(stringResource(R.string.step_quit), onQuit) },
+            right = { TopBarInfo(stringResource(R.string.step_progress, p.index + 1, p.total)) },
+        )
+        BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = Space.screenH, vertical = Space.screenV)) {
+            // 가로형은 두 칸(POL-U-1). 왼쪽은 문구·조건·버튼(운전석에 가깝다), 오른쪽은 위치 안내(문서 5-2절).
+            // 늘어나는 것은 위치 안내의 크기다(POL-U-2).
+            if (maxWidth >= Size.wideBreakpoint) {
+                Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(Space.xl)) {
+                    Column(Modifier.weight(5f).fillMaxHeight()) {
+                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Space.ml)) {
+                            MessageBlock(view)
+                            ConditionList(view)
+                        }
+                        Spacer(Modifier.height(Space.ml))
+                        Controls(view, p, onSpeak, voice)
                     }
-                    Column(Modifier.weight(1f)) { Locator(view, loadImage, Modifier.weight(1f)) }
+                    Locator(view, loadImage, Modifier.weight(6f).fillMaxHeight(), wide = true)
                 }
             } else {
-                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                    MessageBlock(view)
-                    Spacer(Modifier.height(16.dp))
-                    Locator(view, loadImage, Modifier.heightIn(max = 360.dp))
-                    Spacer(Modifier.height(16.dp))
-                    ConditionList(view)
+                Column(Modifier.fillMaxSize()) {
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Space.ml)) {
+                        MessageBlock(view)
+                        Locator(view, loadImage, Modifier, wide = false)
+                        ConditionList(view)
+                    }
+                    Spacer(Modifier.height(Space.ml))
+                    Controls(view, p, onSpeak, voice)
                 }
-                Spacer(Modifier.height(12.dp))
-                Controls(view, p, onSpeak)
             }
         }
     }
 }
 
-/** 듣는 중(POL-V-13)과 음성 꺼짐(AC-06-6) 표시. 글자로 알려 준다(POL-U-4). 둘 다 아니면 자리를 차지하지 않는다. */
-@Composable
-private fun VoiceIndicator(voice: AppViewModel.VoiceStatus) {
-    if (voice.listening) Text(stringResource(R.string.voice_listening), style = MaterialTheme.typography.titleMedium)
-    if (voice.off) Text(stringResource(R.string.voice_off), style = MaterialTheme.typography.titleMedium)
-}
-
-/** 상태 문구. 확인 중에는 진행 표시, 완료에는 표시(✓)를 붙인다. 색만으로 구분하지 않는다(POL-U-4). */
+/**
+ * 상태 문구. 기다리는 중에는 안내 문구 한 문장을 크게, 그 밖의 상태는 [StateBanner]로 기호·이름표·색을 함께 보인다.
+ * 색만으로 구분하지 않는다(POL-U-4).
+ */
 @Composable
 private fun MessageBlock(view: StepView) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        if (view.phase == Phase.PRECHECK) {
-            CircularProgressIndicator(Modifier.width(32.dp).height(32.dp))
-            Spacer(Modifier.width(16.dp))
-        }
-        val mark = if (view.phase == Phase.DONE) "${stringResource(R.string.step_done_mark)} " else ""
-        Text(mark + view.message, style = MaterialTheme.typography.headlineSmall)
+    if (view.phase == Phase.WAITING) {
+        Text(view.message, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
+    } else {
+        StateBanner(view.phase, view.message)
     }
 }
 
@@ -146,30 +136,32 @@ private fun ConditionList(view: StepView) {
 
 /** 위치 안내 그림과 위치 문구. 그림이 없거나 읽지 못해도 문구는 나온다. */
 @Composable
-private fun Locator(view: StepView, loadImage: (String) -> ImageBitmap?, modifier: Modifier) {
+private fun Locator(view: StepView, loadImage: (String) -> ImageBitmap?, modifier: Modifier, wide: Boolean) {
     val image by produceState<ImageBitmap?>(null, view.locatorAsset) {
         value = view.locatorAsset?.let { path -> withContext(Dispatchers.IO) { loadImage(path) } }
     }
-    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        image?.let {
-            Image(it, contentDescription = view.locatorText, contentScale = ContentScale.Fit, modifier = Modifier.weight(1f, fill = false).fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
-        }
-        view.locatorText?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.s)) {
+        // 가로형은 칸 높이를 다 쓰고, 세로형은 340dp로 묶는다(문서 5-2절).
+        if (view.locatorAsset != null) LocatorPlate(image, view.locatorText, if (wide) Modifier.weight(1f) else Modifier.height(Size.locatorPortrait))
+        view.locatorText?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }
 
-/** 음성 진행의 세 어휘와 같은 동작을 하는 터치 버튼이 항상 있다(AC-04-6). 확인 불가에서는 "다시 확인"이 더해진다. */
+/**
+ * 음성 진행의 세 어휘와 같은 동작을 하는 터치 버튼이 항상 있다(AC-04-6). 확인 불가에서는 "다시 확인"이 더해진다.
+ * 버튼 줄은 화면 아래에 고정한다.
+ */
 @Composable
-private fun Controls(view: StepView, p: StepProgress, onSpeak: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun Controls(view: StepView, p: StepProgress, onSpeak: (String) -> Unit, voice: AppViewModel.VoiceStatus) {
+    Column(verticalArrangement = Arrangement.spacedBy(Space.m)) {
+        VoiceBar(voice)
         if (view.phase == Phase.UNVERIFIABLE) {
-            BigButton(stringResource(R.string.step_recheck), p.runner::retry, Modifier.fillMaxWidth(), primary = true)
+            PrimaryButton(stringResource(R.string.step_recheck), p.runner::retry, Modifier.fillMaxWidth())
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BigButton(stringResource(R.string.step_replay), { (view.spoken ?: view.message).takeIf { it.isNotBlank() }?.let(onSpeak) }, Modifier.weight(1f))
-            BigButton(stringResource(R.string.step_where), { view.locatorText?.let(onSpeak) }, Modifier.weight(1f))
-            BigButton(stringResource(R.string.step_skip), p.runner::skip, Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.m)) {
+            SecondaryButton(stringResource(R.string.step_replay), { (view.spoken ?: view.message).takeIf { it.isNotBlank() }?.let(onSpeak) }, Modifier.weight(1f))
+            SecondaryButton(stringResource(R.string.step_where), { view.locatorText?.let(onSpeak) }, Modifier.weight(1f))
+            TextButton(stringResource(R.string.step_skip), p.runner::skip, Modifier.weight(1f))
         }
     }
 }

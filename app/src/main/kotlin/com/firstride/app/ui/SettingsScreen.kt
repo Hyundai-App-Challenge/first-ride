@@ -1,37 +1,23 @@
 package com.firstride.app.ui
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextButton as DialogTextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.firstride.R
 import com.firstride.app.start.HideReason
 import com.firstride.app.start.StartupResult
-import kotlinx.coroutines.delay
 
 
 /**
@@ -48,32 +34,32 @@ fun SettingsScreen(
 ) {
     var confirming by remember { mutableStateOf(false) }
     var cleared by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().padding(32.dp).verticalScroll(rememberScrollState())) {
-        TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
-        Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(24.dp))
-        // 음성 켜기/끄기(POL-V-6). 설정값이라 기록 지우기로 지워지지 않는다(POL-S-5).
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.settings_voice), style = MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.settings_voice_hint), style = MaterialTheme.typography.bodyMedium)
-            }
-            Switch(checked = voiceEnabled, onCheckedChange = onVoiceEnabled)
-        }
-        Spacer(Modifier.height(24.dp))
-        OutlinedButton(onClick = { confirming = true }) { Text(stringResource(R.string.clear_records)) }
-        if (cleared) Text(stringResource(R.string.clear_records_done))
+    val cs = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxSize()) {
+        TopBar(title = stringResource(R.string.settings_title), left = { TextButton(stringResource(R.string.back), onBack) })
+        ScreenBody {
+            // 음성 켜기/끄기(POL-V-6). 설정값이라 기록 지우기로 지워지지 않는다(POL-S-5).
+            ListRow(
+                stringResource(R.string.settings_voice),
+                description = stringResource(R.string.settings_voice_hint),
+                onClick = { onVoiceEnabled(!voiceEnabled) },
+                trailing = { Switch(checked = voiceEnabled, onCheckedChange = onVoiceEnabled) },
+            )
+            SecondaryButton(stringResource(R.string.clear_records), { confirming = true })
+            if (cleared) Text(stringResource(R.string.clear_records_done), style = MaterialTheme.typography.bodyLarge, color = cs.onSurface)
 
-        val hidden = catalog?.hidden.orEmpty()
-        if (hidden.isNotEmpty()) {
-            Spacer(Modifier.height(32.dp))
-            Text(stringResource(R.string.hidden_courses_title), style = MaterialTheme.typography.titleMedium)
-            hidden.forEach { h ->
-                val reason = when (h.reason) {
-                    HideReason.UNSUPPORTED -> R.string.hidden_reason_unsupported
-                    HideReason.PERMISSION_DENIED -> R.string.hidden_reason_permission
+            val hidden = catalog?.hidden.orEmpty()
+            if (hidden.isNotEmpty()) {
+                Column {
+                    Text(stringResource(R.string.hidden_courses_title), style = MaterialTheme.typography.titleMedium, color = cs.onSurface)
+                    hidden.forEach { h ->
+                        val reason = when (h.reason) {
+                            HideReason.UNSUPPORTED -> R.string.hidden_reason_unsupported
+                            HideReason.PERMISSION_DENIED -> R.string.hidden_reason_permission
+                        }
+                        ListRow(h.course.name, description = stringResource(reason))
+                    }
                 }
-                Text("${h.course.name} — ${stringResource(reason)}")
             }
         }
     }
@@ -83,12 +69,12 @@ fun SettingsScreen(
             title = { Text(stringResource(R.string.clear_records_confirm_title)) },
             text = { Text(stringResource(R.string.clear_records_confirm_body)) },
             confirmButton = {
-                TextButton(onClick = {
+                DialogTextButton(onClick = {
                     confirming = false
                     onClear { cleared = true }
                 }) { Text(stringResource(R.string.clear_records_confirm)) }
             },
-            dismissButton = { TextButton(onClick = { confirming = false }) { Text(stringResource(R.string.cancel)) } },
+            dismissButton = { DialogTextButton(onClick = { confirming = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }

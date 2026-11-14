@@ -5,7 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -36,7 +39,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             FirstRideTheme {
                 Box {
-                    Surface {
+                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                         val texts = remember { CourseTexts.load(assets) }
                         AppNavigation(vm, texts, loadImage = { path -> CourseTexts.loadImage(assets, path) })
                     }

@@ -1,17 +1,18 @@
 package com.firstride.app.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -21,37 +22,59 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.firstride.R
 import com.firstride.engine.course.CourseDefinition
+import com.firstride.engine.judge.Phase
 import com.firstride.engine.judge.RestoreReport
 import com.firstride.engine.progress.CourseResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
+/** 가로형에서 글이 너무 길게 늘어나지 않게 내용 너비를 묶는다(세로형 앱 창 너비). */
+private val ContentMaxWidth = 841.dp
+
+/**
+ * TopBar 아래 본문. 내용이 넘치면 위쪽만 스크롤하고 [bottom]의 버튼은 화면 아래에 고정한다.
+ * 가로형에서는 내용 너비를 [ContentMaxWidth]로 묶는다.
+ */
+@Composable
+internal fun ScreenBody(
+    modifier: Modifier = Modifier,
+    bottom: @Composable () -> Unit = {},
+    content: @Composable () -> Unit,
+) {
+    Box(modifier.fillMaxSize().padding(horizontal = Space.screenH, vertical = Space.screenV)) {
+        Column(Modifier.widthIn(max = ContentMaxWidth).fillMaxSize()) {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Space.ml)) { content() }
+            Column(Modifier.fillMaxWidth().padding(top = Space.ml), verticalArrangement = Arrangement.spacedBy(Space.m)) { bottom() }
+        }
+    }
+}
+
 /** SCR-03 코스 소개. 무엇을 익히는지, 몇 단계인지 알리고 시작한다. */
 @Composable
 fun CourseIntroScreen(course: CourseDefinition, onStart: () -> Unit, onBack: () -> Unit, onFollowUp: () -> Unit = {}) {
-    Column(Modifier.fillMaxSize().padding(32.dp).verticalScroll(rememberScrollState())) {
-        TextButton(onClick = onBack) { Text(stringResource(R.string.back), style = MaterialTheme.typography.labelLarge) }
-        Spacer(Modifier.height(16.dp))
-        Text(course.name, style = MaterialTheme.typography.headlineMedium)
-        if (course.summary.isNotBlank()) {
-            Spacer(Modifier.height(12.dp))
-            Text(course.summary, style = MaterialTheme.typography.bodyLarge)
-        }
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "${stringResource(R.string.intro_steps, course.steps.size)} · ${stringResource(R.string.course_minutes, minutesOf(course.estimatedSeconds))}",
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(stringResource(R.string.intro_park_notice), style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(32.dp))
-        BigButton(stringResource(R.string.intro_start), onStart, Modifier.fillMaxWidth(), primary = true)
-        // 후속 조치가 정의된 코스에서만(AC-16-1). 정차 상태에서 쓰는 안내임을 함께 밝힌다(POL-F-13).
-        if (course.followUps.isNotEmpty()) {
-            Spacer(Modifier.height(24.dp))
-            BigButton(stringResource(R.string.followup_entry_intro), onFollowUp, Modifier.fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.followup_entry_notice), style = MaterialTheme.typography.bodyMedium)
+    val cs = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxSize()) {
+        TopBar(title = stringResource(R.string.intro_title), left = { TextButton(stringResource(R.string.back), onBack) })
+        ScreenBody(
+            bottom = {
+                PrimaryButton(stringResource(R.string.intro_start), onStart, Modifier.fillMaxWidth())
+                // 후속 조치가 정의된 코스에서만(AC-16-1). 정차 상태에서 쓰는 안내임을 함께 밝힌다(POL-F-13).
+                if (course.followUps.isNotEmpty()) {
+                    TextButton(stringResource(R.string.followup_entry_intro), onFollowUp, Modifier.fillMaxWidth())
+                    Text(stringResource(R.string.followup_entry_notice), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                }
+            },
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(Space.s)) {
+                Text(course.name, style = MaterialTheme.typography.headlineMedium, color = cs.onSurface)
+                if (course.summary.isNotBlank()) Text(course.summary, style = MaterialTheme.typography.bodyLarge, color = cs.onSurface)
+                Text(
+                    "${stringResource(R.string.intro_steps, course.steps.size)} · ${stringResource(R.string.course_minutes, minutesOf(course.estimatedSeconds))}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cs.onSurfaceVariant,
+                )
+            }
+            NoticeBox(stringResource(R.string.intro_park_notice))
         }
     }
 }
@@ -73,40 +96,52 @@ fun CourseDoneScreen(
     onFollowUp: () -> Unit = {},
 ) {
     val report by restore.collectAsStateWithLifecycle(null)
+    val cs = MaterialTheme.colorScheme
+    val skipped = attempt == CourseResult.HAS_SKIPPED
+    Column(Modifier.fillMaxSize()) {
+        TopBar(title = course.name)
+        ScreenBody(
+            bottom = {
+                if (skipped) {
+                    PrimaryButton(stringResource(R.string.done_retry), onRetry, Modifier.fillMaxWidth())
+                } else if (next != null) {
+                    PrimaryButton("${stringResource(R.string.done_next_course)} · ${next.name}", onNext, Modifier.fillMaxWidth())
+                }
+                SecondaryButton(stringResource(R.string.done_home), onHome, Modifier.fillMaxWidth())
+                if (course.followUps.isNotEmpty()) {
+                    TextButton(stringResource(R.string.followup_entry_done), onFollowUp, Modifier.fillMaxWidth())
+                    Text(stringResource(R.string.followup_entry_notice), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                }
+            },
+        ) {
+            // 결과는 상태 배너와 같은 기호·색을 쓴다(완료 ✓ / 건너뜀 »). 색만으로 구분하지 않는다(POL-U-4).
+            if (skipped) StateBanner(Phase.SKIPPED, stringResource(R.string.done_has_skipped))
+            else StateBanner(Phase.DONE, stringResource(R.string.done_completed, course.name))
+            report?.takeIf { !it.isEmpty }?.let {
+                if (it.changed.isNotEmpty()) {
+                    Column {
+                        Text(stringResource(R.string.restore_title), style = MaterialTheme.typography.titleMedium, color = cs.onSurface)
+                        it.changed.forEach { label -> ListRow(label) }
+                        Spacer(Modifier.height(Space.s))
+                        Text(stringResource(R.string.restore_hint), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                    }
+                }
+                if (it.unverified.isNotEmpty()) {
+                    Text(stringResource(R.string.restore_unverified, it.unverified.joinToString(", ")), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+/** 가운데 정렬 화면(시작·오류·후속 조치 질문). */
+@Composable
+internal fun CenteredBody(content: @Composable () -> Unit) {
     Column(
-        Modifier.fillMaxSize().padding(32.dp).verticalScroll(rememberScrollState()),
+        Modifier.fillMaxSize().padding(horizontal = Space.screenH, vertical = Space.screenV),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        if (attempt == CourseResult.HAS_SKIPPED) {
-            Text(stringResource(R.string.done_has_skipped), style = MaterialTheme.typography.headlineMedium)
-            Spacer(Modifier.height(24.dp))
-            BigButton(stringResource(R.string.done_retry), onRetry, primary = true)
-        } else {
-            Text("✓ ${stringResource(R.string.done_completed, course.name)}", style = MaterialTheme.typography.headlineMedium)
-            if (next != null) {
-                Spacer(Modifier.height(24.dp))
-                BigButton("${stringResource(R.string.done_next_course)}: ${next.name}", onNext, primary = true)
-            }
-        }
-        report?.takeIf { !it.isEmpty }?.let {
-            Spacer(Modifier.height(24.dp))
-            if (it.changed.isNotEmpty()) {
-                Text(stringResource(R.string.restore_title), style = MaterialTheme.typography.titleMedium)
-                it.changed.forEach { label -> Text("· $label", style = MaterialTheme.typography.bodyLarge) }
-                Text(stringResource(R.string.restore_hint), style = MaterialTheme.typography.bodyMedium)
-            }
-            if (it.unverified.isNotEmpty()) {
-                Text(stringResource(R.string.restore_unverified, it.unverified.joinToString(", ")), style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-        if (course.followUps.isNotEmpty()) {
-            Spacer(Modifier.height(16.dp))
-            BigButton(stringResource(R.string.followup_entry_done), onFollowUp)
-            Spacer(Modifier.height(4.dp))
-            Text(stringResource(R.string.followup_entry_notice), style = MaterialTheme.typography.bodyMedium)
-        }
-        Spacer(Modifier.height(16.dp))
-        BigButton(stringResource(R.string.done_home), onHome)
+        Column(Modifier.widthIn(max = ContentMaxWidth), horizontalAlignment = Alignment.CenterHorizontally) { content() }
     }
 }

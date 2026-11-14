@@ -1,26 +1,19 @@
 package com.firstride.app.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.firstride.R
 import com.firstride.app.AppViewModel
@@ -51,10 +44,10 @@ fun FollowUpScreen(
     }
     val state by r.state.collectAsStateWithLifecycle()
     when (val s = state) {
-        FollowUpState.Checking -> Centered {
-            CircularProgressIndicator(Modifier.width(32.dp).height(32.dp))
-            Spacer(Modifier.height(16.dp))
-            Text(stringResource(R.string.followup_checking), style = MaterialTheme.typography.headlineSmall)
+        FollowUpState.Checking -> CenteredBody {
+            Spinner()
+            Spacer(Modifier.height(Space.m))
+            Text(stringResource(R.string.followup_checking), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
         }
         is FollowUpState.Doing -> {
             val base = course.steps.lastOrNull()?.id?.let { texts?.steps?.get(it) }
@@ -69,15 +62,16 @@ fun FollowUpScreen(
         FollowUpState.Asking -> {
             val ask = stringResource(R.string.followup_ask)
             LaunchedEffect(Unit) { vm.say(ask) }
-            Centered {
-                Text(ask, style = MaterialTheme.typography.headlineMedium)
-                Spacer(Modifier.height(32.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BigButton(stringResource(R.string.followup_yes), { r.answer(FollowUpAnswer.RESOLVED) }, Modifier.weight(1f), primary = true)
-                    BigButton(stringResource(R.string.followup_no), { r.answer(FollowUpAnswer.NOT_YET) }, Modifier.weight(1f))
+            CenteredBody {
+                Text(ask, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+                Spacer(Modifier.height(Space.xl))
+                // 두 답은 같은 무게로 보인다(와이어프레임 SCR-11).
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Space.m)) {
+                    SecondaryButton(stringResource(R.string.followup_yes), { r.answer(FollowUpAnswer.RESOLVED) }, Modifier.weight(1f))
+                    SecondaryButton(stringResource(R.string.followup_no), { r.answer(FollowUpAnswer.NOT_YET) }, Modifier.weight(1f))
                 }
-                Spacer(Modifier.height(12.dp))
-                BigButton(stringResource(R.string.followup_quit), vm::quitFollowUp, Modifier.fillMaxWidth())
+                Spacer(Modifier.height(Space.m))
+                TextButton(stringResource(R.string.followup_quit), vm::quitFollowUp, Modifier.fillMaxWidth())
             }
         }
         FollowUpState.Exhausted -> {
@@ -90,17 +84,8 @@ fun FollowUpScreen(
 }
 
 @Composable
-private fun Ending(text: String, vm: AppViewModel) = Centered {
-    Text(text, style = MaterialTheme.typography.headlineSmall)
-    Spacer(Modifier.height(32.dp))
-    BigButton(stringResource(R.string.followup_home), vm::quitFollowUp, Modifier.fillMaxWidth(), primary = true)
-}
-
-@Composable
-private fun Centered(content: @Composable () -> Unit) {
-    Column(
-        Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) { content() }
+private fun Ending(text: String, vm: AppViewModel) = CenteredBody {
+    Text(text, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
+    Spacer(Modifier.height(Space.xl))
+    PrimaryButton(stringResource(R.string.followup_home), vm::quitFollowUp, Modifier.fillMaxWidth())
 }
