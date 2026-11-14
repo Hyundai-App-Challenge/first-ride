@@ -168,3 +168,14 @@
 - 최종 APK를 다시 설치해 fake 차량 신호에서 CRS-01 정상 그림 표시와 CRS-04 누락 그림의 위치 문구 안내를 확인하고 그만하기로 홈 복귀했다. 실제 TTS SDK는 그대로 사용한다.
 
 지연 검증 캡처는 로컬 captures/w58-red-during-load.png, w58-green-during-load.png, w58-green-loaded.png에 있다. 지연 probe와 캡처는 커밋하지 않는다. 실제 실내 자산 교체·기준 차종 확정은 별도다.
+
+
+# W-59 CRS-01 공통 위치 문구 검증
+
+검증일: 2026-11-15. 단계 공통 문구가 A/C·내기 순환 그림에서도 제상 전용 위치를 가리키는 문제를 코스 문구만으로 수정했다. 제상 모양 설명은 기본 instruction에 두고 공통 locatorText는 차량 공조 조작부로 안내한다. JSON 형식은 유지한다.
+
+- `gradlew.bat :engine:test --rerun-tasks`로 코스 데이터 테스트를 실제 재실행해 185개 통과했다. `:app:testDebugUnitTest :app:assembleDebug`는 성공했고 app 테스트는 기존 결과를 재사용(UP-TO-DATE)했다. 문구 자체를 복제한 단위 테스트는 추가하지 않았다.
+- 실제 Pleos Connect v2.1.0 / emulator-5554 / com.firstride.qa39 / real에서 WAITING은 제상 모양 안내, PARTIAL은 A/C 그림, CORRECTION은 내기 순환 그림을 확인했다. 후자의 두 상태에는 부채꼴 문구가 남지 않는다.
+- 세 상태 모두 어디 있어요 버튼으로 공통 위치 문구의 SDK doSpeak 요청을 확인했다. 캡처에서 내기 순환 그림과 공조 조작부 문구가 일치한다. 검증 후 VC 시작 값·QA fake를 복구했다.
+
+기준 차종 미정 상태에서 실차 좌표를 임의로 추가하지 않았다. 차종별 정확한 실내 배치·자산의 검증은 별도이며 동료 자산 PR은 수정하지 않았다.
