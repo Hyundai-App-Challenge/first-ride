@@ -21,6 +21,10 @@ captures/
 keystore.properties
 secrets.properties
 
+# 도구 로컬 상태와 에이전트 작업 사본
+.claude/
+.omc/
+
 # Kotlin
 .kotlin/
 
