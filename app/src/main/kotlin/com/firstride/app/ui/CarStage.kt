@@ -153,11 +153,19 @@ private fun ExteriorView(model: CarModel, images: CarImages, modifier: Modifier)
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, ImageBitmap>?) = size > 24
         }
     }
+    // 소수 각도만큼 다음 프레임을 섞어 보여, 프레임 수가 적어도 천천히 돌 때 끊겨 보이지 않게 한다.
     val index = floor(angle).toInt().mod(n)
+    val nextIndex = (index + 1).mod(n)
+    val blend = angle - floor(angle)
     var shown by remember(model.id) { mutableStateOf<ImageBitmap?>(null) }
+    var shownNext by remember(model.id) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(model.id, index) {
         val bitmap = cache[index] ?: withContext(Dispatchers.IO) { images.frame(model, index) }?.also { cache[index] = it }
         if (bitmap != null) shown = bitmap            // 읽는 동안은 앞 프레임을 그대로 둔다
+    }
+    LaunchedEffect(model.id, nextIndex) {
+        val bitmap = cache[nextIndex] ?: withContext(Dispatchers.IO) { images.frame(model, nextIndex) }?.also { cache[nextIndex] = it }
+        if (bitmap != null) shownNext = bitmap
     }
 
     // 손을 뗀 뒤 잠시 가만히 있으면 천천히 돈다. 시스템 애니메이션이 꺼져 있으면(접근성) 돌지 않는다.
@@ -187,14 +195,11 @@ private fun ExteriorView(model: CarModel, images: CarImages, modifier: Modifier)
             ),
         contentAlignment = Alignment.Center,
     ) {
-        shown?.let {
-            Image(
-                it,
-                contentDescription = stringResource(R.string.car_stage_description, model.name),
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 72.dp, bottom = 104.dp),
-            )
-        }
+        val description = stringResource(R.string.car_stage_description, model.name)
+        val framePadding = Modifier.fillMaxSize().padding(start = 24.dp, end = 24.dp, top = 72.dp, bottom = 104.dp)
+        shown?.let { Image(it, description, framePadding, contentScale = ContentScale.Fit) }
+        // 위에 얹는 다음 프레임은 소수 각도만큼만 보인다. 아래 프레임이 불투명하므로 두 장이 정확히 섞인다.
+        shownNext?.let { Image(it, null, framePadding, contentScale = ContentScale.Fit, alpha = blend) }
     }
 }
 

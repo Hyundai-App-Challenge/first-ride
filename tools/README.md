@@ -13,6 +13,7 @@
 | `tap.sh "글자"` | 화면에서 글자가 같은 요소를 찾아 누른다(uiautomator) |
 | `check-crs01.sh` | CRS-01 수용 기준(AC-CRS01-1·2·2b·2c·3·4)을 VC로 차례로 확인한다. debug + `signals.sh real` |
 | `demo-scene.sh reset\|<장면>` | 2차 PT 시연 장면(사용자 플로우 8절)의 VC 조작과 기대하는 앱 상태 |
+| `gen_placeholder_cars.py` | 실제 차 이미지가 준비되기 전의 자리표시자. **실제 차종이 아닌** 가상의 세단·SUV·해치백·픽업을 3D로 렌더링해 `app/src/main/assets/cars/<차종>/`에 한 바퀴 연속 이미지(72장)와 실내 파노라마를 만든다. numpy와 Pillow만 쓴다. `--only 이름 --frame 번호 --out 파일.png`로 한 장만 확인한다. 실제 이미지가 들어오면 `assets/cars/`의 해당 폴더를 지우면 된다 |
 
 ## 알아 둘 것
 
