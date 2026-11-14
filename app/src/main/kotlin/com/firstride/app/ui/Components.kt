@@ -57,7 +57,8 @@ import com.firstride.engine.judge.ConditionView
 import com.firstride.engine.judge.Phase
 
 /*
- * 공통 컴포넌트. 이름은 Figma 01 컴포넌트 보드와 같다(기술 설계 12절). 값은 docs/08-design-tokens.md 4절.
+ * 공통 컴포넌트. 이름은 Figma 01 컴포넌트 보드와 같다(기술 설계 12절). 크기는 docs/08-design-tokens.md 4절, 색은 DESIGN.md 3절.
+ * 글자에는 색을 넣지 않는다. 카드·배너·판·버튼에 테두리를 두르지 않는다.
  */
 
 // ---------------------------------------------------------------- 누름
@@ -90,7 +91,7 @@ private fun Pressable(
 
 // ---------------------------------------------------------------- 버튼
 
-private enum class ButtonKind { PRIMARY, SECONDARY, TEXT }
+private enum class ButtonKind { PRIMARY, SECONDARY, TEXT, DANGER }
 
 @Composable
 private fun AppButton(kind: ButtonKind, text: String, onClick: () -> Unit, modifier: Modifier, enabled: Boolean) {
@@ -100,18 +101,18 @@ private fun AppButton(kind: ButtonKind, text: String, onClick: () -> Unit, modif
     Pressable(onClick, modifier.heightIn(min = Size.buttonH), enabled, shape) { pressed ->
         val bg = when (kind) {
             ButtonKind.PRIMARY -> when { !enabled -> app.disabledContainer; pressed -> app.primaryPressed; else -> cs.primary }
-            ButtonKind.SECONDARY -> if (pressed) app.secondaryPressed else cs.surface
+            ButtonKind.SECONDARY -> when { !enabled -> app.disabledContainer; pressed -> app.secondaryPressed; else -> app.secondary }
             ButtonKind.TEXT -> if (pressed) app.secondaryPressed else Color.Transparent
+            ButtonKind.DANGER -> if (enabled) cs.error else app.disabledContainer
         }
         val fg = when {
             !enabled -> app.textDisabled
             kind == ButtonKind.PRIMARY -> cs.onPrimary
             kind == ButtonKind.SECONDARY -> cs.onSurface
-            else -> cs.primary
+            kind == ButtonKind.DANGER -> app.onStatus
+            else -> cs.onSurfaceVariant
         }
-        var m = Modifier.heightIn(min = Size.buttonH).background(bg, shape)
-        if (kind == ButtonKind.SECONDARY) m = m.border(2.dp, if (enabled) cs.outline else cs.outlineVariant, shape)
-        Box(m.padding(horizontal = Space.xl), contentAlignment = Alignment.Center) {
+        Box(Modifier.heightIn(min = Size.buttonH).background(bg, shape).padding(horizontal = Space.xl), contentAlignment = Alignment.Center) {
             Text(text, style = MaterialTheme.typography.labelLarge, color = fg, textAlign = TextAlign.Center)
         }
     }
@@ -122,15 +123,20 @@ private fun AppButton(kind: ButtonKind, text: String, onClick: () -> Unit, modif
 fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) =
     AppButton(ButtonKind.PRIMARY, text, onClick, modifier, enabled)
 
-/** 보조 행동. 테두리 2dp. (예전 `BigButton(primary = false)`) */
+/** 보조 행동. 회색으로 채운 버튼, 테두리 없음. (예전 `BigButton(primary = false)`) */
 @Composable
 fun SecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) =
     AppButton(ButtonKind.SECONDARY, text, onClick, modifier, enabled)
 
-/** 가벼운 행동(그만하기, 건너뛰기, 돌아가기). 글자만, 누르는 동안 바탕이 생긴다. */
+/** 가벼운 행동(그만하기, 건너뛰기, 돌아가기). 글자만(text/secondary), 누르는 동안 바탕이 생긴다. */
 @Composable
 fun TextButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) =
     AppButton(ButtonKind.TEXT, text, onClick, modifier, enabled)
+
+/** 되돌릴 수 없는 행동의 확인(기록 지우기). 바탕 error, 글자 #131417. */
+@Composable
+fun DangerButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) =
+    AppButton(ButtonKind.DANGER, text, onClick, modifier, enabled)
 
 // ---------------------------------------------------------------- TopBar
 
@@ -163,36 +169,38 @@ fun TopBar(
 
 /** TopBar 오른쪽의 짧은 정보(예: 1 / 3 단계). */
 @Composable
-fun TopBarInfo(text: String) = Text(text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+fun TopBarInfo(text: String) = Text(text, style = MaterialTheme.typography.bodyLarge, color = appColors.textTertiary)
 
 // ---------------------------------------------------------------- 목록·카드
 
-/** 카드 모양의 누를 수 있는 상자(CourseCard 등). 바탕 surface, 테두리 2dp, 모서리 24dp, 안쪽 24dp. */
+/** 카드 모양의 누를 수 있는 상자(CourseCard 등). 바탕 bg/card, 테두리 없음, 모서리 24dp, 안쪽 24dp. */
 @Composable
 fun CardButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    highlight: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val shape = RoundedCornerShape(Radius.card)
-    val cs = MaterialTheme.colorScheme
     Pressable(onClick, modifier.fillMaxWidth(), true, shape) { pressed ->
         Box(
             Modifier.fillMaxWidth().heightIn(min = Size.touchMin)
-                .background(if (pressed) appColors.secondaryPressed else cs.surface, shape)
-                .border(2.dp, if (highlight) cs.primary else cs.outlineVariant, shape)
+                .background(if (pressed) appColors.secondaryPressed else appColors.card, shape)
                 .padding(Space.l),
         ) { content() }
     }
 }
 
-/** 알약 모양 이름표(코스 상태 등). 테두리 border/strong. */
+/** 알약 모양 이름표(코스 상태 등). 테두리 없이 채운다. 기본은 bg/surface-variant 위 text/secondary. */
 @Composable
-fun Pill(text: String, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onSurface, border: Color = MaterialTheme.colorScheme.outline) {
+fun Pill(
+    text: String,
+    modifier: Modifier = Modifier,
+    background: Color = MaterialTheme.colorScheme.surfaceVariant,
+    color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
     Text(
         text,
-        modifier.border(2.dp, border, CircleShape).padding(horizontal = 18.dp, vertical = 8.dp),
+        modifier.background(background, CircleShape).padding(horizontal = 18.dp, vertical = 8.dp),
         style = MaterialTheme.typography.labelMedium,
         color = color,
     )
@@ -217,7 +225,7 @@ fun ListRow(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(title, style = MaterialTheme.typography.titleMedium, color = cs.onSurface)
-                    if (!description.isNullOrBlank()) Text(description, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                    if (!description.isNullOrBlank()) Text(description, style = MaterialTheme.typography.bodyMedium, color = appColors.textTertiary)
                 }
                 trailing?.invoke()
             }
@@ -242,19 +250,21 @@ fun NoticeBox(text: String, modifier: Modifier = Modifier) {
 // ---------------------------------------------------------------- 조건 줄
 
 /**
- * 조건 하나의 상태(AC-04-3). 기호 + 문구 + 색으로 구분한다(POL-U-4). 폴링하는 조건은 "확인 중"을 덧붙인다(AC-04-7).
+ * 조건 하나의 상태(AC-04-3). 기호와 문구로 구분하고 색은 기호에만 쓴다(POL-U-4, DESIGN.md 3절).
+ * 오른쪽 문구는 회색 단계만 쓴다. 폴링하는 조건은 "확인 중"을 덧붙인다(AC-04-7).
  */
 @Composable
 fun ConditionRow(view: ConditionView, modifier: Modifier = Modifier) {
     val cs = MaterialTheme.colorScheme
     val app = appColors
     val (status, color) = when (view.status) {
-        ConditionStatus.MET -> R.string.condition_met to app.markMet
-        ConditionStatus.ALREADY_MET -> R.string.condition_already_met to app.markAlready
-        ConditionStatus.UNMET -> R.string.condition_unmet to cs.onSurfaceVariant
-        ConditionStatus.TOGGLE_NEEDED -> R.string.condition_toggle to app.markAlready
-        ConditionStatus.UNKNOWN -> R.string.condition_unknown to app.unverifiable.fg
+        ConditionStatus.MET -> R.string.condition_met to cs.onSurfaceVariant
+        ConditionStatus.ALREADY_MET -> R.string.condition_already_met to cs.onSurfaceVariant
+        ConditionStatus.UNMET -> R.string.condition_unmet to app.textTertiary
+        ConditionStatus.TOGGLE_NEEDED -> R.string.condition_toggle to cs.onSurface
+        ConditionStatus.UNKNOWN -> R.string.condition_unknown to cs.onSurfaceVariant
     }
+    val labelColor = if (view.status == ConditionStatus.UNKNOWN) cs.onSurfaceVariant else cs.onSurface
     Column(modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth().padding(vertical = 14.dp),
@@ -264,7 +274,7 @@ fun ConditionRow(view: ConditionView, modifier: Modifier = Modifier) {
             Box(Modifier.size(Size.mark), contentAlignment = Alignment.Center) {
                 if (view.polling && view.status == ConditionStatus.UNMET) Spinner(24.dp, cs.onSurfaceVariant) else ConditionMark(view.status)
             }
-            Text(view.label, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = cs.onSurface)
+            Text(view.label, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = labelColor)
             val polling = if (view.polling) " ${stringResource(R.string.condition_polling)}" else ""
             Text(stringResource(status) + polling, style = MaterialTheme.typography.labelMedium, color = color)
         }
@@ -272,46 +282,61 @@ fun ConditionRow(view: ConditionView, modifier: Modifier = Modifier) {
     }
 }
 
-/** 조건 줄의 44dp 표시. 문서 1-3절. */
+/** 조건 줄의 44dp 표시. DESIGN.md 3절. 초록 채움은 신호로 확인된 것(MET)에만 쓴다. */
 @Composable
 private fun ConditionMark(status: ConditionStatus) {
     val cs = MaterialTheme.colorScheme
     val app = appColors
     when (status) {
-        ConditionStatus.MET -> Glyph(Size.mark, fill = app.markMet) { check(cs.surface) }
-        ConditionStatus.ALREADY_MET -> Glyph(Size.mark, ring = app.markAlready) { check(app.markAlready) }
-        ConditionStatus.UNMET -> Glyph(Size.mark, ring = cs.onSurfaceVariant) {}
-        ConditionStatus.TOGGLE_NEEDED -> Glyph(Size.mark, ring = app.markAlready) { refresh(app.markAlready) }
-        ConditionStatus.UNKNOWN -> Glyph(Size.mark, ring = app.markUnknown, dashed = true, letter = "?", letterColor = app.markUnknown)
+        ConditionStatus.MET -> Glyph(Size.mark, fill = app.statusConfirmed) { check(app.onStatus) }
+        ConditionStatus.ALREADY_MET -> Glyph(Size.mark, ring = cs.onSurfaceVariant) { check(cs.onSurfaceVariant) }
+        ConditionStatus.UNMET -> Glyph(Size.mark, ring = app.textTertiary) {}
+        ConditionStatus.TOGGLE_NEEDED -> Glyph(Size.mark, ring = cs.onSurfaceVariant) { refresh(cs.onSurfaceVariant) }
+        ConditionStatus.UNKNOWN -> Glyph(Size.mark, ring = app.textTertiary, dashed = true, letter = "?", letterColor = app.textTertiary)
+    }
+}
+
+/** 조건 줄 밖에서 쓰는 상태 기호(소등 확인, 연결 오류). DESIGN.md 2-6절. */
+enum class Mark { CONFIRMED, ATTENTION, ERROR, UNKNOWN }
+
+@Composable
+fun StatusMark(mark: Mark, size: Dp = Size.mark) {
+    val cs = MaterialTheme.colorScheme
+    val app = appColors
+    when (mark) {
+        Mark.CONFIRMED -> Glyph(size, fill = app.statusConfirmed) { check(app.onStatus) }
+        // 노랑은 밝은 바탕과 대비가 낮아 #131417 외곽선을 두른다.
+        Mark.ATTENTION -> Glyph(size, fill = app.statusAttention, ring = app.onStatus, ringWidth = 2.dp, letter = "!", letterColor = app.onStatus)
+        Mark.ERROR -> Glyph(size, fill = cs.error, letter = "!", letterColor = app.onStatus)
+        Mark.UNKNOWN -> Glyph(size, ring = app.textTertiary, dashed = true, letter = "?", letterColor = app.textTertiary)
     }
 }
 
 // ---------------------------------------------------------------- 상태 배너
 
 /**
- * SCR-04의 판정 상태(문서 1-2절). 위 줄: 상태 기호 + 이름표, 아래: 제목·설명.
- * [showHead]가 false면 색만 빌려 쓴다(SCR-04 밖의 알림).
+ * SCR-04의 판정 상태(DESIGN.md 3절). 위 줄: 상태 기호 + 이름표, 아래: 제목·설명. 테두리가 없다.
+ * 교정만 노랑 바탕에 #131417 글자이고, 나머지는 회색 바탕에 기본 글자다. 상태는 기호와 이름표가 구분한다.
+ * [showHead]가 false면 바탕만 빌려 쓴다(SCR-04 밖의 알림).
  */
 @Composable
 fun StateBanner(phase: Phase, title: String, modifier: Modifier = Modifier, body: String? = null, showHead: Boolean = true) {
-    val c = appColors.status(phase)
-    val shape = RoundedCornerShape(Radius.card)
-    var m = modifier.fillMaxWidth().background(c.bg, shape)
-    m = when (phase) {
-        Phase.DONE -> m
-        Phase.UNVERIFIABLE -> m.dashedBorder(2.dp, c.icon, Radius.card)
-        Phase.CORRECTION -> m.border(3.dp, c.icon, shape)
-        else -> m.border(2.dp, c.icon, shape)
-    }
-    Column(m.padding(Space.l), verticalArrangement = Arrangement.spacedBy(Space.s)) {
+    val cs = MaterialTheme.colorScheme
+    val attention = phase == Phase.CORRECTION
+    val bg = if (attention) appColors.statusAttention else cs.surfaceVariant
+    val fg = if (attention) appColors.onStatus else cs.onSurface
+    Column(
+        modifier.fillMaxWidth().background(bg, RoundedCornerShape(Radius.card)).padding(Space.l),
+        verticalArrangement = Arrangement.spacedBy(Space.s),
+    ) {
         if (showHead) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
-                StateIcon(phase, c)
-                Text(stringResource(stateLabel(phase)), style = MaterialTheme.typography.labelMedium, color = c.fg)
+                StateIcon(phase, bg)
+                Text(stringResource(stateLabel(phase)), style = MaterialTheme.typography.labelMedium, color = fg)
             }
         }
-        Text(title, style = MaterialTheme.typography.titleLarge, color = c.fg)
-        if (!body.isNullOrBlank()) Text(body, style = MaterialTheme.typography.bodyLarge, color = c.fg)
+        Text(title, style = MaterialTheme.typography.titleLarge, color = fg)
+        if (!body.isNullOrBlank()) Text(body, style = MaterialTheme.typography.bodyLarge, color = fg)
     }
 }
 
@@ -326,21 +351,24 @@ private fun stateLabel(phase: Phase) = when (phase) {
     Phase.SKIPPED -> R.string.state_skipped
 }
 
+/** 배너의 상태 기호. [bg]는 배너 바탕(채운 원의 "구멍" 색). */
 @Composable
-private fun StateIcon(phase: Phase, c: StatusColor) {
+private fun StateIcon(phase: Phase, bg: Color) {
     val s = Size.stateIcon
+    val cs = MaterialTheme.colorScheme
+    val app = appColors
     when (phase) {
-        Phase.PRECHECK -> Box(Modifier.size(s), contentAlignment = Alignment.Center) { Spinner(30.dp, c.icon) }
-        Phase.WAITING -> Glyph(s, fill = c.icon) { arrow(c.bg) }
-        Phase.ALREADY_AT_TARGET -> Glyph(s, fill = c.icon) { refresh(c.bg) }
-        Phase.PARTIAL -> Glyph(s, fill = c.icon) { half(c.bg) }
+        Phase.PRECHECK -> Box(Modifier.size(s), contentAlignment = Alignment.Center) { Spinner(30.dp, cs.onSurfaceVariant) }
+        Phase.WAITING -> Glyph(s, fill = cs.onSurfaceVariant) { arrow(bg) }
+        Phase.ALREADY_AT_TARGET -> Glyph(s, fill = cs.onSurfaceVariant) { refresh(bg) }
+        Phase.PARTIAL -> Glyph(s, fill = app.statusConfirmed) { half(app.onStatus) }
         Phase.CORRECTION -> Box(Modifier.size(s), contentAlignment = Alignment.Center) {
-            Canvas(Modifier.size(s)) { triangle(c.icon) }
-            Text("!", Modifier.padding(top = 6.dp), color = c.bg, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Canvas(Modifier.size(s)) { triangle(app.onStatus) }
+            Text("!", Modifier.padding(top = 6.dp), color = bg, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
-        Phase.DONE -> Glyph(s, fill = c.icon) { check(c.bg) }
-        Phase.UNVERIFIABLE -> Glyph(s, ring = c.icon, dashed = true, letter = "?", letterColor = c.icon)
-        Phase.SKIPPED -> Glyph(s, fill = c.icon) { chevrons(c.bg) }
+        Phase.DONE -> Glyph(s, fill = app.statusConfirmed) { check(app.onStatus) }
+        Phase.UNVERIFIABLE -> Glyph(s, ring = app.textTertiary, dashed = true, letter = "?", letterColor = app.textTertiary)
+        Phase.SKIPPED -> Glyph(s, fill = app.textTertiary) { chevrons(bg) }
     }
 }
 
@@ -360,10 +388,10 @@ fun VoiceBar(voice: AppViewModel.VoiceStatus, modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.spacedBy(Space.m),
     ) {
         if (voice.listening) {
-            Box(Modifier.size(20.dp).background(cs.primary, CircleShape))
+            Box(Modifier.size(20.dp).background(cs.onSurface, CircleShape))
             Text(stringResource(R.string.voice_listening), style = MaterialTheme.typography.labelMedium, color = cs.onSurface)
         } else {
-            Box(Modifier.size(20.dp).border(3.dp, cs.onSurfaceVariant, CircleShape))
+            Box(Modifier.size(20.dp).border(3.dp, appColors.textTertiary, CircleShape))
             Text(stringResource(R.string.voice_off), style = MaterialTheme.typography.labelMedium, color = cs.onSurfaceVariant)
         }
     }
@@ -372,14 +400,14 @@ fun VoiceBar(voice: AppViewModel.VoiceStatus, modifier: Modifier = Modifier) {
 // ---------------------------------------------------------------- 위치 안내
 
 /**
- * 위치 안내 그림을 담는 판. 판 색은 그림 바탕과 같아 그림의 가장자리가 보이지 않는다. 야간에도 밝게 둔다(문서 1-4절).
+ * 위치 안내 그림을 담는 판. 판 색은 그림 바탕과 같아 그림의 가장자리가 보이지 않는다. 야간에도 밝게 둔다(DESIGN.md 2-5절). 테두리 없음.
  * 그림이 없으면 판 안에 [fallback] 문구를 쓴다.
  */
 @Composable
 fun LocatorPlate(image: ImageBitmap?, description: String?, modifier: Modifier = Modifier, fallback: String? = null) {
     val shape = RoundedCornerShape(Radius.card)
     Box(
-        modifier.fillMaxWidth().clip(shape).background(appColors.locatorPlate).border(2.dp, MaterialTheme.colorScheme.outlineVariant, shape),
+        modifier.fillMaxWidth().clip(shape).background(appColors.locatorPlate),
         contentAlignment = Alignment.Center,
     ) {
         if (image != null) {
@@ -392,19 +420,20 @@ fun LocatorPlate(image: ImageBitmap?, description: String?, modifier: Modifier =
 
 // ---------------------------------------------------------------- 진행 표시
 
-/** 진행 표시. 화면에서 유일하게 계속 움직이는 요소(POL-U-5). */
+/** 진행 표시. 화면에서 유일하게 계속 움직이는 요소(POL-U-5). 색은 text/secondary. */
 @Composable
-fun Spinner(size: Dp = 40.dp, color: Color = MaterialTheme.colorScheme.primary) =
+fun Spinner(size: Dp = 40.dp, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) =
     CircularProgressIndicator(Modifier.size(size), color = color, strokeWidth = 4.dp)
 
 // ---------------------------------------------------------------- 기호 그리기
 
-/** 원 하나에 기호를 그린다. [fill]이면 채운 원, [ring]이면 테두리 원(3dp). */
+/** 원 하나에 기호를 그린다. [fill]이면 채운 원, [ring]이면 테두리 원(기본 3dp). 둘 다 주면 채운 원에 외곽선. */
 @Composable
 private fun Glyph(
     size: Dp,
     fill: Color? = null,
     ring: Color? = null,
+    ringWidth: Dp = 3.dp,
     dashed: Boolean = false,
     letter: String? = null,
     letterColor: Color = Color.Unspecified,
@@ -412,7 +441,7 @@ private fun Glyph(
 ) {
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(size)) {
-            val w = 3.dp.toPx()
+            val w = ringWidth.toPx()
             if (fill != null) drawCircle(fill)
             if (ring != null) drawCircle(
                 ring,
@@ -472,17 +501,4 @@ private fun DrawScope.triangle(c: Color) {
     val p = Path().apply { moveTo(s / 2, s * 0.06f); lineTo(s * 0.97f, s * 0.92f); lineTo(s * 0.03f, s * 0.92f); close() }
     drawPath(p, c)
     drawPath(p, c, style = Stroke(s * 0.08f, join = StrokeJoin.Round))
-}
-
-/** 점선 테두리(확인 불가). */
-private fun Modifier.dashedBorder(width: Dp, color: Color, radius: Dp): Modifier = drawWithContent {
-    drawContent()
-    val w = width.toPx()
-    drawRoundRect(
-        color,
-        topLeft = Offset(w / 2, w / 2),
-        size = GeoSize(size.width - w, size.height - w),
-        cornerRadius = CornerRadius(radius.toPx()),
-        style = Stroke(w, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 6.dp.toPx()))),
-    )
 }

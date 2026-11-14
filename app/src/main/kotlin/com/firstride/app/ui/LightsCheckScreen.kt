@@ -1,6 +1,8 @@
 package com.firstride.app.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
@@ -10,7 +12,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.firstride.R
 import com.firstride.app.AppViewModel
@@ -85,16 +89,22 @@ fun LightsCheckScreen(vm: AppViewModel) {
     }
 }
 
-/** 등 하나의 상태. 색이 아니라 문구로 구분하고 색은 거든다(POL-U-4). */
+/** 등 하나의 상태. 기호와 문구로 구분하고 색은 기호에만 쓴다(POL-U-4, DESIGN.md 3절). */
 @Composable
 private fun LampStateText(state: LampState) {
-    val app = appColors
-    val (text, color) = when (state) {
-        LampState.ON -> R.string.lamp_on to app.correction.fg
-        LampState.OFF -> R.string.lamp_off to app.markMet
-        LampState.UNKNOWN -> R.string.lamp_unknown to app.unverifiable.fg
+    val (text, mark) = when (state) {
+        LampState.ON -> R.string.lamp_on to Mark.ATTENTION
+        LampState.OFF -> R.string.lamp_off to Mark.CONFIRMED
+        LampState.UNKNOWN -> R.string.lamp_unknown to Mark.UNKNOWN
     }
-    Text(stringResource(text), style = MaterialTheme.typography.labelMedium, color = color)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+        StatusMark(mark, 32.dp)
+        Text(
+            stringResource(text),
+            style = MaterialTheme.typography.labelMedium,
+            color = if (state == LampState.ON) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable

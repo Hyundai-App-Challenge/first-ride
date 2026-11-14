@@ -96,21 +96,21 @@ fun HomeScreen(
     }
 }
 
-/** 코스 카드. 카드 전체가 터치 대상이다. 첫 실행의 대표 코스는 테두리와 이름표로 강조한다. */
+/** 코스 카드. 카드 전체가 터치 대상이다. 첫 실행의 대표 코스는 채운 이름표("여기서 시작")로 알린다. 테두리로 강조하지 않는다. */
 @Composable
 private fun CourseCard(course: CourseDefinition, result: CourseResult, highlight: Boolean, onClick: () -> Unit) {
-    CardButton(onClick, highlight = highlight) {
+    CardButton(onClick) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.ml)) {
             Column(Modifier.weight(1f)) {
                 Text(course.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
                 Text(
                     stringResource(R.string.course_minutes, minutesOf(course.estimatedSeconds)),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = appColors.textTertiary,
                 )
             }
             if (highlight) {
-                Pill(stringResource(R.string.home_start_here), color = MaterialTheme.colorScheme.primary, border = MaterialTheme.colorScheme.primary)
+                Pill(stringResource(R.string.home_start_here), background = MaterialTheme.colorScheme.primary, color = MaterialTheme.colorScheme.onPrimary)
             } else {
                 Pill(
                     stringResource(

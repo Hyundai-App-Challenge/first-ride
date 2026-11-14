@@ -64,6 +64,8 @@ fun DrivingBlockScreen() {
 @Composable
 fun ConnectionErrorScreen(onRetry: () -> Unit) {
     CenteredBody {
+        StatusMark(Mark.ERROR)
+        Spacer(Modifier.height(Space.m))
         Text(stringResource(R.string.connection_error_title), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
         Spacer(Modifier.height(Space.m))
         Text(stringResource(R.string.connection_error_body), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)

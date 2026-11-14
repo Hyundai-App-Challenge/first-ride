@@ -6,7 +6,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton as DialogTextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,12 +68,12 @@ fun SettingsScreen(
             title = { Text(stringResource(R.string.clear_records_confirm_title)) },
             text = { Text(stringResource(R.string.clear_records_confirm_body)) },
             confirmButton = {
-                DialogTextButton(onClick = {
+                DangerButton(stringResource(R.string.clear_records_confirm), {
                     confirming = false
                     onClear { cleared = true }
-                }) { Text(stringResource(R.string.clear_records_confirm)) }
+                })
             },
-            dismissButton = { DialogTextButton(onClick = { confirming = false }) { Text(stringResource(R.string.cancel)) } },
+            dismissButton = { SecondaryButton(stringResource(R.string.cancel), { confirming = false }) },
         )
     }
 }

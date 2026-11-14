@@ -19,11 +19,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.firstride.engine.judge.Phase
 
 /*
- * 디자인 값. 출처는 docs/08-design-tokens.md 와 Figma 변수(color · type · space · radius).
- * 값을 바꿀 때는 문서와 Figma를 함께 고친다.
+ * 디자인 값. 색은 DESIGN.md, 글자·간격·크기·모서리는 docs/08-design-tokens.md 가 기준이고
+ * Figma 변수(color · type · space · radius)와 같다. 값을 바꿀 때는 세 곳을 함께 고친다.
  */
 
 /** 간격과 크기(dp). 문서 3절. */
@@ -60,106 +59,76 @@ object Radius {
     val card = 24.dp
 }
 
-/** 판정 상태 하나의 색: 바탕, 글자, 기호(테두리도 이 색). 문서 1-2절. */
-@Immutable
-data class StatusColor(val bg: Color, val fg: Color, val icon: Color)
-
-/** Material 3 [ColorScheme]에 없는 앱 색. 문서 1-1절의 "(앱 색)". */
+/**
+ * Material 3 [ColorScheme]에 없는 앱 색. 이름과 값은 DESIGN.md 2절, Figma 컬렉션 `color`의 변수와 같다.
+ * 글자에는 색을 넣지 않는다. 상태색(confirmed·attention·error)은 채운 도형에만 쓰고, 그 위 글자·기호는 [onStatus]다.
+ */
 @Immutable
 data class AppColors(
-    val blockedBg: Color,
-    val textDisabled: Color,
-    val primaryPressed: Color,
-    val secondaryPressed: Color,
-    val disabledContainer: Color,
-    val locatorPlate: Color,
-    val locatorInk: Color,
-    val markMet: Color,
-    val markAlready: Color,
-    val markUnknown: Color,
-    val markWrong: Color,
-    val precheck: StatusColor,
-    val waiting: StatusColor,
-    val already: StatusColor,
-    val partial: StatusColor,
-    val correction: StatusColor,
-    val done: StatusColor,
-    val unverifiable: StatusColor,
-    val skipped: StatusColor,
-) {
-    fun status(phase: Phase): StatusColor = when (phase) {
-        Phase.PRECHECK -> precheck
-        Phase.WAITING -> waiting
-        Phase.ALREADY_AT_TARGET -> already
-        Phase.PARTIAL -> partial
-        Phase.CORRECTION -> correction
-        Phase.DONE -> done
-        Phase.UNVERIFIABLE -> unverifiable
-        Phase.SKIPPED -> skipped
-    }
-}
+    val card: Color,                // bg/card
+    val blockedBg: Color,           // bg/blocked
+    val textTertiary: Color,        // text/tertiary (64%)
+    val textDisabled: Color,        // text/disabled (32%)
+    val primaryPressed: Color,      // action/primary-pressed
+    val secondary: Color,           // action/secondary
+    val secondaryPressed: Color,    // action/secondary-pressed
+    val disabledContainer: Color,   // action/disabled
+    val statusConfirmed: Color,     // status/confirmed
+    val statusAttention: Color,     // status/attention
+    val onStatus: Color,            // status/on
+    val locatorPlate: Color,        // locator/plate
+    val locatorInk: Color,          // locator/ink
+)
 
-private val LocatorPlate = Color(0xFFF6F7F9)   // 위치 안내 그림의 바탕과 같은 색. 야간에도 바꾸지 않는다(문서 1-4절)
+private val Ink = Color(0xFF131417)       // Pleos basic_static_dark_100
+private val White = Color(0xFFFFFFFF)
+private val LocatorPlate = Color(0xFFF6F7F9)   // 위치 안내 그림의 바탕과 같은 색. 야간에도 바꾸지 않는다(DESIGN.md 2-5절)
 private val LocatorInk = Color(0xFF2C3038)
 
 private val LightApp = AppColors(
-    blockedBg = Color(0xFFE3E6EB),
-    textDisabled = Color(0xFF8A919C),
-    primaryPressed = Color(0xFF1A3EA6),
-    secondaryPressed = Color(0xFFE8ECF2),
-    disabledContainer = Color(0xFFE3E6EB),
+    card = White,
+    blockedBg = Color(0xFFEDEEF2),
+    textTertiary = Ink.copy(alpha = 0.64f),
+    textDisabled = Ink.copy(alpha = 0.32f),
+    primaryPressed = Color(0xFF313236),
+    secondary = Color(0xFFE0E1E6),
+    secondaryPressed = Color(0xFFC7C9CE),
+    disabledContainer = Color(0xFFEDEEF2),
+    statusConfirmed = Color(0xFF02C265),
+    statusAttention = Color(0xFFFFC224),
+    onStatus = Ink,
     locatorPlate = LocatorPlate,
     locatorInk = LocatorInk,
-    markMet = Color(0xFF1E7B43),
-    markAlready = Color(0xFF0B7C88),
-    markUnknown = Color(0xFF6A4FC4),
-    markWrong = Color(0xFF8F6B00),
-    precheck = StatusColor(Color(0xFFEEF0F3), Color(0xFF3E4450), Color(0xFF3E4450)),
-    waiting = StatusColor(Color(0xFFE7EEFF), Color(0xFF1D3F99), Color(0xFF2350C8)),
-    already = StatusColor(Color(0xFFDFF3F4), Color(0xFF0B5F69), Color(0xFF0B7C88)),
-    partial = StatusColor(Color(0xFFE3F4E8), Color(0xFF1E6B3A), Color(0xFF1E7B43)),
-    correction = StatusColor(Color(0xFFFFF3C4), Color(0xFF6B4E00), Color(0xFF8F6B00)),
-    done = StatusColor(Color(0xFF1E7B43), Color(0xFFFFFFFF), Color(0xFFFFFFFF)),
-    unverifiable = StatusColor(Color(0xFFEFEAFB), Color(0xFF4B2E99), Color(0xFF6A4FC4)),
-    skipped = StatusColor(Color(0xFFEEF0F3), Color(0xFF4A505A), Color(0xFF6B7380)),
 )
 
 private val DarkApp = AppColors(
-    blockedBg = Color(0xFF2A2E35),
-    textDisabled = Color(0xFF6E7580),
-    primaryPressed = Color(0xFFB5CBFF),
-    secondaryPressed = Color(0xFF2A2E35),
-    disabledContainer = Color(0xFF2A2E35),
+    card = Color(0xFF313236),
+    blockedBg = Color(0xFF313236),
+    textTertiary = White.copy(alpha = 0.64f),
+    textDisabled = White.copy(alpha = 0.32f),
+    primaryPressed = Color(0xFFC7C9CE),
+    secondary = Color(0xFF313236),
+    secondaryPressed = Color(0xFF44464E),
+    disabledContainer = Color(0xFF313236),
+    statusConfirmed = Color(0xFF00E074),
+    statusAttention = Color(0xFFFFC224),
+    onStatus = Ink,
     locatorPlate = LocatorPlate,
     locatorInk = LocatorInk,
-    markMet = Color(0xFF5CCB86),
-    markAlready = Color(0xFF5CC8D1),
-    markUnknown = Color(0xFF9C86F0),
-    markWrong = Color(0xFFD9A800),
-    precheck = StatusColor(Color(0xFF2A2E35), Color(0xFFD3D8E0), Color(0xFFD3D8E0)),
-    waiting = StatusColor(Color(0xFF1B2A4D), Color(0xFFB9CCFF), Color(0xFF8FB0FF)),
-    already = StatusColor(Color(0xFF123638), Color(0xFF8FDCE2), Color(0xFF5CC8D1)),
-    partial = StatusColor(Color(0xFF173322), Color(0xFF9FE0B4), Color(0xFF5CCB86)),
-    correction = StatusColor(Color(0xFF3D3000), Color(0xFFFFE08A), Color(0xFFD9A800)),
-    done = StatusColor(Color(0xFF7FD9A0), Color(0xFF0B2E18), Color(0xFF0B2E18)),
-    unverifiable = StatusColor(Color(0xFF2B2147), Color(0xFFCDBDFF), Color(0xFF9C86F0)),
-    skipped = StatusColor(Color(0xFF2A2E35), Color(0xFFB4BAC4), Color(0xFF8A929E)),
 )
 
 private fun scheme(dark: Boolean): ColorScheme {
-    val primary = if (dark) Color(0xFF8FB0FF) else Color(0xFF2350C8)
-    val onPrimary = if (dark) Color(0xFF0A1F52) else Color(0xFFFFFFFF)
-    val background = if (dark) Color(0xFF121417) else Color(0xFFF1F3F6)
-    val surface = if (dark) Color(0xFF1C1F24) else Color(0xFFFFFFFF)
-    val surfaceVariant = if (dark) Color(0xFF262A31) else Color(0xFFE8EBF0)
-    val onSurface = if (dark) Color(0xFFF1F3F6) else Color(0xFF16181C)
-    val onSurfaceVariant = if (dark) Color(0xFFB4BAC4) else Color(0xFF4A505A)
-    val outline = if (dark) Color(0xFF8A929E) else Color(0xFF6B7380)
-    val outlineVariant = if (dark) Color(0xFF343942) else Color(0xFFDDE1E7)
-    val error = if (dark) Color(0xFFFF8A80) else Color(0xFFC62828)
-    val onError = if (dark) Color(0xFF3B0909) else Color(0xFFFFFFFF)
+    val primary = if (dark) Color(0xFFE0E1E6) else Color(0xFF44464E)          // action/primary (회색 버튼 바탕. 글자에 쓰지 않는다)
+    val onPrimary = if (dark) Ink else White                                   // text/on-primary
+    val background = if (dark) Color(0xFF1D1E21) else Color(0xFFF7F8FA)       // bg/app
+    val surface = if (dark) Ink else White                                     // bg/surface
+    val surfaceVariant = if (dark) Color(0xFF313236) else Color(0xFFEDEEF2)   // bg/surface-variant
+    val onSurface = if (dark) White else Ink                                   // text/primary
+    val onSurfaceVariant = onSurface.copy(alpha = 0.84f)                       // text/secondary
+    val outlineVariant = if (dark) Color(0xFF44464E) else Color(0xFFE0E1E6)   // border/subtle
+    val error = if (dark) Color(0xFFFF4C28) else Color(0xFFFE3D16)            // error
     val base = if (dark) darkColorScheme() else lightColorScheme()
-    // 쓰지 않는 칸도 기본 보라색이 새어 나오지 않게 같은 계열로 채운다(문서 1-1절).
+    // 쓰지 않는 칸도 Material 기본 보라색이 새어 나오지 않게 같은 계열로 채운다.
     return base.copy(
         primary = primary, onPrimary = onPrimary,
         primaryContainer = surfaceVariant, onPrimaryContainer = onSurface,
@@ -173,10 +142,11 @@ private fun scheme(dark: Boolean): ColorScheme {
         surfaceTint = Color.Transparent,
         surfaceBright = surface, surfaceDim = background,
         surfaceContainerLowest = surface, surfaceContainerLow = surface, surfaceContainer = surface,
-        surfaceContainerHigh = surface, surfaceContainerHighest = surface,
+        surfaceContainerHigh = if (dark) Color(0xFF313236) else White,   // 대화 상자 바탕(Pleos background_popup)
+        surfaceContainerHighest = surface,
         inverseSurface = onSurface, inverseOnSurface = surface, inversePrimary = primary,
-        outline = outline, outlineVariant = outlineVariant,
-        error = error, onError = onError,
+        outline = outlineVariant, outlineVariant = outlineVariant,
+        error = error, onError = Ink,
         scrim = Color(0x99000000),
     )
 }
@@ -205,7 +175,7 @@ private val CarShapes = Shapes(
 
 private val LocalAppColors = staticCompositionLocalOf { LightApp }
 
-/** 앱 색. `MaterialTheme.colorScheme`에 없는 것(상태 색, 누름 색 등). */
+/** 앱 색. `MaterialTheme.colorScheme`에 없는 것(상태색, 누름 색 등). */
 val appColors: AppColors
     @Composable @ReadOnlyComposable get() = LocalAppColors.current
 
