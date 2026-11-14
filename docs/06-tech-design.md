@@ -196,7 +196,7 @@ Android 모듈의 `debugImplementation`에서 JVM 모듈의 test fixtures를 가
 | `hvac.maxDefrost` | `ON` / `OFF` | CRS-01 후속 조치 |
 | `hvac.temperature` | 숫자 (0.1℃ 단위의 정수. 22.5℃ → 225) | CRS-01 후속 조치 |
 
-값 이름은 설계상의 이름이다. SDK가 실제로 주는 값과의 대응은 어댑터가 맡고, 실측 T6으로 확정한다.
+값 이름은 설계상의 이름이다. SDK가 실제로 주는 값과의 대응은 어댑터가 맡고, 실측 T6으로 확정한다. 어댑터는 표의 값으로 바꿀 수 없는 SDK 값(예: 와이퍼의 간헐 단, 등화의 `DAYTIME_RUNNING`)을 SDK 이름 그대로 토큰으로 낸다. 이런 값은 어떤 목표와도 맞지 않아 완료로도 꺼짐으로도 읽히지 않는다.
 
 ## 5. 판정 엔진
 
@@ -632,10 +632,10 @@ GitHub Actions에서 `./gradlew :engine:test`를 돌린다. 에뮬레이터가 �
 | `hvac.recirculation` | `getHvac()` | `getHvacRecirculationState` | `registerHvacRecirculationState` | 메서드 확인 (2026-11-14) |
 | `hvac.fanSpeed` | `getHvac()` | `getHvacFanSpeed` | `registerHvacFanSpeed` | 메서드 확인 |
 | `hvac.fanDirection` | `getHvac()` | `getHvacFanDirection` | **없음 → 폴링** | 구독 메서드가 목록에 없음 |
-| `light.lowBeam` | `getLight()` | `getCurrentLowBeamLightState` | `registerLowBeamLightState` | 메서드 확인 |
-| `light.tailLamp` | `getLight()` | `getCurrentTailLampLightState` | `registerTailLampLightState` | 메서드 확인 |
-| `light.cabin` | `getLight()` | `getCurrentCabinLightState` | `registerCabinLightState` | 메서드 확인 |
-| `wiper.state` | `getWiper()` | `getCurrentWiperState` | `registerWiperState` | 메서드 확인 (2026-11-14). 스위치 값은 `getCurrentWiperSwitch`로 따로 있음 |
+| `light.lowBeam` | `getLight()` | `getCurrentLowBeamLightState` | `registerLowBeamLightState` | 실측 확정 (11-14). `LightStateListener.onLightStateUpdated`, 영역 없음 |
+| `light.tailLamp` | `getLight()` | `getCurrentTailLampLightState` | `registerTailLampLightState` | 실측 확정 (11-14) |
+| `light.cabin` | `getLight()` | `getCurrentCabinLightState` | `registerCabinLightState` | 실측 확정 (11-14) |
+| `wiper.state` | `getWiper()` | `getCurrentWiperSwitch(WindowArea(FRONT_WINDSHIELD))` | **없음 → 폴링** | 실측 확정 (11-14). 단은 스위치 값에만 있다. `registerWiperState`는 ON/OFF뿐이라 쓰지 않는다 |
 | `turnSignal.state` | `getTurnSignal()` | `getCurrentTurnSignalState` | `registerTurnSignalState` | 메서드 확인 (2026-11-14) |
 | `window.driverPosition` | `getWindow()` | `getCurrentWindowPosition` | `registerWindowPosition` | 메서드 확인 (2026-11-14). 영역 인자 사용 |
 | `window.lock` | `getWindow()` | `getCurrentWindowLockState` | `registerWindowLockState` | 메서드 확인 (2026-11-14) |
@@ -783,7 +783,7 @@ fun observe(): Flow<Reading> = callbackFlow {
 | T9 | STT `ON_DEVICE` 한국어, 이어 듣기, 마이크 퍼미션 | 세 어휘를 각 10번 말해 인식 결과를 기록. `onEndedRecognition` 뒤 바로 `request` | 11절 분기. 인식 결과의 변형을 어휘 매칭 테스트에 넣는다 | |
 | T10 | VC 기어 주입이 주행 제한에 반영되는가. DO 미선언 앱에 플랫폼이 무엇을 띄우는가 | VC에서 기어를 D로 바꾸고 `isRequiresDistractionOptimization()`과 화면을 본다 | 반영 안 되면 FR-07은 단위 테스트까지만 하고 시연에서 뺀다. README에 한계로 적는다 || **반영된다 (11-14, B).** VC Gear를 D로 바꾸면 `CarUxRestrictions.isRequiresDistractionOptimization()`이 참 → `RESTRICTED`, P로 바꾸면 `PARKED`(4회 모두). 요청부터 콜백까지 약 0.2초 이하(M6 1초 이내). 속도와 무관하게 기어 D만으로 제한된다. **DO 미선언 앱에 플랫폼이 띄우는 것**: 앱 창 전체를 회색 화면 + 앱 아이콘 + "주행 중에는 사용할 수 없습니다."로 덮는다. 이때 앱의 Activity에는 `onPause`·`onStop`이 오지 않는다 → 음성·구독은 앱이 `DrivingGate`를 보고 직접 멈춰야 한다(8-2절 그대로). VC 요청: `tools/vc.sh set gear gear=Drive` / `gear=Park` |
 | T11 | 확인 불가를 재현할 방법 | 퍼미션을 빼고 빌드, 에뮬레이터의 Vehicle 서비스 중지 등 | 방법이 없으면 시연에서는 단위 테스트 실행 화면으로 대신하고 그 사실을 밝힌다 | |
-| T12 | VC 외부등 모드와 미등·하향등 상태의 관계 | 모드를 Off → Tail lamp → Low beam → Auto로 바꾸며 두 신호를 본다 | CRS-03의 단계 순서와 목표를 확정 | |
+| T12 | VC 외부등 모드와 미등·하향등 상태의 관계 | 모드를 Off → Tail lamp → Low beam → Auto로 바꾸며 두 신호를 본다 | CRS-03의 단계 순서와 목표를 확정 || **확정 (11-14, B).** VC Exterior Lights Mode(`tools/vc.sh set lights feature=headlamp_mode value=…`) 순서별 결과: Off → Tail lamp(`Position`): 미등 ON / → Low beam: 하향등 ON(미등은 ON 유지) / Low beam → Tail lamp: 하향등 OFF / → Off: 미등 OFF / Off → Low beam: 미등·하향등 함께 ON / → Auto(주간): 둘 다 OFF. 즉 하향등 모드는 미등을 포함한다. 실내등은 VC Cabin Lights Switch로 ON/OFF. 등화 상태 값은 `LightState` ON/OFF/DAYTIME_RUNNING(주간주행등은 토큰 `DAYTIME_RUNNING`으로 그대로 낸다). 등화 3종 모두 지원(구독 가능), 영역 인자 없음 |
 | T13 | Compose 화면이 에뮬레이터에서 정상 표시되는가 | 실측 앱을 Compose로 만든다 | 문제가 있으면 View로 바꾼다(`:app`만 영향) || **통과 (11-14, B).** debug의 실측 화면(Compose)이 정상 표시된다 |
 | T14 | 세로형↔가로형 전환 시 Activity 생명주기 | 창 크기를 바꾸며 `onStop`, `onConfigurationChanged` 로그를 본다 | `onStop`이 불리면 창 크기 변경을 백그라운드 전환과 구분하는 방법이 필요하다(POL-E-8) || **통과 (11-14, B).** 앱 창 오른쪽 끝의 손잡이(⋮)를 끌어 창을 1682×1210 ↔ 841×1210 dp(내비게이션과 나눠 쓰는 세로로 긴 창)로 바꾸면 `onConfigurationChanged`만 오고 `onPause`·`onStop`은 오지 않는다(`configChanges`에 화면 크기·방향 선언). **Pleos의 홈 키는 앱을 가리지 않는다**(왼쪽 창만 바뀌고 앱은 resumed·visible 그대로). 다른 앱이 앱 창을 차지하면(`am start -a android.settings.SETTINGS`) `onPause` → `onStop`. → `onStop`을 백그라운드 전환으로 써도 창 크기 변경과 헷갈리지 않는다. 세로형은 841×1210 dp, 가로형은 1682×1210 dp |
 | T15 | 주간·야간 전환이 앱에 전달되는가 | 시스템 테마를 바꾸고 `uiMode`를 본다 | 전달 안 되면 Pleos 테마 API를 찾는다 || **통과 (11-14, B).** `adb shell cmd uimode night yes/no`로 바꾸면 앱의 `uiMode`가 19(주간) ↔ 35(야간)로 바뀐다. `configChanges`에 `uiMode`가 없으면 Activity가 다시 만들어진다(`onStop`·`onDestroy`) → `uiMode`를 더해 `onConfigurationChanged`만 오게 했다. Compose의 `isSystemInDarkTheme`로 따른다. VC에서 주야간을 바꾸는 방법은 아직 못 찾았다 |
