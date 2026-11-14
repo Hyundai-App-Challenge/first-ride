@@ -1,0 +1,29 @@
+{
+  "id": "CRS-06",
+  "name": "창문·도어 잠금",
+  "estimatedSeconds": 90,
+  "summary": "운전석 창문, 창문 잠금, 도어 잠금을 다루는 방법을 익혀요.",
+  "steps": [
+    {
+      "id": "CRS-06-S1",
+      "action": [
+        { "signal": "window.driverPosition", "relative": "up", "label": "운전석 창문" }
+      ],
+      "doneText": "좋아요. 운전석 창문이 움직였어요."
+    },
+    {
+      "id": "CRS-06-S2",
+      "action": [
+        { "signal": "window.lock", "equals": "ON", "label": "창문 잠금" }
+      ],
+      "doneText": "좋아요. 창문 잠금이 켜졌어요."
+    },
+    {
+      "id": "CRS-06-S3",
+      "action": [
+        { "signal": "door.lock", "equals": "LOCKED", "label": "도어 잠금" }
+      ],
+      "doneText": "좋아요. 문이 잠겼어요."
+    }
+  ]
+}

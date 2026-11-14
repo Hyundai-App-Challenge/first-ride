@@ -12,6 +12,21 @@
       "misoperationLocators": {
         "recirc": "assets/hvac_recirculation.webp"
       }
+    },
+    "CRS-01-F1": {
+      "instruction": "최대 제상 버튼을 눌러 보세요.",
+      "locatorText": "공조 조작부에서 최대 제상 버튼을 찾아 보세요.",
+      "locatorAsset": "assets/hvac_max_defrost.webp"
+    },
+    "CRS-01-F2": {
+      "instruction": "풍량을 가장 세게 올려 보세요.",
+      "locatorText": "공조 조작부의 풍량 버튼으로 올릴 수 있어요.",
+      "locatorAsset": "assets/hvac_fan_speed.webp"
+    },
+    "CRS-01-F3": {
+      "instruction": "온도를 가장 높게 올려 보세요.",
+      "locatorText": "공조 조작부의 온도 버튼으로 올릴 수 있어요.",
+      "locatorAsset": "assets/hvac_temperature.webp"
     }
   }
 }

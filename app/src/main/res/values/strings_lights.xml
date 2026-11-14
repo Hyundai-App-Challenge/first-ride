@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SCR-06 소등 확인과 코스 확장(W-28, W-29, W-34, W-36). 이 파일은 코스 확장 묶음만 고친다. -->
+    <string name="home_lights_check">소등 확인</string>
+
+    <string name="lights_title">내리기 전에 등을 확인해요</string>
+    <string name="lights_loading">등 상태를 확인하고 있어요</string>
+
+    <!-- 등 이름 (모두 "등"으로 끝나서 "이"가 붙는다) -->
+    <string name="lamp_low_beam">하향등</string>
+    <string name="lamp_tail">미등</string>
+    <string name="lamp_cabin">실내등</string>
+
+    <string name="lamp_on">켜짐</string>
+    <string name="lamp_off">꺼짐</string>
+    <string name="lamp_unknown">확인 불가</string>
+
+    <!-- 요약. 확인한 것만 말하고 "모든 등이 꺼졌다"고 단정하지 않는다(POL-W-7, AC-10-2) -->
+    <string name="lights_some_on">%1$s이 켜져 있어요.</string>
+    <string name="lights_all_off">확인한 등은 모두 꺼져 있어요.</string>
+    <string name="lights_none_readable">지금은 등 상태를 확인할 수 없어요.</string>
+
+    <!-- 끄는 방법은 안내만 한다(AC-10-7) -->
+    <string name="lights_how_to_off">켜져 있는 등은 차의 조명 스위치나 실내등 버튼으로 직접 꺼 주세요. 앱은 등을 끄지 않아요.</string>
+    <string name="lights_unreadable_notice">주간주행등 등 이 앱이 읽을 수 없는 등이 있습니다.</string>
+    <string name="lights_no_lamps">이 차에서는 확인할 수 있는 등이 없어요.</string>
+    <string name="lights_close">닫기</string>
+</resources>

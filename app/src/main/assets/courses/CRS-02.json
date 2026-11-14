@@ -1,0 +1,29 @@
+{
+  "id": "CRS-02",
+  "name": "뒷유리 열선·풍량·풍향",
+  "estimatedSeconds": 120,
+  "summary": "뒷유리 김을 걷고 바람의 세기와 방향을 바꾸는 방법을 익혀요.",
+  "steps": [
+    {
+      "id": "CRS-02-S1",
+      "action": [
+        { "signal": "hvac.rearDefroster", "equals": "ON", "label": "뒷유리 열선" }
+      ],
+      "doneText": "좋아요. 뒷유리 열선이 켜졌어요."
+    },
+    {
+      "id": "CRS-02-S2",
+      "action": [
+        { "signal": "hvac.fanSpeed", "relative": "up", "label": "풍량" }
+      ],
+      "doneText": "좋아요. 풍량이 바뀌었어요."
+    },
+    {
+      "id": "CRS-02-S3",
+      "action": [
+        { "signal": "hvac.fanDirection", "equals": "DEFROST", "label": "앞유리 쪽 바람" }
+      ],
+      "doneText": "좋아요. 바람이 앞유리로 향해요."
+    }
+  ]
+}

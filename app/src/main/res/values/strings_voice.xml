@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 음성 듣기·되묻기, 설정의 음성 켜기/끄기(W-24, W-25, W-30). 이 파일은 음성 묶음만 고친다. -->
+    <!-- SCR-04 음성 표시 -->
+    <string name="voice_listening">듣는 중이에요. \"다음\", \"다시\", \"어디야\"라고 말해 보세요.</string>
+    <string name="voice_off">음성 꺼짐</string>
+    <!-- SCR-10 음성 설정 -->
+    <string name="settings_voice">음성 안내와 음성 진행</string>
+    <string name="settings_voice_hint">끄면 안내를 읽어 주지 않고 말도 듣지 않아요. 화면의 문구와 버튼으로 진행해요.</string>
+</resources>

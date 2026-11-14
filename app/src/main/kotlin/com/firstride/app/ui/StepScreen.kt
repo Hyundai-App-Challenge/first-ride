@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.firstride.R
+import com.firstride.app.AppViewModel
 import com.firstride.engine.course.CourseDefinition
 import com.firstride.engine.course.ModelCourseText
 import com.firstride.engine.judge.CourseRunner
@@ -52,11 +53,12 @@ fun StepScreen(
     loadImage: (String) -> ImageBitmap?,
     onSpeak: (String) -> Unit,
     onQuit: () -> Unit,
+    voice: AppViewModel.VoiceStatus = AppViewModel.VoiceStatus(),
 ) {
     if (runner == null || course == null) return Centered { CircularProgressIndicator() }
     val progress by runner.step.collectAsStateWithLifecycle()
     val p = progress ?: return Centered { CircularProgressIndicator() }
-    StepContent(p, course, texts, loadImage, onSpeak, onQuit)
+    StepContent(p, course, texts, loadImage, onSpeak, onQuit, voice)
 }
 
 @Composable
@@ -65,13 +67,14 @@ private fun Centered(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun StepContent(
+internal fun StepContent(
     p: StepProgress,
     course: CourseDefinition,
     texts: ModelCourseText?,
     loadImage: (String) -> ImageBitmap?,
     onSpeak: (String) -> Unit,
     onQuit: () -> Unit,
+    voice: AppViewModel.VoiceStatus,
 ) {
     val state by p.runner.state.collectAsStateWithLifecycle()
     val def = course.steps[p.index]
@@ -84,6 +87,7 @@ private fun StepContent(
                 Text(stringResource(R.string.step_progress, p.index + 1, p.total), style = MaterialTheme.typography.titleMedium)
                 TextButton(onClick = onQuit) { Text(stringResource(R.string.step_quit), style = MaterialTheme.typography.labelLarge) }
             }
+            VoiceIndicator(voice)
             Spacer(Modifier.height(12.dp))
             if (wide) {
                 Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -109,6 +113,13 @@ private fun StepContent(
             }
         }
     }
+}
+
+/** 듣는 중(POL-V-13)과 음성 꺼짐(AC-06-6) 표시. 글자로 알려 준다(POL-U-4). 둘 다 아니면 자리를 차지하지 않는다. */
+@Composable
+private fun VoiceIndicator(voice: AppViewModel.VoiceStatus) {
+    if (voice.listening) Text(stringResource(R.string.voice_listening), style = MaterialTheme.typography.titleMedium)
+    if (voice.off) Text(stringResource(R.string.voice_off), style = MaterialTheme.typography.titleMedium)
 }
 
 /** 상태 문구. 확인 중에는 진행 표시, 완료에는 표시(✓)를 붙인다. 색만으로 구분하지 않는다(POL-U-4). */

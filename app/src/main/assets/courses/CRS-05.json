@@ -1,0 +1,36 @@
+{
+  "id": "CRS-05",
+  "name": "방향지시등",
+  "estimatedSeconds": 60,
+  "summary": "차선을 바꾸거나 방향을 틀 때 쓰는 방향지시등을 켜는 방법을 익혀요.",
+  "steps": [
+    {
+      "id": "CRS-05-S1",
+      "action": [
+        { "signal": "turnSignal.state", "equals": "LEFT", "label": "왼쪽 방향지시등" }
+      ],
+      "misoperations": [
+        {
+          "id": "right",
+          "when": { "signal": "turnSignal.state", "equals": "RIGHT" },
+          "correction": "반대쪽이에요. 레버를 반대 방향으로 움직여 보세요."
+        }
+      ],
+      "doneText": "좋아요. 왼쪽 방향지시등이 켜졌어요."
+    },
+    {
+      "id": "CRS-05-S2",
+      "action": [
+        { "signal": "turnSignal.state", "equals": "RIGHT", "label": "오른쪽 방향지시등" }
+      ],
+      "misoperations": [
+        {
+          "id": "left",
+          "when": { "signal": "turnSignal.state", "equals": "LEFT" },
+          "correction": "반대쪽이에요. 레버를 반대 방향으로 움직여 보세요."
+        }
+      ],
+      "doneText": "좋아요. 오른쪽 방향지시등이 켜졌어요."
+    }
+  ]
+}
