@@ -57,6 +57,7 @@ dependencies {
     implementation(project(":engine"))
     implementation(project(":platform"))
     debugImplementation(testFixtures(project(":engine")))   // 가짜 신호원. release에는 들어가지 않는다
+    debugImplementation("ai.pleos.playground:Vehicle:2.3.2")   // debug의 실측 화면이 SDK를 직접 부른다
 
     implementation(platform("androidx.compose:compose-bom:2024.09.03"))
     implementation("androidx.compose.material3:material3")
