@@ -53,6 +53,18 @@ fun StartScreen() {
     }
 }
 
+/** SCR-08 주행 중 차단. 문구 하나만 있다. 버튼·목록·움직이는 요소가 없다(POL-D-4, AC-07-1). */
+@Composable
+fun DrivingBlockScreen() {
+    Column(
+        Modifier.fillMaxSize().padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(stringResource(R.string.driving_block), style = MaterialTheme.typography.headlineSmall)
+    }
+}
+
 /** SCR-09 연결 오류. 무슨 일이 있었는지와 할 수 있는 행동, 다시 시도(FR-12, POL-E-2). */
 @Composable
 fun ConnectionErrorScreen(onRetry: () -> Unit) {
