@@ -54,7 +54,7 @@ class NarrationTest {
         backgroundScope.launch { narrateStep(runner, crs01Step(), text, v) }
         backgroundScope.launch { runner.run() }
         runCurrent()
-        assertEquals(listOf("이미 켜져 있어요. 한 번 껐다가 다시 켜 보세요."), tts.started)
+        assertEquals(listOf("이미 목표 상태예요. 다른 상태로 바꾼 뒤 다시 해 보세요. 버튼을 누르세요."), tts.started)
 
         val broken = FakeTts(durationMillis = 100)
         val v2 = voice(broken)

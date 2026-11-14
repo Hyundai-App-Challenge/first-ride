@@ -220,3 +220,16 @@
 - 최종 APK의 real SDK에서 시작→CRS-01 WAITING→Settings→복귀 확인→이어 하기 WAITING→그만하기→홈을 통과했다. fake 복구 후 글자 크기 1.0→1.1로 Activity 인스턴스 변경·동일 PID·와이퍼 2/2 유지, 원래 1.0 복원 후 2/2 유지를 확인하고 홈으로 돌아왔다.
 
 QA 신호원 fake·기어 P·글자 크기를 복구했다. 실제 SDK의 지원 조회 지연 장애와 실차는 주입·실측하지 않았다. 완료한 홈 조회는 같은 구성의 캐시이며 소등 확인 화면의 현재 상태 재조회는 그대로 유지한다.
+
+
+# W-63 이미 목표 상태의 안내 검증
+
+검증일: 2026-11-15. 켜기 전용 틀을 목표에 중립적인 재조작 안내와 해당 단계 instruction으로 바꿨다. 조건 행·정책의 설명도 맞추며 판정과 JSON 형식은 유지한다.
+
+- StepViewTest에 OFF/LOW 목표 2개를 추가하고 기존 ON·문구 누락 조건을 갱신했다. 수정 전 13개 중 4개가 실패했다. 수정 뒤 전체 실행에서 기존 NarrationTest의 이전 문구 기대값 1개가 실패해 새 안내의 실제 발화 기대값으로 맞췄다.
+- `gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug` 성공(engine 187/platform 41/app 10개, 실패 0). OFF 테스트는 목표 상태에서 미완료, LOW 변경 후 WAITING, OFF 복귀 후 DONE을 함께 확인한다. 화면·음성은 같은 목표 안내를 쓴다.
+- 실제 Pleos Connect v2.1.0/emulator-5554/com.firstride.qa39/real: 와이퍼 OFF로 시작하고 첫 단계를 건너뛰어 2단계 ALREADY_AT_TARGET에 진입했다. 중립 문구와 실제 OFF instruction, 다시 듣기의 동일 SDK doSpeak를 확인했다. LOW→OFF 조작으로만 완료 화면에 도달했다.
+- 제상·AC ON/외기로 시작한 CRS-01에서도 ALREADY_AT_TARGET의 실제 instruction·조건 행·동일 SDK doSpeak를 확인했다. 제상 OFF→ON 뒤 완료됐다. 아무 조작 없이 자동 완료되지 않았다.
+- 첫 UI 검사는 단일 조건인 와이퍼에도 조건 행이 있다고 가정해 실패했다. 기존 ConditionList는 조합 조건만 표시하므로 CRS-01에서 행을 검사하도록 고친 뒤 전체 SDK 경로가 통과했다. 캡처에서 OFF 안내·조작 버튼이 잘림 없이 보였다(captures/w63-off-instruction.png, 로컬).
+
+검증 후 원래 와이퍼 OFF·공조 값·QA fake를 복구했다. 와이퍼 그림 누락은 동료 자산 PR 범위이며 수정하지 않았다. 실차의 조작부 위치·STT 발화 정확도는 미검증이다.
