@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -32,12 +31,11 @@ import com.firstride.app.ui.StartScreen
 import com.firstride.app.ui.StepScreen
 import com.firstride.engine.course.CourseDefinition
 import com.firstride.engine.drive.DriveState
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels {
         viewModelFactory {
-            initializer { AppViewModel((application as FirstRideApp).container) { CourseCatalog.load(assets) } }
+            initializer { AppViewModel((application as FirstRideApp).container, CourseTexts.load(assets)) { CourseCatalog.load(assets) } }
         }
     }
 
@@ -59,10 +57,7 @@ class MainActivity : ComponentActivity() {
                         val runner by vm.runner.collectAsStateWithLifecycle()
                         val lastAttempt by vm.lastAttempt.collectAsStateWithLifecycle()
                         val texts = remember { CourseTexts.load(assets) }
-                        val scope = rememberCoroutineScope()
                         val visible = catalog?.visible.orEmpty()
-                        // 음성 조율(W-11) 전까지 "다시 듣기"와 "어디 있어요"는 TTS를 바로 부른다.
-                        val speak: (String) -> Unit = { text -> scope.launch { vm.container.tts.speak(text) } }
 
                         // 주행 제한은 화면 전환보다 위에 있다(POL-D-2, 기술 설계 12절).
                         if (drive == DriveState.RESTRICTED) DrivingBlockScreen() else when (val s = screen) {
@@ -85,7 +80,7 @@ class MainActivity : ComponentActivity() {
                                     course = course,
                                     texts = texts[s.courseId],
                                     loadImage = { path -> CourseTexts.loadImage(assets, path) },
-                                    onSpeak = speak,
+                                    onSpeak = vm::say,
                                     onQuit = vm::quitCourse,
                                 )
                             }
