@@ -22,5 +22,6 @@
 - **AAOS에서 앱은 사용자 10으로 돈다.** `run-as`에 `--user $(adb shell am get-current-user)`를 주지 않으면 다른 사용자의 폴더에 쓴다(`signals.sh`가 처리).
 - **Pleos의 홈 키는 앱을 가리지 않는다.** 백그라운드 전환을 보려면 다른 앱(예: `adb shell am start -a android.settings.SETTINGS`)을 앱 창에 띄운다.
 - **로그 태그(debug 빌드만)**: `FR-TRACE` 화면 전환과 단계 상태, `FR-SIGNALS` 신호 구독 수, `FR-MEASURE` 실측 화면. release 빌드는 남기지 않는다(POL-S-7).
+- **내비게이션과 나눠 쓰는 화면 흉내(debug)**: `adb shell am start -n com.firstride/.MainActivity --ez nav_mock true`. 가로형 앱 창의 왼쪽 반에 내비게이션 mock을, 오른쪽 반(841dp)에 앱의 세로형 화면을 그린다(Figma 05 보드). 가짜 신호원일 때는 개발자 패널의 "내비 mock 켜기"로도 켠다. release에는 없다.
 - **실측 화면**: `adb shell am start -n com.firstride/.measure.MeasureActivity` (debug). `--ez tts true`면 TTS 확인, `--ez stt true`면 STT 확인.
 - **시간 재기**: logcat 시각(에뮬레이터)과 PC 시각은 어긋나고 중간에 튄다. 지연은 `adb shell 'echo $EPOCHREALTIME'`로 에뮬레이터 시계 기준으로 잰다.

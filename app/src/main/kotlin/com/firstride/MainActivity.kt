@@ -18,6 +18,7 @@ import com.firstride.app.FirstRideApp
 import com.firstride.app.start.CourseCatalog
 import com.firstride.app.start.CourseTexts
 import com.firstride.app.ui.DevPanel
+import com.firstride.app.ui.DevSplitFrame
 import com.firstride.app.ui.FirstRideTheme
 
 /** 앱의 유일한 Activity. 화면 분기는 [AppNavigation]에 있다. */
@@ -39,9 +40,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             FirstRideTheme {
                 Box {
-                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                        val texts = remember { CourseTexts.load(assets) }
-                        AppNavigation(vm, texts, loadImage = { path -> CourseTexts.loadImage(assets, path) })
+                    // debug에서만 내비게이션 mock과 창을 나눠 쓸 수 있다(DevSplit.kt). release는 그대로 그린다.
+                    DevSplitFrame {
+                        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                            val texts = remember { CourseTexts.load(assets) }
+                            AppNavigation(vm, texts, loadImage = { path -> CourseTexts.loadImage(assets, path) })
+                        }
                     }
                     DevPanel()
                 }
