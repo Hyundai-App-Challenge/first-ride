@@ -233,3 +233,26 @@ QA 신호원 fake·기어 P·글자 크기를 복구했다. 실제 SDK의 지원
 - 첫 UI 검사는 단일 조건인 와이퍼에도 조건 행이 있다고 가정해 실패했다. 기존 ConditionList는 조합 조건만 표시하므로 CRS-01에서 행을 검사하도록 고친 뒤 전체 SDK 경로가 통과했다. 캡처에서 OFF 안내·조작 버튼이 잘림 없이 보였다(captures/w63-off-instruction.png, 로컬).
 
 검증 후 원래 와이퍼 OFF·공조 값·QA fake를 복구했다. 와이퍼 그림 누락은 동료 자산 PR 범위이며 수정하지 않았다. 실차의 조작부 위치·STT 발화 정확도는 미검증이다.
+
+
+# W-64 포함된 코스와 배포 조회 권한 검증
+
+검증일: 2026-11-15. CRS-01~06·소등 확인이 쓰는 차량 조회 권한을 main으로 옮기고 debug의 중복 선언을 제거했다(POL-S-10, 기술 설계10-1).
+
+| 성공 기준 | 실행 확인 | 결과 |
+|---|---|---|
+| 포함된 코스의 release 권한 | processReleaseManifest 결과 XML 검사 | 수정 전 CAR_LIGHTS/WINDOWS/DOORS 3개 누락으로 assertion 실패. 수정 후 차량 조회 4종+TTS 정확히 일치 |
+| 실측·STT debug 전용 | release/debug 병합 XML의 권한·Activity·package 비교 | STT_SERVICE와 MeasureActivity는 debug에만 있음. 제어·INTERNET·RECORD_AUDIO 권한 없음. release com.firstride/debug com.firstride.qa39 유지 |
+| 배포 코드·QA 빌드 | gradlew.bat :app:processReleaseManifest :app:compileReleaseKotlin :app:testDebugUnitTest :app:assembleDebug | 성공. app 10개 실패0, 변경 없는 작업 결과 재사용. release 서명·설치는 실행하지 않음 |
+| 기존 release 앱 보존 | adb dumpsys package의 설치·갱신 시각 전후 비교 | 동일. 삭제·설치·데이터 초기화 없음 |
+
+같은 최종 QA APK/real SDK(Pleos Connect v2.1.0, emulator-5554)에서 추가 코스를 확인했다.
+
+- CRS-02: 뒷유리 열선 OFF→ON, 풍량3→4 상대 변화, 풍향 Face→Defrost의 폴링을 거쳐 완료.
+- CRS-03: Off→Position으로 미등, LowBeam으로 전조등, Position으로 전조등 끄기를 거쳐 완료.
+- CRS-05: 반대쪽 BlinkRight의 CORRECTION, BlinkLeft로 첫 단계 완료, BlinkRight로 마지막 단계 완료.
+- CRS-06: 운전석 창문0→10 상대 변화, 창문 잠금, 도어 잠금으로 완료.
+
+처음 완료 로그 직후 UI를 눌러 아직 없는 노드를 읽어 화면 대기를 추가했다. 이후 방향지시등 완료 화면 검사 실패는 캡처·dumpsys로 사각지대 카메라(ai.umos.car.evs)의 포커스 점유임을 확인했다. 화면에는 코스 완료가 보였으나 UIAutomator에는 카메라 노드만 있었다. 방향지시등을 Off로 돌리고 앱을 다시 선택한 실행에서 CRS-05·06까지 통과했다. 중간 adb 재연결도 있었으며 제품 판정 실패와 구분했다.
+
+원래 공조·전조등·방향지시등·창문·잠금 값과 QA fake 모드를 복구했다. 실제 release APK 설치·실차·전체 모델의 조작부 일치는 미검증이다. CRS-01/04는 직전 W-63 real SDK 결과가 있고 이번 권한 이동은 debug의 최종 권한 집합을 바꾸지 않는다.

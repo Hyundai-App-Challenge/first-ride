@@ -644,6 +644,7 @@ GitHub Actions에서 `./gradlew :engine:test`를 돌린다. 에뮬레이터가 �
 
 - 제어 퍼미션(`CONTROL_CAR_*`)과 인터넷 퍼미션은 선언하지 않는다(POL-S-9, POL-S-4).
 - 빌드에 들어가지 않는 코스의 퍼미션은 뺀다(POL-S-10). 11-15 제출본에 CRS-06이 없으면 `CAR_DOORS`를 선언하지 않는다.
+- 현재 공통 자산에는 CRS-01~06이 포함되므로 차량 조회 권한 네 종류와 TTS를 main에 선언한다. STT는 실사용 정확도 게이트 전까지 debug 실측용으로만 선언하며, 실측 Activity도 debug에만 둔다.
 - 문서는 "세부 API마다 요구 퍼미션이 다를 수 있다"고 적었다. 메서드별 `@RequiresPermission`을 구현 때 확인한다.
 - STT에 Android의 마이크 퍼미션(`RECORD_AUDIO`)이 따로 필요한지는 문서에 없다 **[실측 T9]**.
 
