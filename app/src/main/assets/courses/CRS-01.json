@@ -1,0 +1,25 @@
+{
+  "id": "CRS-01",
+  "name": "김서림 제거",
+  "estimatedSeconds": 60,
+  "steps": [
+    {
+      "id": "CRS-01-S1",
+      "action": [
+        { "signal": "hvac.frontDefroster", "equals": "ON", "label": "앞유리 제상" }
+      ],
+      "hold": [
+        { "signal": "hvac.ac", "equals": "ON", "label": "에어컨" },
+        { "signal": "hvac.recirculation", "equals": "FRESH", "label": "외기 유입" }
+      ],
+      "misoperations": [
+        {
+          "id": "recirc",
+          "when": { "signal": "hvac.recirculation", "equals": "RECIRCULATE" },
+          "correction": "내기 순환이 켜져 있어요. 외기로 바꿔야 김이 빨리 걷혀요."
+        }
+      ],
+      "doneText": "좋아요. 김서림 제거가 켜졌어요."
+    }
+  ]
+}
