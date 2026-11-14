@@ -20,25 +20,25 @@ curl_bin=curl
 [[ -x /mnt/c/Windows/System32/curl.exe ]] && curl_bin=/mnt/c/Windows/System32/curl.exe
 
 tools/adb.sh forward "tcp:$port" "tcp:$port" >/dev/null
-"$curl_bin" -s -m 5 -X POST "$base/browser/session?client=firstride-cli" >/dev/null
+"$curl_bin" -fsS -m 5 -X POST "$base/browser/session?client=firstride-cli" >/dev/null
 
 case "${1:-}" in
   set)
     endpoint="$2"; shift 2
     query=$(IFS='&'; echo "$*")
-    "$curl_bin" -s -m 5 -o /dev/null -w '%{http_code}\n' -X PUT "$base/vehicle/$endpoint?$query"
+    "$curl_bin" -fsS -m 5 -o /dev/null -w '%{http_code}\n' -X PUT "$base/vehicle/$endpoint?$query"
     ;;
   state)
     if [[ -n "${2:-}" ]]; then
-      "$curl_bin" -s -m 5 "$base/vehicle/state" | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin)['$2'], indent=1))"
+      "$curl_bin" -fsS -m 5 "$base/vehicle/state" | python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin)['$2'], indent=1))"
     else
-      "$curl_bin" -s -m 5 "$base/vehicle/state"
+      "$curl_bin" -fsS -m 5 "$base/vehicle/state"
     fi
     ;;
   keepalive)
     end=$((SECONDS + ${2:-60}))
     while (( SECONDS < end )); do
-      "$curl_bin" -s -m 2 -X POST "$base/browser/session?client=firstride-cli" >/dev/null || true
+      "$curl_bin" -fsS -m 2 -X POST "$base/browser/session?client=firstride-cli" >/dev/null || true
       sleep 1
     done
     ;;

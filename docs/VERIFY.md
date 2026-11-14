@@ -35,3 +35,14 @@
 - 실제 환경: Pleos Connect v2.1.0, emulator-5554, com.firstride.qa39. 인식 텍스트는 검증 출력에 포함하지 않았다.
 
 늦게 도착하는 STT 최종 결과의 요청 간 격리, 세 어휘 정확도, 앱의 STT 연결은 이번 수정에 포함하지 않았다.
+
+
+# W-49 VC HTTP 실패 전달 검증
+
+검증일: 2026-11-15.
+
+- 도구 테스트 11개 통과. 로컬 HTTP 서버와 실제 curl로 성공 시 상태 코드·JSON 보존, 차량 변경/상태 조회 HTTP 500 실패, 세션 실패 시 PUT 미전송, CRS-01 주입 실패 시 즉시 중단을 확인했다. fake adb를 사용하므로 테스트는 차량에 연결하지 않는다.
+- `bash -n tools/vc.sh`, `bash -n tools/check-crs01.sh`, `git diff --check` 통과.
+- `gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug` 통과.
+- 실제 Pleos Connect v2.1.0 / emulator-5554 / com.firstride.qa39 / real 모드에서 `tools/check-crs01.sh`의 AC-CRS01-1·2·2b·2c·3·4 모두 통과했다.
+- HTTP 실패의 종료 코드와 신호 주입 실패 중단만 바꿨다. 엔진 판정과 차량 제어 범위는 변경하지 않았다.

@@ -23,10 +23,17 @@ expect() {  # expect <설명> <기대 문자열>
   if [[ "$got" == *"$2"* ]]; then echo "  OK   $1: $got"; else echo "  FAIL $1: 기대 '$2', 실제 '$got'"; fail=1; fi
 }
 
+vc_set() {
+  if ! tools/vc.sh set "$@" >/dev/null; then
+    echo "  FAIL VC 신호 주입에 실패해 검증을 중단한다" >&2
+    exit 1
+  fi
+}
+
 scenario() {  # scenario <이름> <시작 VC 값들>
   echo "### $1"
-  tools/vc.sh set gear gear=Park >/dev/null
-  tools/vc.sh set hvac $2 >/dev/null
+  vc_set gear gear=Park
+  vc_set hvac $2
   sleep 1
   $A shell am force-stop "$app_id"
   $A logcat -c
@@ -41,7 +48,7 @@ scenario() {  # scenario <이름> <시작 VC 값들>
 }
 
 step() {  # step <VC 값들> <기대>
-  tools/vc.sh set hvac $1 >/dev/null
+  vc_set hvac $1
   sleep 2.5
   expect "$1" "$2"
 }
