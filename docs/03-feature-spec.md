@@ -309,8 +309,8 @@
   "steps": [
     {
       "id": "CRS-01-S1",
-      "instruction": "앞유리 김서림 제거 버튼을 누르세요.",
-      "locatorText": "공조 조작부 왼쪽 위, 부채꼴 모양 버튼이에요.",
+      "instruction": "부채꼴 모양의 앞유리 김서림 제거 버튼을 누르세요.",
+      "locatorText": "차량의 공조 조작부를 확인해 주세요.",
       "locatorAsset": "ref_model/hvac_front_defrost.png",
       "actionConditions": [
         { "signal": "hvac.frontDefroster", "target": "ON", "label": "앞유리 제상" }
