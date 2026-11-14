@@ -6,6 +6,9 @@
     <!-- SCR-01 시작 -->
     <string name="start_checking">차량을 확인하고 있어요</string>
 
+    <!-- SCR-08 주행 중 차단 (합쇼체, POL-W-1) -->
+    <string name="driving_block">주행 중에는 사용할 수 없습니다</string>
+
     <!-- SCR-09 연결 오류 (제목은 합쇼체, POL-W-1) -->
     <string name="connection_error_title">차량과 연결할 수 없습니다</string>
     <string name="connection_error_body">차량 정보를 읽지 못했어요. 시동이 켜져 있는지 확인한 뒤 다시 시도해 주세요.</string>

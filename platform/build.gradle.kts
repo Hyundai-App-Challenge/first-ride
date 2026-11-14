@@ -7,6 +7,7 @@ android {
     namespace = "com.firstride.platform"
     compileSdk = 35
     defaultConfig { minSdk = 28 }
+    useLibrary("android.car")   // CarUxRestrictionsManager(주행 제한 감지, 기술 설계 8-1절)
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

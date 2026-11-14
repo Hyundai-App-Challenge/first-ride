@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import com.firstride.engine.signal.Signals
+import com.firstride.platform.drive.CarDrivingGate
 import com.firstride.platform.vehicle.VehicleConnection
 import com.firstride.platform.voice.PleosTts
 import kotlinx.coroutines.delay
@@ -65,6 +66,9 @@ class MeasureActivity : ComponentActivity() {
                 rawLog.take(60).forEach { Text(it, fontSize = 12.sp) }
             }
         }
+        // T10: 주행 제한 상태
+        val gate = CarDrivingGate(this)
+        lifecycleScope.launch { gate.state.collect { log("drive $it") } }
         val s = connection.signals
         for (id in Signals.all) lifecycleScope.launch {
             val support = s.support(id)
@@ -143,6 +147,7 @@ class MeasureActivity : ComponentActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        log("lifecycle onConfigurationChanged")
         updateWindow(newConfig)
     }
 
@@ -152,7 +157,14 @@ class MeasureActivity : ComponentActivity() {
         log("window ${window.value}")
     }
 
+    // T14·T15: 창 크기·주야간 변경 때의 생명주기
+    override fun onStart() { super.onStart(); log("lifecycle onStart") }
+    override fun onResume() { super.onResume(); log("lifecycle onResume") }
+    override fun onPause() { log("lifecycle onPause"); super.onPause() }
+    override fun onStop() { log("lifecycle onStop"); super.onStop() }
+
     override fun onDestroy() {
+        log("lifecycle onDestroy")
         connection.close()
         if (ttsUsed) tts.release()
         raw.release()
