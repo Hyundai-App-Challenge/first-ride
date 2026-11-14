@@ -10,10 +10,13 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.firstride.R
 
 /**
  * 색은 차갑고 낮은 채도의 회색 계열 하나와 포인트색 하나(코발트)뿐이다. 순백과 순흑을 쓰지 않는다.
@@ -58,6 +61,16 @@ private val CarShapes = Shapes(
     extraLarge = RoundedCornerShape(38.dp),
 )
 
+/**
+ * 글꼴은 SUIT(SIL OFL 1.1, assets/licenses/SUIT-OFL.txt). 한글과 영문이 한 글꼴로 맞고, 기본 글꼴이나 Inter 계열이 아니다.
+ * 세 굵기만 넣는다. 원본 그대로 쓰며 이름을 바꾸지 않는다(OFL의 예약 이름 조항).
+ */
+private val Suit = FontFamily(
+    Font(R.font.suit_regular, FontWeight.Normal),
+    Font(R.font.suit_semibold, FontWeight.SemiBold),
+    Font(R.font.suit_bold, FontWeight.Bold),
+)
+
 /** 차량 화면은 멀리서 훑어본다. 기본보다 큰 글자를 쓰고, 큰 제목은 자간을 조여 단단하게 보이게 한다. */
 private val CarTypography = Typography(
     headlineMedium = TextStyle(fontSize = 38.sp, fontWeight = FontWeight.Bold, lineHeight = 48.sp, letterSpacing = (-0.8).sp),
@@ -67,7 +80,19 @@ private val CarTypography = Typography(
     bodyLarge = TextStyle(fontSize = 24.sp, lineHeight = 34.sp),
     bodyMedium = TextStyle(fontSize = 21.sp, lineHeight = 30.sp),
     labelLarge = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.SemiBold),
-)
+).let { t ->
+    // 위에서 정하지 않은 스타일(작은 글자 등)도 같은 글꼴을 쓰게 한다. 빠지면 기본 글꼴이 섞인다.
+    t.copy(
+        displayLarge = t.displayLarge.copy(fontFamily = Suit), displayMedium = t.displayMedium.copy(fontFamily = Suit),
+        displaySmall = t.displaySmall.copy(fontFamily = Suit), headlineLarge = t.headlineLarge.copy(fontFamily = Suit),
+        headlineMedium = t.headlineMedium.copy(fontFamily = Suit), headlineSmall = t.headlineSmall.copy(fontFamily = Suit),
+        titleLarge = t.titleLarge.copy(fontFamily = Suit), titleMedium = t.titleMedium.copy(fontFamily = Suit),
+        titleSmall = t.titleSmall.copy(fontFamily = Suit), bodyLarge = t.bodyLarge.copy(fontFamily = Suit),
+        bodyMedium = t.bodyMedium.copy(fontFamily = Suit), bodySmall = t.bodySmall.copy(fontFamily = Suit),
+        labelLarge = t.labelLarge.copy(fontFamily = Suit), labelMedium = t.labelMedium.copy(fontFamily = Suit),
+        labelSmall = t.labelSmall.copy(fontFamily = Suit),
+    )
+}
 
 /** 주간·야간은 시스템을 따른다. 앱에 테마 설정을 두지 않는다(POL-U-3). */
 @Composable
