@@ -470,7 +470,9 @@ interface SttPort { suspend fun listenOnce(): ListenResult         /* 최종 텍
 ```
 
 - `speak`는 재생이 끝날 때까지 기다리는 `suspend` 함수다. SDK의 `speak()` 호출 뒤 `EventListener.onDone()`/`onStop()`/`onError()`를 기다려 결과로 돌려준다.
-- `listenOnce`는 SDK의 `request()` 호출 뒤 `ResultListener.onUpdated(stt, completed = true)`의 텍스트를 돌려준다. 중간 결과(`completed = false`)는 쓰지 않는다. `onEndedRecognition()`이 텍스트 없이 오면 무음이다.
+- `listenOnce`는 SDK의 `request()` 호출 뒤 `ResultListener.onUpdated(stt, completed = true)`의 텍스트를 돌려준다. 중간 결과(`completed = false`)는 쓰지 않는다. `onEndedRecognition()`만으로는 완료하지 않는다. 실측 T9에서 종료 뒤 약 3~5ms 후 최종 텍스트가 왔다. 빈 최종 결과 또는 명시적 stop은 무음이며, 최종 결과가 없으면 15초 제한 뒤 오류다.
+- STT SDK는 요청 ID를 주지 않으므로 `OneShotStt`가 요청마다 SDK 인스턴스와 결과를 함께 소유한다. 초기화 제한은 5초이며 정상·실패·취소·시간 초과 모두 리스너를 제거하고 stop/release한 후 다음 요청을 시작한다. 이미 닫힌 인식기의 콜백은 다음 요청을 완료할 수 없다. 임의의 유예 시간에 의존하지 않는다.
+- SDK 3.3.1의 [공식 이벤트 설명](https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/SpeechToText/result-listeners)은 최종 결과를 `completed=true`로 정의하며, 해제 전에 등록한 리스너를 제거하도록 안내한다. 실제 마이크의 세 어휘 정확도와 연속 발화는 T9 검증이 추가로 필요하다.
 
 ### 7-2. 흐름
 

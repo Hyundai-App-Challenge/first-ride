@@ -46,3 +46,16 @@
 - `gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug` 통과.
 - 실제 Pleos Connect v2.1.0 / emulator-5554 / com.firstride.qa39 / real 모드에서 `tools/check-crs01.sh`의 AC-CRS01-1·2·2b·2c·3·4 모두 통과했다.
 - HTTP 실패의 종료 코드와 신호 주입 실패 중단만 바꿨다. 엔진 판정과 차량 제어 범위는 변경하지 않았다.
+
+
+# W-50 STT 요청 격리 검증
+
+검증일: 2026-11-15.
+
+- 새 STT 회귀 테스트 14개 통과. 종료→5ms→최종 텍스트, 중간/빈 결과, 취소·시간 초과 뒤 늦은 결과, 중복 결과, 초기화 실패·시간 초과·취소, 요청 예외, stop/release, 동시 호출과 다른 스레드 정리 중 취소를 확인했다.
+- `gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug` 통과.
+- 실제 SDK 3.3.1 / Pleos Connect v2.1.0 / emulator-5554 / com.firstride.qa39에서 듣는 중 Back: initialize → request → removeListener → release → cleanup → onDestroy 확인.
+- 명시적인 음성 입력 없이 연속 측정: SDK 인스턴스 3개의 initialize/request/removeListener/release를 각각 확인했다. 처음 두 요청은 제한 시간, 세 번째는 취소 경로로 정리했다. 초기화→request는 122/2/37ms, 최초 차가운 연결의 별도 샘플은 약 1.3초였다.
+- W-48 시점에는 공유 SDK의 release가 전체 측정에서 한 번이었다. W-50부터는 각 요청에서 한 번씩 정리되므로 위 3회가 기대값이다.
+
+인간의 실제 발화 정확도·변형과 양산 차량은 미검증이다. AppViewModel의 stt=null은 유지하며 이 결과를 앱 음성 진행 활성화의 근거로 대신하지 않는다.
