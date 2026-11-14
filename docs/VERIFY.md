@@ -256,3 +256,16 @@ QA 신호원 fake·기어 P·글자 크기를 복구했다. 실제 SDK의 지원
 처음 완료 로그 직후 UI를 눌러 아직 없는 노드를 읽어 화면 대기를 추가했다. 이후 방향지시등 완료 화면 검사 실패는 캡처·dumpsys로 사각지대 카메라(ai.umos.car.evs)의 포커스 점유임을 확인했다. 화면에는 코스 완료가 보였으나 UIAutomator에는 카메라 노드만 있었다. 방향지시등을 Off로 돌리고 앱을 다시 선택한 실행에서 CRS-05·06까지 통과했다. 중간 adb 재연결도 있었으며 제품 판정 실패와 구분했다.
 
 원래 공조·전조등·방향지시등·창문·잠금 값과 QA fake 모드를 복구했다. 실제 release APK 설치·실차·전체 모델의 조작부 일치는 미검증이다. CRS-01/04는 직전 W-63 real SDK 결과가 있고 이번 권한 이동은 debug의 최종 권한 집합을 바꾸지 않는다.
+
+
+# W-65 코스 조작·복귀 문구 정합성 검증
+
+검증일: 2026-11-15. JSON 형식·목표 토큰·판정은 유지하고 코스 문구 3곳만 수정했다.
+
+- [현대 공식 Lighting Control](https://ownersmanual.hyundai.com/full_webhelp/NE1a/2025/en_US/id4229c6bd123.html)은 AUTO가 주변 조도에 따라 전조등을 켜거나 끈다고 설명한다. AUTO를 OFF 보장 대안에서 제외하고 현재 VC/SDK에서 확인한 미등 위치를 안내한다. 사용자 특정 차종의 실내 배치를 확인했다는 뜻은 아니다.
+- `gradlew.bat :engine:test :app:testDebugUnitTest :app:assembleDebug` 성공. 자산 변경으로 engine:test가 UP-TO-DATE가 아닌 실제 실행됐으며 187개 실패0. app 10개는 기존 결과 재사용. 단순 문구를 복제하는 새 테스트는 추가하지 않았다.
+- 실제 Pleos/emulator-5554/com.firstride.qa39/real의 CRS-03에서 Off→Position→LowBeam으로 3단계에 도달했다. 새 미등 위치 안내와 다시 듣기의 동일 SDK doSpeak를 확인하고 Position으로 완료했다.
+- 같은 APK의 CRS-05에서 Off→BlinkLeft→BlinkRight로 완료했다. 실제 오른쪽 점등·카메라가 보이는 캡처의 원상 복귀 목록은 이제 "방향지시등"이며 이전의 "왼쪽 방향지시등" 오표시가 없다(captures/w65-right-restore.png, 로컬 픽셀 확인).
+- 방향지시등을 Off로 직접 되돌린 후 목록에서 사라지는 것을 UI 노드로 확인하고 홈으로 돌아왔다. 원래 등·방향지시등 값과 QA fake 모드를 복구했다.
+
+좌우 목표·단계 안내·완료 문구는 그대로다. 실차 AUTO 조건·차종별 스위치 형상은 미검증이다.

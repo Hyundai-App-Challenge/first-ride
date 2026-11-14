@@ -12,7 +12,7 @@
       "locatorAsset": "assets/light_switch.webp"
     },
     "CRS-03-S3": {
-      "instruction": "같은 돌림 스위치를 미등 표시나 Auto 표시로 돌려 전조등을 꺼 주세요.",
+      "instruction": "같은 돌림 스위치를 미등 표시에 맞춰 전조등을 꺼 주세요.",
       "locatorText": "운전대 왼쪽 레버 끝에 있는 둥근 돌림 스위치예요.",
       "locatorAsset": "assets/light_switch.webp"
     }

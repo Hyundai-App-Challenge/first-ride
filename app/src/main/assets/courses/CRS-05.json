@@ -7,7 +7,7 @@
     {
       "id": "CRS-05-S1",
       "action": [
-        { "signal": "turnSignal.state", "equals": "LEFT", "label": "왼쪽 방향지시등" }
+        { "signal": "turnSignal.state", "equals": "LEFT", "label": "방향지시등" }
       ],
       "misoperations": [
         {
@@ -21,7 +21,7 @@
     {
       "id": "CRS-05-S2",
       "action": [
-        { "signal": "turnSignal.state", "equals": "RIGHT", "label": "오른쪽 방향지시등" }
+        { "signal": "turnSignal.state", "equals": "RIGHT", "label": "방향지시등" }
       ],
       "misoperations": [
         {
