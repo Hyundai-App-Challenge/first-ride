@@ -2,8 +2,10 @@ package com.firstride.app.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -13,6 +15,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,12 +39,27 @@ import kotlinx.coroutines.delay
  * 기록 지우기는 실행 전에 한 번 확인받고 되돌릴 수 없음을 알린다(POL-S-5, AC-11-3).
  */
 @Composable
-fun SettingsScreen(catalog: StartupResult.Ready?, onClear: (onDone: () -> Unit) -> Unit, onBack: () -> Unit) {
+fun SettingsScreen(
+    catalog: StartupResult.Ready?,
+    voiceEnabled: Boolean,
+    onVoiceEnabled: (Boolean) -> Unit,
+    onClear: (onDone: () -> Unit) -> Unit,
+    onBack: () -> Unit,
+) {
     var confirming by remember { mutableStateOf(false) }
     var cleared by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().padding(32.dp).verticalScroll(rememberScrollState())) {
         TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
         Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(24.dp))
+        // 음성 켜기/끄기(POL-V-6). 설정값이라 기록 지우기로 지워지지 않는다(POL-S-5).
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.settings_voice), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.settings_voice_hint), style = MaterialTheme.typography.bodyMedium)
+            }
+            Switch(checked = voiceEnabled, onCheckedChange = onVoiceEnabled)
+        }
         Spacer(Modifier.height(24.dp))
         OutlinedButton(onClick = { confirming = true }) { Text(stringResource(R.string.clear_records)) }
         if (cleared) Text(stringResource(R.string.clear_records_done))

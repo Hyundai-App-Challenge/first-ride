@@ -31,6 +31,8 @@ fun AppNavigation(vm: AppViewModel, texts: Map<String, ModelCourseText>, loadIma
     val drive by vm.driveState.collectAsStateWithLifecycle()
     val runner by vm.runner.collectAsStateWithLifecycle()
     val lastAttempt by vm.lastAttempt.collectAsStateWithLifecycle()
+    val voiceStatus by vm.voiceStatus.collectAsStateWithLifecycle()
+    val voiceEnabled by vm.voiceEnabled.collectAsStateWithLifecycle()
     val visible = catalog?.visible.orEmpty()
 
     // 주행 제한은 화면 전환보다 위에 있다(POL-D-2).
@@ -41,7 +43,7 @@ fun AppNavigation(vm: AppViewModel, texts: Map<String, ModelCourseText>, loadIma
     when (val s = screen) {
         Screen.Start -> StartScreen()
         Screen.ConnectionError -> ConnectionErrorScreen(onRetry = vm::start)
-        Screen.Settings -> SettingsScreen(catalog, onClear = vm::clearRecords, onBack = { vm.navigate(Screen.Home) })
+        Screen.Settings -> SettingsScreen(catalog, voiceEnabled, onVoiceEnabled = vm::setVoiceEnabled, onClear = vm::clearRecords, onBack = { vm.navigate(Screen.Home) })
         Screen.Home -> HomeScreen(
             courses = visible,
             progress = vm.container.progress,
@@ -58,6 +60,7 @@ fun AppNavigation(vm: AppViewModel, texts: Map<String, ModelCourseText>, loadIma
             loadImage = loadImage,
             onSpeak = vm::say,
             onQuit = vm::quitCourse,
+            voice = voiceStatus,
         )
         is Screen.CourseDone -> WithCourse(visible, s.courseId, onMissing = { vm.navigate(Screen.Home) }) { course ->
             CourseDoneScreen(
