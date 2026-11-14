@@ -32,19 +32,25 @@ class VehicleSignalSourceTest {
         var readError: Exception? = null
         var answerReads = true
         var registerThrows: Exception? = null
+        var answerArea = true
+        var pendingArea: ((String) -> Unit)? = null
+        val calls = mutableListOf<String>()
         val listeners = mutableListOf<Pair<ValueCallback, ErrorCallback>>()
         var pendingRead: ValueCallback? = null
 
-        fun binding(subscribable: Boolean = true) = SignalBinding(
+        fun binding(subscribable: Boolean = true) = SignalBinding<String>(
             support = { ok, err -> readError?.let(err) ?: ok(Support.SUPPORTED) },
-            read = { ok, err ->
+            area = { ok, _ -> calls += "area"; if (answerArea) ok("driver") else pendingArea = ok },
+            read = { _, ok, err ->
+                calls += "read"
                 when {
                     readError != null -> err(readError!!)
                     answerReads -> ok(value)
                     else -> pendingRead = ok
                 }
             },
-            subscribe = if (!subscribable) null else { ok, err ->
+            subscribe = if (!subscribable) null else { _: String, ok: ValueCallback, err: ErrorCallback ->
+                calls += "register"
                 registerThrows?.let { throw it }
                 val l = ok to err
                 listeners += l
@@ -101,6 +107,37 @@ class VehicleSignalSourceTest {
     }
 
     @Test
+    fun `계약 3 첫 조회를 기다리는 중에 취소해도 리스너가 남지 않는다`() = runTest {
+        val sdk = FakeSdk().apply { answerReads = false }
+        val job = launch { source(sdk).observe(id).collect {} }
+        runCurrent()
+        assertEquals(1, sdk.listeners.size)
+        job.cancel()
+        runCurrent()
+        assertEquals(0, sdk.listeners.size)
+    }
+
+    @Test
+    fun `계약 3 영역을 고르는 중에 취소하면 등록하지 않는다`() = runTest {
+        val sdk = FakeSdk().apply { value = on; answerArea = false }
+        val job = launch { source(sdk).observe(id).collect {} }
+        runCurrent()
+        job.cancel()
+        runCurrent()
+        sdk.pendingArea!!("driver")      // 취소 뒤에 늦게 온 응답
+        runCurrent()
+        assertEquals(0, sdk.listeners.size)
+        assertEquals(listOf("area"), sdk.calls)
+    }
+
+    @Test
+    fun `구독은 영역 확정 뒤 등록하고 그 다음에 조회한다`() = runTest {
+        val sdk = FakeSdk().apply { value = on }
+        source(sdk).observe(id).first()
+        assertEquals(listOf("area", "register", "read"), sdk.calls)
+    }
+
+    @Test
     fun `계약 4 구독이 없는 신호는 폴링으로 값의 변화를 낸다`() = runTest {
         val sdk = FakeSdk().apply { value = off }
         val src = source(sdk, subscribable = false)
@@ -149,7 +186,11 @@ class VehicleSignalSourceTest {
 
     @Test
     fun `조회 콜백이 두 번 와도 첫 값만 쓴다`() = runTest {
-        val binding = SignalBinding(support = { ok, _ -> ok(Support.SUPPORTED) }, read = { ok, _ -> ok(on); ok(off) })
+        val binding = SignalBinding<String>(
+            support = { ok, _ -> ok(Support.SUPPORTED) },
+            area = { ok, _ -> ok("driver") },
+            read = { _, ok, _ -> ok(on); ok(off) },
+        )
         val src = VehicleSignalSource(mapOf(id to binding), StandardTestDispatcher(testScheduler))
         assertEquals(Reading.Value(on), src.read(id))
     }
