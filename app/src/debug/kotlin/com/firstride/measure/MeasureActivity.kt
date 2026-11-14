@@ -39,7 +39,8 @@ import kotlinx.coroutines.launch
 class MeasureActivity : ComponentActivity() {
     private lateinit var connection: VehicleConnection
     private lateinit var raw: Vehicle
-    private lateinit var tts: PleosTts
+    private val tts by lazy { PleosTts(this) }
+    private var ttsUsed = false
     private val rows = mutableStateMapOf<String, String>()
     private val rawLog = mutableStateListOf<String>()
     private val window = mutableStateOf("")
@@ -82,9 +83,9 @@ class MeasureActivity : ComponentActivity() {
         }
         // 같은 신호를 두 번째로 수집해도 둘 다 값을 받는가(리스너를 여러 개 유지하는가)
         lifecycleScope.launch { s.observe(Signals.HVAC_AC).collect { log("observe#2 hvac.ac $it") } }
-        tts = PleosTts(this)
         // T8: 한국어 ON_DEVICE 재생, 끝까지 기다림, 중지. am start에 --ez tts true를 주면 실행한다.
         if (intent.getBooleanExtra("tts", false)) lifecycleScope.launch {
+            ttsUsed = true
             val t = SystemClock.elapsedRealtime()
             log("tts speak#1 start")
             log("tts speak#1 -> ${tts.speak("앞유리 김서림 제거 버튼을 누르세요.")} after ${SystemClock.elapsedRealtime() - t}ms")
@@ -98,6 +99,8 @@ class MeasureActivity : ComponentActivity() {
             delay(800)
             log("tts cancel speak#3 coroutine at +800ms")
             job3.cancel()
+            val t4 = SystemClock.elapsedRealtime()
+            log("tts speak#4 -> ${tts.speak("다음 단계예요.")} after ${SystemClock.elapsedRealtime() - t4}ms")
         }
         runCatching { rawProbe() }.onFailure { log("raw probe threw ${it.javaClass.name}: ${it.message}") }
     }
@@ -151,7 +154,7 @@ class MeasureActivity : ComponentActivity() {
 
     override fun onDestroy() {
         connection.close()
-        tts.release()
+        if (ttsUsed) tts.release()
         raw.release()
         super.onDestroy()
     }
