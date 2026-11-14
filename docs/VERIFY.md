@@ -156,3 +156,15 @@
 - 제상·AC를 원래 OFF로 되돌리면 목록이 사라지고 홈 복귀 후 구독 active=0이었다. 검증 후 VC 시작 값과 QA fake 모드를 복구했다.
 
 준비 중 SDK 미응답·취소는 단위 테스트로 주입했다. 실제 SDK 지연 장애와 실차는 미검증이다.
+
+
+# W-58 위치 그림 전환 상태 검증
+
+검증일: 2026-11-15. UI/UX의 상태 일치 원칙에 따라 그림 경로가 달라지면 이미지 상태를 새로 만든다. 자산과 배치는 유지한다.
+
+- QA에만 loadImage 8초 지연을 임시로 넣고 실제 Pleos/VC의 CRS-01 WAITING→내기 순환 CORRECTION을 실행했다. 수정 전 새 그림 로딩 중 이미지 노드가 1개 남았고, 캡처에서도 제상 그림이 교정 문구 아래에 표시됐다.
+- 수정 후 같은 지연에서 로딩 중 이미지 노드는 0개였다. 이전 제상 그림이 사라지고 문구는 유지됐다. 로딩 완료 후 내기 순환 강조 그림과 노드 1개를 확인했다.
+- 임시 지연을 제거한 뒤 CourseTexts.kt diff가 없음을 확인했다. `gradlew.bat :app:testDebugUnitTest :app:assembleDebug` 통과(app 10개, 실패 0). Compose key 동작을 복제한 단위 테스트는 추가하지 않았다.
+- 최종 APK를 다시 설치해 fake 차량 신호에서 CRS-01 정상 그림 표시와 CRS-04 누락 그림의 위치 문구 안내를 확인하고 그만하기로 홈 복귀했다. 실제 TTS SDK는 그대로 사용한다.
+
+지연 검증 캡처는 로컬 captures/w58-red-during-load.png, w58-green-during-load.png, w58-green-loaded.png에 있다. 지연 probe와 캡처는 커밋하지 않는다. 실제 실내 자산 교체·기준 차종 확정은 별도다.
