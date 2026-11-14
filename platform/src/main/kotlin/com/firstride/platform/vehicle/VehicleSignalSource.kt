@@ -38,6 +38,7 @@ internal class VehicleSignalSource(
     private val sdkDispatcher: CoroutineDispatcher,
     private val pollIntervalMillis: Long = POLL_INTERVAL_MILLIS,
     private val callTimeoutMillis: Long = CALL_TIMEOUT_MILLIS,
+    private val capabilityTimeoutMillis: Long = CAPABILITY_TIMEOUT_MILLIS,
 ) : SignalSource {
 
     @Suppress("UNCHECKED_CAST")
@@ -45,7 +46,7 @@ internal class VehicleSignalSource(
 
     override suspend fun support(id: SignalId): Support {
         val b = bindings[id] ?: return Support.UNSUPPORTED
-        return withTimeoutOrNull(callTimeoutMillis) {
+        return withTimeoutOrNull(capabilityTimeoutMillis) {
             callSdk(onThrow = { it.toSupport() }) { done -> b.support(done) { e -> done(e.toSupport()) } }
         } ?: Support.UNKNOWN
     }
@@ -109,7 +110,7 @@ internal class VehicleSignalSource(
 
     override suspend fun range(id: SignalId): IntRange? {
         val r = bindings[id]?.range ?: return null
-        return withTimeoutOrNull(callTimeoutMillis) { callSdk(onThrow = { null }) { done -> r(done) { done(null) } } }
+        return withTimeoutOrNull(capabilityTimeoutMillis) { callSdk(onThrow = { null }) { done -> r(done) { done(null) } } }
     }
 
     private sealed interface AreaResult {
@@ -144,8 +145,13 @@ internal class VehicleSignalSource(
     companion object {
         /** 구독이 없는 신호의 폴링 간격 [가정]. */
         const val POLL_INTERVAL_MILLIS = 500L
-        /** 폴링 한 번, 지원 여부, 범위 조회의 시간 제한. 초기 상태 확인 시간(POL-J-19, 3초)과 같게 둔다. */
+        /** 폴링 한 번의 시간 제한. 초기 상태 확인 시간(POL-J-19, 3초)과 같게 둔다. */
         const val CALL_TIMEOUT_MILLIS = 3_000L
+        /**
+         * 지원 여부·범위 조회의 시간 제한. 앱 시작 직후에는 SDK가 차량 서비스에 붙는 동안 첫 응답이 2~4초 걸려
+         * 3초로는 연결 오류로 잘못 갈 수 있었다(11-14 실측). 홈 표시 10초 안(AC-01-1)에 들도록 8초.
+         */
+        const val CAPABILITY_TIMEOUT_MILLIS = 8_000L
     }
 }
 

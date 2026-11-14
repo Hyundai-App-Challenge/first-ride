@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # CRS-01 수용 기준(AC-CRS01-1~4, 2b, 2c)을 에뮬레이터에서 차례로 확인한다(W-18, L3).
 # debug 빌드 + 차량 SDK(tools/signals.sh real)가 설치돼 있어야 한다. 판정 상태는 logcat FR-TRACE에서 읽는다.
-# 코스 시작은 홈에서 코스 이름을 누른다(START_TEXT로 바꿀 수 있다).
+# 코스 시작은 홈에서 코스 이름을 누르고, 코스 소개(SCR-03)가 나오면 시작 버튼을 누른다(START_TEXT, INTRO_START로 바꿀 수 있다).
 #
 #   tools/check-crs01.sh
 set -uo pipefail
 cd "$(dirname "$0")/.."
 A=tools/adb.sh
 START_TEXT="${START_TEXT:-김서림 제거}"
+INTRO_START="${INTRO_START:-시작하기}"
 fail=0
 
 tools/vc.sh keepalive 600 &   # VC 세션이 쉬면 VC가 자기 값을 다시 내보내 시작 상태가 바뀐다
@@ -30,7 +31,11 @@ scenario() {  # scenario <이름> <시작 VC 값들>
   $A logcat -c
   $A shell am start -n com.firstride/.MainActivity >/dev/null
   for _ in $(seq 1 20); do $A logcat -d -s FR-TRACE:D | grep -q 'screen Home' && break; sleep 0.5; done
-  tools/tap.sh "$START_TEXT" >/dev/null || { echo "  FAIL 코스를 시작하지 못했다"; fail=1; return; }
+  tools/tap.sh "$START_TEXT" >/dev/null || { echo "  FAIL 코스를 고르지 못했다"; fail=1; return; }
+  sleep 1
+  if $A logcat -d -s FR-TRACE:D | grep -q 'screen CourseIntro'; then
+    tools/tap.sh "$INTRO_START" >/dev/null || { echo "  FAIL 코스 소개에서 시작하지 못했다"; fail=1; return; }
+  fi
   sleep 4
 }
 
