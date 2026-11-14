@@ -143,3 +143,16 @@
 - 캡처로 안내 문구와 단계·버튼이 함께 보이는 것을 확인했다. 화면 배치와 off 필드 의미를 유지해 동료 디자인의 MicButton 활성화 조건과 호환한다.
 
 이 실행은 실제 차량 신호 판정·사람의 발화 검증을 대신하지 않는다. 앱의 stt=null은 유지한다.
+
+
+# W-57 시작 전 값 조회 실습 범위 검증
+
+검증일: 2026-11-15.
+
+- 신규 CourseRunnerTest 3개: 기준 조회 전 단계/구독 없음, 준비 취소의 모든 읽기 정리와 재개 시 미확인 기준 유지, 3초 준비 미응답 후 단계 시작. 기존 재개·완료 후 재시도 테스트 2개에 기준 보존/재취득 확인을 추가했다.
+- 실행기에서 아직 기준을 읽지 않는 상태에서는 5개 조건이 실패했다. 구현 후에는 테스트의 단계 초기 조회를 준비 조회로 오인한 호출 수와 fixture 기본 풍량(3)을 잘못 가정한 두 기대값을 바로잡았다. 준비 조회와 단계 재조회는 모두 유지한다.
+- `gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug` 통과(engine 185, platform 41, app 10개, 실패 0). 내레이션 테스트도 기준 준비 이후에 단계를 읽는다.
+- 실제 Pleos Connect v2.1.0 / emulator-5554 / com.firstride.qa39 / real: CRS-01에서 제상·AC OFF로 시작 → 제상 ON PARTIAL → 백그라운드에서 AC ON → 재개 ALREADY_AT_TARGET → 제상 OFF/ON으로 새 조작 후 완료. 완료 목록에 원래 OFF였던 제상과 AC가 모두 표시됐다.
+- 제상·AC를 원래 OFF로 되돌리면 목록이 사라지고 홈 복귀 후 구독 active=0이었다. 검증 후 VC 시작 값과 QA fake 모드를 복구했다.
+
+준비 중 SDK 미응답·취소는 단위 테스트로 주입했다. 실제 SDK 지연 장애와 실차는 미검증이다.

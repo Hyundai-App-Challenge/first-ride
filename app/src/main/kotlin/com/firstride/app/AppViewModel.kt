@@ -15,12 +15,9 @@ import com.firstride.engine.judge.FollowUpRunner
 import com.firstride.engine.judge.RestoreReport
 import com.firstride.engine.judge.StepRunner
 import com.firstride.engine.judge.observeRestore
-import com.firstride.engine.judge.snapshotBefore
 import com.firstride.engine.progress.CourseResult
 import com.firstride.engine.judge.Phase
 import com.firstride.engine.judge.stepView
-import com.firstride.engine.signal.SignalId
-import com.firstride.engine.signal.SignalValue
 import com.firstride.engine.voice.SttPort
 import com.firstride.engine.voice.VoiceAction
 import com.firstride.engine.voice.VoiceCoordinator
@@ -28,9 +25,7 @@ import com.firstride.engine.voice.applyVoiceAction
 import com.firstride.engine.voice.narrateCourse
 import com.firstride.engine.voice.narrateStep
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,9 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -89,8 +82,8 @@ class AppViewModel(
     private val _followUp = MutableStateFlow<FollowUpRunner?>(null)
     val followUp: StateFlow<FollowUpRunner?> = _followUp.asStateFlow()
 
-    /** 방금 시작한 코스의 시작 전 값(FR-14). 메모리에만 두고 저장하지 않는다. */
-    private var restoreBefore: Pair<String, Deferred<Map<SignalId, SignalValue>>>? = null
+    /** 원상 복귀 기준을 소유한 방금 시도(FR-14). 메모리에만 두고 저장하지 않는다. */
+    private var restoreAttempt: Pair<String, CourseRunner>? = null
 
     /** 음성 설정(SCR-10). 저장된 값을 읽기 전에는 켜짐으로 본다. */
     val voiceEnabled: StateFlow<Boolean> = container.settings.voiceEnabled.stateIn(viewModelScope, SharingStarted.Eagerly, true)
@@ -167,7 +160,7 @@ class AppViewModel(
         cancelPractice()
         clearInterruption()
         val runner = CourseRunner(course, container.signals, container.progress)
-        restoreBefore = course.id to viewModelScope.async { snapshotBefore(course, container.signals) }
+        restoreAttempt = course.id to runner
         launchCourse(course, runner)
     }
 
@@ -236,9 +229,9 @@ class AppViewModel(
 
     /** SCR-05의 원상 복귀 목록(FR-14). 방금 한 코스가 아니면 null 하나만 낸다. 수집을 멈추면 구독이 풀린다. */
     fun restoreReport(course: CourseDefinition): Flow<RestoreReport?> {
-        val (id, before) = restoreBefore ?: return flowOf(null)
+        val (id, attempt) = restoreAttempt ?: return flowOf(null)
         if (id != course.id) return flowOf(null)
-        return flow { emitAll(observeRestore(course, before.await(), container.signals)) }
+        return observeRestore(course, attempt.initialValues, container.signals)
     }
 
     /** "다시 듣기"와 "어디 있어요". 3초 안의 같은 문구도 사용자가 요청한 것은 읽는다(POL-V-3의 예외). */
