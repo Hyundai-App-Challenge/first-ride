@@ -29,6 +29,7 @@ import androidx.lifecycle.lifecycleScope
 import com.firstride.engine.signal.Signals
 import com.firstride.platform.drive.CarDrivingGate
 import com.firstride.platform.vehicle.VehicleConnection
+import com.firstride.platform.voice.PleosStt
 import com.firstride.platform.voice.PleosTts
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -105,6 +106,19 @@ class MeasureActivity : ComponentActivity() {
             job3.cancel()
             val t4 = SystemClock.elapsedRealtime()
             log("tts speak#4 -> ${tts.speak("다음 단계예요.")} after ${SystemClock.elapsedRealtime() - t4}ms")
+        }
+        // T9(일부): STT 초기화, 한 번 듣기의 결과와 걸린 시간, 듣는 중 취소. am start에 --ez stt true
+        if (intent.getBooleanExtra("stt", false)) lifecycleScope.launch {
+            val stt = PleosStt(this@MeasureActivity)
+            repeat(2) { i ->
+                val t = SystemClock.elapsedRealtime()
+                log("stt listen#${i + 1} -> ${stt.listenOnce()} after ${SystemClock.elapsedRealtime() - t}ms")
+            }
+            val job = launch { log("stt listen#3 -> ${stt.listenOnce()}") }
+            delay(1500)
+            log("stt cancel listen#3 at +1500ms")
+            job.cancel()
+            stt.release()
         }
         runCatching { rawProbe() }.onFailure { log("raw probe threw ${it.javaClass.name}: ${it.message}") }
     }
