@@ -29,7 +29,10 @@ class VehicleConnection(context: Context) : AutoCloseable {
     }
 
     val signals: SignalSource = vehicle?.let {
-        VehicleSignalSource(bindings = hvacBindings(it.getHVAC()), sdkDispatcher = Dispatchers.Main)
+        VehicleSignalSource(
+            bindings = hvacBindings(it.getHVAC()) + lightBindings(it.getLight()) + wiperBindings(it.getWiper()),
+            sdkDispatcher = Dispatchers.Main,
+        )
     } ?: Disconnected
 
     override fun close() {

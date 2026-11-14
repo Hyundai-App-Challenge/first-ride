@@ -126,6 +126,14 @@ class MeasureActivity : ComponentActivity() {
         val errCode: (String) -> (Exception) -> Unit = { what -> { e -> log("raw $what error ${e.javaClass.name} code=${errorCodeOf(e)} msg=${e.message}") } }
         hvac.getHvacAcState(driver, { log("raw get ac(driver) $it") }, errCode("get ac(driver)"))
         hvac.getHvacAcState(all, { log("raw get ac(all) $it") }, errCode("get ac(all)"))
+        // T6·T12: 와이퍼 상태(구독 가능, ON/OFF)와 스위치(조회만)를 함께 본다
+        val w = raw.getWiper()
+        w.checkWiperStateCapabilities({ c, m -> log("raw cap wiperState ${c.accessType} ${m.map { it.key.values.toList() to it.value }}") }, err)
+        w.checkWiperSwitchCapabilities({ c, m -> log("raw cap wiperSwitch ${c.accessType} ${m.map { it.key.values.toList() to it.value }}") }, err)
+        w.registerWiperState(front, object : ai.pleos.playground.vehicle.listener.WiperStateListener {
+            override fun onWiperStateUpdated(p0: ai.pleos.playground.vehicle.constant.control.WiperState?) = log("raw cb wiperState $p0")
+            override fun onFailed(p0: Exception) = err(p0)
+        })
         log("raw register ac/recirc/defroster (no read)")
         hvac.registerHvacAcState(all, object : HvacAcStateListener {
             override fun onHvacAcStateUpdated(p0: Boolean?) = log("raw cb ac $p0 thread=${Thread.currentThread().name}")

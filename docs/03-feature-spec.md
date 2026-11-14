@@ -460,7 +460,7 @@
 - 주간주행등·비상등은 다루지 않는다(SDK 메서드 미확인).
 - 신호: `getCurrentTailLampLightState`/`registerTailLampLightState`, `getCurrentLowBeamLightState`/`registerLowBeamLightState`
 - AC-CRS03-1: 하향등이 켜진 채로 S2를 시작하면 `ALREADY_AT_TARGET`이 된다(2차 PT 시연 장면).
-- AC-CRS03-2: VC의 외부등 모드를 Low beam으로 바꿨을 때 미등과 하향등 상태가 함께 바뀌어도 S1·S2가 각각 올바르게 판정된다 **[실측: 모드와 상태의 관계]**.
+- AC-CRS03-2: VC의 외부등 모드를 Low beam으로 바꿨을 때 미등과 하향등 상태가 함께 바뀌어도 S1·S2가 각각 올바르게 판정된다 (실측 T12: Low beam 모드는 미등과 하향등을 함께 켠다).
 
 ### CRS-04. 와이퍼 — Must · 11-15 ○
 
@@ -469,7 +469,7 @@
 | S1 | 와이퍼 켜기 (Low) | 와이퍼 Off → Low |
 | S2 | 와이퍼 끄기 | 와이퍼 → Off |
 
-- AC-CRS04-1: S1에서 High나 Auto로 바꾸면 완료가 아니라 "한 단계 낮은 Low로 맞춰 보세요" 안내가 나온다(오조작 규칙) **[실측: 와이퍼 상태 값 목록]**.
+- AC-CRS04-1: S1에서 High나 Auto로 바꾸면 완료가 아니라 "한 단계 낮은 Low로 맞춰 보세요" 안내가 나온다(오조작 규칙) (실측 T6: VC의 Low/High/Auto/Off가 토큰 `LOW`/`HIGH`/`AUTO`/`OFF`로 온다. 그 밖의 단(간헐 등)은 완료도 오조작도 아니다).
 
 ### CRS-05. 방향지시등 — Should · 11-15 ○
 
