@@ -11,7 +11,8 @@
 | 5 | [정책서](05-policy.md) | 이런 상황에서는 어떻게 처리하는가 | 초안 v0.1 |
 | 6 | [기술 설계](06-tech-design.md) | 어떤 구조로 만드는가. 실측으로 무엇을 확정하는가 | 초안 v0.1 |
 | 7 | [개발 계획](07-dev-plan.md) | 2인이 MVP까지 무엇을 어떤 순서로 누가 만드는가 | 초안 v0.1 |
-| 8 | [와이어프레임 (Figma)](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=0-1) | 각 화면이 어떻게 생겼는가 | 초안 v0.1 · 프레임 크기는 가정 |
+| 8 | [디자인 값](08-design-tokens.md) | 색·글자·간격·컴포넌트·배치를 어떤 값으로 그리는가 | 초안 v0.1 |
+| 9 | [와이어프레임 (Figma)](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=0-1) | 각 화면이 어떻게 생겼는가 | 초안 v0.1 · 프레임 크기 실측 반영(841·1682×1210) |
 
 ## 참고 자료 (`reference/`)
 
