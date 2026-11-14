@@ -46,10 +46,14 @@ class StepRunner(
     fun skip() { events.trySend(StepEvent.Skip) }
     fun retry() { events.trySend(StepEvent.Retry) }
 
+    /** 완료(DONE)한 단계를 자동 진행 시간을 기다리지 않고 끝낸다. 완료가 아니면 아무 일도 하지 않는다(건너뜀으로 기록되지 않는다). */
+    fun advance() { if (_state.value.phase == Phase.DONE) events.close() }
+
     /** 단계가 끝날 때까지 돌고 마지막 상태(DONE 또는 SKIPPED)를 돌려준다. DONE은 자동 진행 시간만큼 기다린 뒤다. */
     suspend fun run(): Phase = coroutineScope {
         var attempt: Job? = null
         var hint: Job? = null
+        var auto: Job? = null
         var hintShown = false
         fun begin() {
             attempt?.cancel()
@@ -80,7 +84,7 @@ class StepRunner(
                     Phase.UNVERIFIABLE -> attempt?.cancel()
                     Phase.DONE -> {
                         attempt?.cancel()
-                        launch { delay(config.autoAdvance); events.close() }
+                        auto = launch { delay(config.autoAdvance); events.close() }
                     }
                     Phase.SKIPPED -> {
                         attempt?.cancel()
@@ -93,6 +97,7 @@ class StepRunner(
         } finally {
             attempt?.cancel()
             hint?.cancel()
+            auto?.cancel()      // advance()로 일찍 끝났을 때 남은 대기를 버린다
         }
     }
 
