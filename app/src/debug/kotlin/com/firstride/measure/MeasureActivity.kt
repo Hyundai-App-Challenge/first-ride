@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import com.firstride.engine.signal.Signals
 import com.firstride.platform.vehicle.VehicleConnection
+import com.firstride.platform.voice.PleosTts
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -37,6 +39,8 @@ import kotlinx.coroutines.launch
 class MeasureActivity : ComponentActivity() {
     private lateinit var connection: VehicleConnection
     private lateinit var raw: Vehicle
+    private val tts by lazy { PleosTts(this) }
+    private var ttsUsed = false
     private val rows = mutableStateMapOf<String, String>()
     private val rawLog = mutableStateListOf<String>()
     private val window = mutableStateOf("")
@@ -79,6 +83,25 @@ class MeasureActivity : ComponentActivity() {
         }
         // 같은 신호를 두 번째로 수집해도 둘 다 값을 받는가(리스너를 여러 개 유지하는가)
         lifecycleScope.launch { s.observe(Signals.HVAC_AC).collect { log("observe#2 hvac.ac $it") } }
+        // T8: 한국어 ON_DEVICE 재생, 끝까지 기다림, 중지. am start에 --ez tts true를 주면 실행한다.
+        if (intent.getBooleanExtra("tts", false)) lifecycleScope.launch {
+            ttsUsed = true
+            val t = SystemClock.elapsedRealtime()
+            log("tts speak#1 start")
+            log("tts speak#1 -> ${tts.speak("앞유리 김서림 제거 버튼을 누르세요.")} after ${SystemClock.elapsedRealtime() - t}ms")
+            val job = launch { log("tts speak#2 -> ${tts.speak("공조 조작부 왼쪽 위, 부채꼴 모양 버튼이에요. 버튼을 한 번 누르면 켜져요.")}") }
+            delay(1000)
+            log("tts stop() at +1000ms")
+            tts.stop()
+            job.join()
+            val t3 = SystemClock.elapsedRealtime()
+            val job3 = launch { log("tts speak#3 -> ${tts.speak("좋아요. 김서림 제거가 켜졌어요. 다음 단계로 넘어갈게요.")} after ${SystemClock.elapsedRealtime() - t3}ms") }
+            delay(800)
+            log("tts cancel speak#3 coroutine at +800ms")
+            job3.cancel()
+            val t4 = SystemClock.elapsedRealtime()
+            log("tts speak#4 -> ${tts.speak("다음 단계예요.")} after ${SystemClock.elapsedRealtime() - t4}ms")
+        }
         runCatching { rawProbe() }.onFailure { log("raw probe threw ${it.javaClass.name}: ${it.message}") }
     }
 
@@ -131,6 +154,7 @@ class MeasureActivity : ComponentActivity() {
 
     override fun onDestroy() {
         connection.close()
+        if (ttsUsed) tts.release()
         raw.release()
         super.onDestroy()
     }
