@@ -96,6 +96,7 @@ class AppViewModel(
     /** 실제 발화 정확도 게이트(T9) 통과 전까지 연결하지 않는다. null이면 TTS 안내와 터치만 쓴다. */
     private val stt: SttPort? = null
 
+    private var inForeground = false
     private var startup: Job? = null
     private var practice: Job? = null
     private val practiceMutex = Mutex()
@@ -114,8 +115,10 @@ class AppViewModel(
         start()
         viewModelScope.launch {
             driveState.collect {
+                Variant.trace("drive $it foreground=$inForeground")
                 if (it != DriveState.RESTRICTED) {
-                    onForeground()
+                    // 정차 복귀는 화면 복귀가 아니다. 숨은 시작 조회는 켜지 않는다.
+                    shouldAskResume()
                     return@collect
                 }
                 interrupt()
@@ -141,6 +144,7 @@ class AppViewModel(
     fun start() {
         if (startup?.isActive == true) return
         _screen.value = Screen.Start
+        if (!inForeground) return
         startup = viewModelScope.launch {
             driveState.first { it == DriveState.PARKED }
             container.tts
@@ -259,10 +263,17 @@ class AppViewModel(
     }
 
     /** 앱이 백그라운드로 갔다(Activity onStop). 창 크기 변경에는 오지 않는다(실측 T14). */
-    fun onBackground() = interrupt()
+    fun onBackground() {
+        inForeground = false
+        startup?.cancel()
+        startup = null
+        interrupt()
+    }
 
-    /** 기한 경과는 복귀 시 확인하고, 재개 버튼에서도 다시 확인한다. */
+    /** 화면 복귀 때만 미완료 시작 확인을 이어 간다. 기한은 재개 버튼에서도 다시 확인한다. */
     fun onForeground() {
+        inForeground = true
+        if (_screen.value == Screen.Start) start()
         if (_interruption.value != null) shouldAskResume()
     }
 

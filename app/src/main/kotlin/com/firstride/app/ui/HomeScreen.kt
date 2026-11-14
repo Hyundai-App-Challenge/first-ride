@@ -22,6 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.firstride.R
 import com.firstride.engine.course.CourseDefinition
 import com.firstride.engine.progress.CourseResult
@@ -48,11 +51,23 @@ fun HomeScreen(
     signals: SignalSource,
     onLightsCheck: () -> Unit,
 ) {
-    val results by produceState<Map<String, CourseResult>?>(null, courses) {
-        value = courses.associate { it.id to progress.result(it.id) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    // 완료한 조회는 같은 화면에서 유지하고, 도중에 멈춘 조회만 복귀 후 다시 한다.
+    val results by produceState<Map<String, CourseResult>?>(null, courses, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            if (value == null) value = courses.associate { it.id to progress.result(it.id) }
+        }
     }
     // 소등 확인은 세 등이 모두 미지원이면 버튼을 숨긴다(AC-10-6).
-    val lightsAvailable by produceState(false, signals) { value = supportedLights(signals).isNotEmpty() }
+    val lightsAvailable by produceState(false, signals, lifecycle) {
+        var checked = false
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            if (!checked) {
+                value = supportedLights(signals).isNotEmpty()
+                checked = true
+            }
+        }
+    }
     Column(Modifier.fillMaxSize().padding(32.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.home_title), style = MaterialTheme.typography.headlineMedium)
