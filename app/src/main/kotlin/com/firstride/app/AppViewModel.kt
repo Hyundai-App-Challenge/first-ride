@@ -6,9 +6,12 @@ import com.firstride.app.practice.Interruption
 import com.firstride.app.start.StartupResult
 import com.firstride.app.start.checkCourses
 import com.firstride.engine.course.CourseDefinition
+import com.firstride.engine.course.ModelCourseText
 import com.firstride.engine.drive.DriveState
 import com.firstride.engine.judge.CourseRunner
 import com.firstride.engine.progress.CourseResult
+import com.firstride.engine.voice.VoiceCoordinator
+import com.firstride.engine.voice.narrateCourse
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +31,8 @@ import kotlinx.coroutines.launch
  */
 class AppViewModel(
     val container: AppContainer,
+    /** 코스 ID별 차종 문구. 단계 상태를 읽어 줄 때 쓴다(FR-05). */
+    private val texts: Map<String, ModelCourseText>,
     private val courses: () -> List<CourseDefinition>,
 ) : ViewModel() {
     private val _screen = MutableStateFlow<Screen>(Screen.Start)
@@ -54,6 +59,9 @@ class AppViewModel(
 
     private var startup: Job? = null
     private var practice: Job? = null
+
+    /** 지금 실습의 음성 조율기. 실습이 아니면 null. */
+    private var voice: VoiceCoordinator? = null
 
     init {
         viewModelScope.launch { _screen.collect { Variant.trace("screen $it") } }
@@ -106,14 +114,25 @@ class AppViewModel(
         _runner.value = runner
         _screen.value = Screen.Step(course.id)
         practice = viewModelScope.launch {
+            val voice = VoiceCoordinator(container.tts).also { this@AppViewModel.voice = it }
+            val speaking = launch { voice.run() }
+            val narrating = launch { narrateCourse(runner, course, texts[course.id], voice) }
             val tracer = launch {
                 runner.step.collectLatest { p -> p?.runner?.state?.collect { Variant.trace("step ${p.index + 1}/${p.total} ${it.phase}") } }
             }
             _lastAttempt.value = runner.run()
             tracer.cancel()
+            narrating.cancel()
+            speaking.cancel()
+            this@AppViewModel.voice = null
             _runner.value = null
             _screen.value = Screen.CourseDone(course.id)
         }
+    }
+
+    /** "다시 듣기"와 "어디 있어요". 3초 안의 같은 문구도 사용자가 요청한 것은 읽는다(POL-V-3의 예외). */
+    fun say(text: String) {
+        voice?.announce(text, force = true)
     }
 
     /** "그만하기": 기록하지 않고 홈으로(POL-R-6). 이어서 하기도 묻지 않는다. */
@@ -154,6 +173,7 @@ class AppViewModel(
         val wasRunning = practice != null
         practice?.cancel()
         practice = null
+        voice = null
         _runner.value = null
         if (wasRunning) container.tts.stop()
     }
