@@ -772,7 +772,7 @@ fun observe(): Flow<Reading> = callbackFlow {
 | T14 | 세로형↔가로형 전환 시 Activity 생명주기 | 창 크기를 바꾸며 `onStop`, `onConfigurationChanged` 로그를 본다 | `onStop`이 불리면 창 크기 변경을 백그라운드 전환과 구분하는 방법이 필요하다(POL-E-8) | |
 | T15 | 주간·야간 전환이 앱에 전달되는가 | 시스템 테마를 바꾸고 `uiMode`를 본다 | 전달 안 되면 Pleos 테마 API를 찾는다 | |
 | T16 | 최대 제상의 지원 여부, 풍량·목표 온도의 지원 범위. 최대 제상을 켜면 다른 공조 값이 함께 바뀌는가 | `checkHvacMaxDefrostCapabilities`, `checkHvacFanSpeedCapabilities`, `checkHvacTemperatureCapabilities`의 결과 기록. VC에 최대 제상 카드가 있는지 확인 | 최대 제상을 에뮬레이터에서 바꿀 수 없으면 F1은 시연에서 빼고 F2·F3으로 시연한다. 범위를 읽지 못하면 `AtMax` 대신 "지금보다 올리기"로 바꾼다 | |
-| T17 | `:app`의 `debugImplementation(testFixtures(project(":engine")))`가 되는가. release APK에 가짜 구현의 클래스가 없는가 | W-02에서 debug·release를 모두 빌드하고, release APK의 클래스 목록에서 `FakeSignalSource`를 찾아본다 | 안 되면 가짜 구현을 `:engine-fakes` 모듈로 뗀다 | |
+| T17 | `:app`의 `debugImplementation(testFixtures(project(":engine")))`가 되는가. release APK에 가짜 구현의 클래스가 없는가 | W-02에서 debug·release를 모두 빌드하고, release APK의 클래스 목록에서 `FakeSignalSource`를 찾아본다 | 안 되면 가짜 구현을 `:engine-fakes` 모듈로 뗀다 | **통과 (11-14, B).** AGP 8.8.2에서 `debugImplementation(testFixtures(project(":engine")))`로 빌드된다. dexdump로 보면 debug APK에는 `FakeSignalSource` 참조가 있고 release APK에는 없다. `:engine-fakes`는 만들지 않는다 |
 | G1 | 앱 창의 크기(dp, px) | FormFactorConsole 또는 실측 앱에서 창 크기 출력 | 와이어프레임 프레임과 세로·가로 기준 값을 확정 | |
 
 ### 13-4. 순서
@@ -792,10 +792,10 @@ fun observe(): Flow<Reading> = callbackFlow {
 | 항목 | 설계 |
 |---|---|
 | 산출물 | release APK. Gradle 작업으로 `apk/팀명_앱이름_release.apk`에 복사한다(공모전 규정) **[미정 D1: 앱 이름]** |
-| 서명 | release 키스토어는 저장소에 넣지 않는다. 비밀값은 저장소에서 빼도 된다고 공지에 있다 |
+| 서명 | release 키스토어는 저장소에 넣지 않는다. 비밀값은 저장소에서 빼도 된다고 공지에 있다. `app/build.gradle.kts`가 `~/.android-keys/keystore.properties`(또는 `-Pfirstride.signing=<경로>`)를 읽는다. 파일이 없으면 서명하지 않은 release APK가 나온다 |
 | 난독화 | 끈다 **[가정]**. Pleos SDK의 유지 규칙이 문서에 없어 축소하다 깨질 위험을 피한다 |
 | debug 전용 코드 | 가짜 신호원은 `engine/src/testFixtures/`에, 개발자 패널과 가짜 신호원을 고르는 조립 코드는 `app/src/debug/`에만 둔다 |
-| Gradle wrapper | W-02에서 추가한다. 그 뒤로 모든 명령은 `./gradlew`로 쓴다 |
+| Gradle wrapper | W-02에서 추가했다(Gradle 8.10.2). 모든 명령은 `./gradlew`로 쓴다 |
 | README 필수 항목 | 앱 이름·한 줄 소개, 실행 방법, 테스트 환경·필요한 설정, 사용한 에뮬레이터 버전과 화면 규격, APK 위치 |
 | README에 더 적을 것 | 알려진 한계(POL-J-23~25, 실측에서 뺀 코스·기능), 테스트 실행 방법(`./gradlew :engine:test`), 모듈 구조 |
 | 제출 절차 | 접수 메일에 저장소 주소와 최종 커밋 해시 기재, 11-16까지 공개 전환 |
