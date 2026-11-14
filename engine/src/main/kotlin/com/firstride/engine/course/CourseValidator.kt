@@ -56,13 +56,14 @@ object CourseValidator {
         (expected - text.steps.keys).forEach { err(Kind.MISSING_TEXT, it, "차종별 파일에 안내 문구와 위치 안내가 없다") }
         (text.steps.keys - expected.toSet()).forEach { err(Kind.MISMATCH, it, "코스 정의에 없는 단계·조치다") }
 
-        fun checkText(id: String, signals: Set<SignalId>, misoIds: Set<String>) {
+        fun checkText(id: String, signals: Set<SignalId>, misoIds: Set<String>, relative: Boolean = false) {
             val t = text.steps[id] ?: return
             if (t.instruction.isBlank()) err(Kind.MISSING_TEXT, id, "instruction이 비었다")
             if (t.locatorText.isBlank()) err(Kind.MISSING_TEXT, id, "locatorText가 비었다")
             checkAsset(t.locatorAsset, id, assetExists, ::err)
             checkLength(t.instruction, "$id.instruction", ::err)
             checkLength(t.locatorText, "$id.locatorText", ::err)
+            if (relative && t.instructionAtLimit.isNullOrBlank()) err(Kind.MISSING_TEXT, id, "상대 목표 단계인데 instructionAtLimit이 없다(POL-J-10)")
             t.instructionAtLimit?.let { checkLength(it, "$id.instructionAtLimit", ::err) }
             t.conditionLocators.forEach { (sig, path) ->
                 if (sig !in signals) err(Kind.MISMATCH, id, "conditionLocators의 '${sig.key}'는 이 단계의 조건이 아니다")
@@ -74,7 +75,10 @@ object CourseValidator {
             }
         }
         course.steps.forEach { s ->
-            checkText(s.id, (s.action + s.hold).map { it.signal }.toSet(), s.misoperations.map { it.id }.toSet())
+            checkText(
+                s.id, (s.action + s.hold).map { it.signal }.toSet(), s.misoperations.map { it.id }.toSet(),
+                relative = (s.action + s.hold).any { it.target is Target.Relative && it.signal in Signals.numeric },
+            )
         }
         course.followUps.forEach { f -> checkText(f.id, setOf(f.condition.signal), emptySet()) }
         return errors

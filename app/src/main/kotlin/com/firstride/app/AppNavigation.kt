@@ -47,6 +47,8 @@ fun AppNavigation(vm: AppViewModel, texts: Map<String, ModelCourseText>, loadIma
             progress = vm.container.progress,
             onOpen = { vm.navigate(Screen.CourseIntro(it.id)) },
             onSettings = { vm.navigate(Screen.Settings) },
+            signals = vm.container.signals,
+            onLightsCheck = { vm.navigate(Screen.LightsCheck) },
         )
         is Screen.CourseIntro -> WithCourse(visible, s.courseId, onMissing = { vm.navigate(Screen.Home) }) { course ->
             CourseIntroScreen(course, onStart = { vm.startCourse(course) }, onBack = { vm.navigate(Screen.Home) })
