@@ -78,3 +78,14 @@
 신규 회귀 테스트는 4개다. 첫 실행의 동시 구독 테스트가 fixture의 3개 신호를 1개로 오인해 실패했으며, fixture를 확인하고 신규 테스트의 기대값만 3개로 수정해 통과했다. 실차·프로세스 강제 종료 후 복구는 이번 범위가 아니다. 재개 정보는 의도적으로 영속 저장하지 않는다.
 
 최종 `gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug` 통과(engine 168, platform 41, app 8, 실패 0). 캡처 뒤 남은 상태를 전제로 한 재실행은 확인창을 찾지 못해 중단했다. 앱 설치·신호원 지정부터 다시 실행한 재개→완료→건너뜀 보존→홈 복귀 전체 경로는 모두 통과했다.
+
+
+# W-52 STT 실측 원문 비기록 검증
+
+검증일: 2026-11-15. 개발용 측정 로그도 POL-V-14/POL-S-2를 따르도록 결과 종류만 표시한다.
+
+- debug 전용 회귀 테스트 2개 통과. 임의 문장·줄바꿈·빈 문자열의 결과는 항상 `Text`, 무음/오류는 `Silence`/`Error`다.
+- `gradlew.bat :app:testDebugUnitTest :app:assembleDebug :app:compileReleaseKotlin` 통과(app 10개, 실패 0). 새 요약 함수와 테스트는 debug 소스에만 있다.
+- Pleos Connect v2.1.0 / emulator-5554 / com.firstride.qa39에서 실제 STT 측정: #1 Error 15990ms, #2 Error 15007ms, #3 1500ms 후 취소와 cleanup 확인. 인식 원문을 출력하는 두 호출 모두 요약 함수를 사용한다.
+
+실제 발화의 Text 경로는 이번 실행에서 만들지 않았으며, 임의 원문 비노출은 단위 테스트로 확인했다. 외부 SDK가 자체적으로 남기는 로그의 변경·비저장 보장과 세 어휘 정확도 검증은 이 수정에 포함하지 않는다.
