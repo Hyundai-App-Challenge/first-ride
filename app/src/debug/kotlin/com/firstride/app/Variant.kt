@@ -31,6 +31,11 @@ internal object Variant {
         else FakeSignalSource().also { fake = it }
         return CountingSignalSource(source)
     }
+
+    /** 실습 흐름(화면, 단계 상태)을 logcat FR-TRACE로 남긴다. tools/check-crs01.sh가 읽는다. */
+    fun trace(message: String) {
+        Log.d("FR-TRACE", message)
+    }
 }
 
 private class CountingSignalSource(private val inner: SignalSource) : SignalSource by inner {
