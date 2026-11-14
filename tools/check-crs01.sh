@@ -6,6 +6,7 @@
 #   tools/check-crs01.sh
 set -uo pipefail
 cd "$(dirname "$0")/.."
+source tools/app-target.sh
 A=tools/adb.sh
 START_TEXT="${START_TEXT:-김서림 제거}"
 INTRO_START="${INTRO_START:-시작하기}"
@@ -27,9 +28,9 @@ scenario() {  # scenario <이름> <시작 VC 값들>
   tools/vc.sh set gear gear=Park >/dev/null
   tools/vc.sh set hvac $2 >/dev/null
   sleep 1
-  $A shell am force-stop com.firstride
+  $A shell am force-stop "$app_id"
   $A logcat -c
-  $A shell am start -n com.firstride/.MainActivity >/dev/null
+  $A shell am start -n "$component" >/dev/null
   for _ in $(seq 1 20); do $A logcat -d -s FR-TRACE:D | grep -q 'screen Home' && break; sleep 0.5; done
   tools/tap.sh "$START_TEXT" >/dev/null || { echo "  FAIL 코스를 고르지 못했다"; fail=1; return; }
   sleep 1
