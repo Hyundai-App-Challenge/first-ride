@@ -25,6 +25,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        vm.onForeground()
+    }
+
     /** 백그라운드 전환. 창 크기·방향·주야간 변경에는 오지 않는다(configChanges, 실측 T14·T15). */
     override fun onStop() {
         super.onStop()

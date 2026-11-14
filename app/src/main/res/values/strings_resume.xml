@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="resume_title">실습을 이어서 할까요?</string>
+    <string name="resume_course_step">%1$s · %2$d/%3$d단계</string>
+    <string name="resume_description">차량 상태를 새로 확인하고 이어서 진행해요.</string>
+    <string name="resume_continue">이어서 하기</string>
+    <string name="resume_home">홈으로</string>
+</resources>
