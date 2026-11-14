@@ -120,6 +120,9 @@ interface SignalSource {
 
     /** 폴링으로 읽는 신호인지. 화면의 "확인 중" 표시에만 쓴다. */
     fun isPolled(id: SignalId): Boolean
+
+    /** 숫자 신호의 지원 범위(checkXxxCapabilities의 AreaBounds). 범위를 모르면 null. */
+    suspend fun range(id: SignalId): IntRange?
 }
 ```
 
@@ -168,6 +171,8 @@ class FakeSignalSource : SignalSource {
 | `window.driverPosition` | 숫자 | CRS-06 |
 | `window.lock` | `ON` / `OFF` | CRS-06 |
 | `door.lock` | `LOCKED` / `UNLOCKED` | CRS-06 |
+| `hvac.maxDefrost` | `ON` / `OFF` | CRS-01 후속 조치 |
+| `hvac.temperature` | 숫자 (0.1℃ 단위의 정수. 22.5℃ → 225) | CRS-01 후속 조치 |
 
 값 이름은 설계상의 이름이다. SDK가 실제로 주는 값과의 대응은 어댑터가 맡고, 실측 T6으로 확정한다.
 
@@ -265,6 +270,7 @@ sealed interface StepEvent {
 sealed interface Target {
     data class Equals(val value: SignalValue) : Target                   // 값이 같음
     data class Relative(val direction: Direction) : Target               // 시작 값보다 커짐/작아짐 (POL-J-10)
+    data object AtMax : Target                                           // 지원 범위의 최댓값 (후속 조치용, 범위는 SignalSource.range)
     fun matches(current: SignalValue, initial: SignalValue?): Boolean
 }
 ```
@@ -298,6 +304,40 @@ interface ProgressStore {
 - 시도가 끝까지 가야 `record`를 부른다. "그만하기"는 부르지 않는다(POL-R-6).
 - 배지 판정은 `BadgeRule` 순수 함수다. 입력은 묶음의 보이는 코스와 각 코스의 결과다(POL-R-14, R-15).
 - 소요 시간, 시도 횟수는 모델에 필드가 없다(POL-R-9). 넣을 수 없게 하는 것이 정책을 지키는 가장 쉬운 방법이다.
+
+### 5-8. 후속 조치 실행기 (FR-16)
+
+판정 엔진을 그대로 쓴다. 새로 필요한 것은 **무엇을 다음 단계로 낼지 고르는 부분**뿐이다.
+
+```kotlin
+sealed interface FollowUpNext {
+    data class RestoreBase(val step: StepDefinition) : FollowUpNext   // 기본 조합이 어긋남 (POL-F-11)
+    data class Offer(val followUp: FollowUpDef) : FollowUpNext        // 아직 안 된 조치
+    data object Exhausted : FollowUpNext                              // 남은 조치 없음 (POL-F-7)
+}
+
+/** 순수 함수. 방금 읽은 값으로 다음에 할 일을 고른다. */
+fun chooseNext(
+    course: CourseDefinition,
+    readings: Map<SignalId, Reading>,
+    ranges: Map<SignalId, IntRange?>,
+    support: Map<SignalId, Support>,
+    alreadyOffered: Set<String>,          // 이번 안내에서 이미 낸 조치 (완료·건너뜀)
+): FollowUpNext
+```
+
+| 규칙 | 구현 | 정책 |
+|---|---|---|
+| 기본 조합 복구가 먼저 | 코스 마지막 단계의 목표 상태가 지금 값과 다르면 `RestoreBase` | POL-F-11 |
+| 이미 된 조치는 내지 않는다 | 목표가 지금 값과 맞으면 건너뛴다 | POL-F-4 |
+| 미지원 조치는 내지 않는다 | `support`가 `SUPPORTED`가 아니면 건너뛴다 | |
+| 고를 때마다 새로 읽는다 | `FollowUpRunner`가 `chooseNext`를 부르기 전에 매번 `read`한다 | POL-F-5 |
+| 조치의 완료는 신호로 | 고른 조치를 `StepDefinition`으로 바꿔 `StepRunner`에 넘긴다. `reduce`를 고치지 않는다 | POL-F-2 |
+| 답은 갈 길만 고른다 | "아직이요" → 다시 `chooseNext`. "걷혔어요" → 종료. 답을 저장하지 않는다 | POL-F-2, F-8 |
+
+`chooseNext`가 고른 조치는 시작 시점에 미충족임이 보장되므로 `StepRunner`에서 `ALREADY_AT_TARGET`이 나오지 않는다. 읽은 직후 사용자가 값을 바꿔 그 사이에 충족되면 엔진의 기존 규칙대로 `ALREADY_AT_TARGET`이 되고, 건너뛰면 다음 `chooseNext`에서 "이미 되어 있음"으로 빠진다.
+
+`FollowUpRunner`는 진행 기록 저장소를 받지 않는다. 코스 결과와 배지를 바꿀 수단이 없다(POL-F-8).
 
 ## 6. 코스 정의
 
@@ -359,6 +399,24 @@ app/src/main/assets/
   }
 }
 ```
+
+후속 조치가 있는 코스는 차종 공통 파일에 `followUps`를 순서대로 적는다(기능 명세서 FR-16).
+
+```json
+{
+  "id": "CRS-01",
+  "followUps": [
+    { "id": "CRS-01-F1", "condition": { "signal": "hvac.maxDefrost", "equals": "ON",  "label": "최대 제상" } },
+    { "id": "CRS-01-F2", "condition": { "signal": "hvac.fanSpeed",   "atMax": true,   "label": "풍량" } },
+    { "id": "CRS-01-F3", "condition": { "signal": "hvac.temperature", "atMax": true,  "label": "온도" } }
+  ],
+  "exhaustedText": "앱이 안내할 수 있는 조치는 모두 했어요. 김이 계속 남으면 취급설명서를 확인하거나 정비소에 문의하세요."
+}
+```
+
+- 기본 조합은 따로 적지 않는다. 코스 마지막 단계의 조작 조건과 유지 조건을 합친 것이 기본 조합이다.
+- 조치의 안내 문구와 위치 안내 자산은 차종별 파일에 단계와 같은 형식으로 적는다.
+- 검증에 더하는 것: 후속 조치의 신호가 4-3절에 있다, `atMax`는 숫자 신호에만 쓴다, 차종별 파일에 모든 조치의 문구와 자산이 있다.
 
 ### 6-3. 검증
 
@@ -549,19 +607,23 @@ GitHub Actions에서 `./gradlew :engine:test`를 돌린다. 에뮬레이터가 �
 | `hvac.frontDefroster` | `getHvac()` | `getHvacDefrosterState` | `registerHvacDefrosterState` | 메서드 확인. 전면·후면을 영역 인자로 나누는지 **[실측 T6]** |
 | `hvac.rearDefroster` | `getHvac()` | 위와 같음(영역이 다름) | 위와 같음 | 위와 같음 |
 | `hvac.ac` | `getHvac()` | `getHvacAcState` | `registerHvacAcState` | 메서드 확인 |
-| `hvac.recirculation` | `getHvac()` | 문서 확인 | 문서 확인 | 기능은 문서에 있음. 메서드 이름 미확인 |
+| `hvac.recirculation` | `getHvac()` | `getHvacRecirculationState` | `registerHvacRecirculationState` | 메서드 확인 (2026-11-14) |
 | `hvac.fanSpeed` | `getHvac()` | `getHvacFanSpeed` | `registerHvacFanSpeed` | 메서드 확인 |
 | `hvac.fanDirection` | `getHvac()` | `getHvacFanDirection` | **없음 → 폴링** | 구독 메서드가 목록에 없음 |
 | `light.lowBeam` | `getLight()` | `getCurrentLowBeamLightState` | `registerLowBeamLightState` | 메서드 확인 |
 | `light.tailLamp` | `getLight()` | `getCurrentTailLampLightState` | `registerTailLampLightState` | 메서드 확인 |
 | `light.cabin` | `getLight()` | `getCurrentCabinLightState` | `registerCabinLightState` | 메서드 확인 |
-| `wiper.state` | `getWiper()` | 문서 확인 | 문서 확인 | 상태 조회·구독 제공은 확인. 이름 미확인 |
-| `turnSignal.state` | `getTurnSignal()` | 문서 확인 | 문서 확인 | 위와 같음 |
-| `window.driverPosition` | `getWindow()` | 문서 확인 | 문서 확인 | 위와 같음. 영역 인자 사용 |
-| `window.lock` | `getWindow()` | 문서 확인 | 문서 확인 | 위와 같음 |
-| `door.lock` | `getDoor()` | 문서 확인 | 문서 확인 | 위와 같음 (`getCurrentDoorPosition`, `registerDoorPosition`은 가이드 예제에 있음) |
+| `wiper.state` | `getWiper()` | `getCurrentWiperState` | `registerWiperState` | 메서드 확인 (2026-11-14). 스위치 값은 `getCurrentWiperSwitch`로 따로 있음 |
+| `turnSignal.state` | `getTurnSignal()` | `getCurrentTurnSignalState` | `registerTurnSignalState` | 메서드 확인 (2026-11-14) |
+| `window.driverPosition` | `getWindow()` | `getCurrentWindowPosition` | `registerWindowPosition` | 메서드 확인 (2026-11-14). 영역 인자 사용 |
+| `window.lock` | `getWindow()` | `getCurrentWindowLockState` | `registerWindowLockState` | 메서드 확인 (2026-11-14) |
+| `door.lock` | `getDoor()` | `getDoorLockState` | `registerDoorLockState` | 메서드 확인 (2026-11-14) |
+| `hvac.maxDefrost` | `getHvac()` | `getHvacMaxDefrostState` | `registerHvacMaxDefrostState` | 메서드 확인 (2026-11-14). VC의 Climate 카드 목록에 최대 제상이 없어 에뮬레이터에서 값을 바꿀 수 있는지 **[실측 T16]** |
+| `hvac.temperature` | `getHvac()` | `getHvacTemperature` | `registerHvacTemperature` | 메서드 확인. 운전석·동승석 영역 인자 사용. VC 범위 16~30℃, 0.5℃ 단위 |
 
 도메인 객체를 얻는 메서드 이름(`getHvac()` 등)은 문서의 규칙(`getXxx()`)에 따른 것이고 `getDoor()`, `getDisplay()`, `getBrake()`만 예제로 확인했다.
+
+메서드 이름은 Pleos 문서 사이트맵의 API Reference 페이지 목록으로 확인했다(페이지 주소가 메서드 이름이다). 인자와 반환 타입은 본문을 열람하지 못했다.
 
 ### 10-3. 어댑터가 SDK 호출을 감싸는 방법
 
@@ -602,7 +664,7 @@ fun observe(): Flow<Reading> = callbackFlow {
 
 | SDK | 쓰는 방식 | 핵심 흐름에서의 역할 |
 |---|---|---|
-| Vehicle SDK | 4개 도메인 그룹(HVAC, Light·TurnSignal, Window·Wiper, Door)의 지원 여부 확인 → 조회 → 구독. 쓰기는 하지 않음 | 조작 결과의 판정. 이 앱의 핵심 가치 |
+| Vehicle SDK | 4개 도메인 그룹(HVAC, Light·TurnSignal, Window·Wiper, Door)의 지원 여부 확인 → 조회 → 구독. 쓰기는 하지 않음. 지원 범위(최솟값·최댓값)도 읽어 후속 조치의 목표로 씀 | 조작 결과의 판정. 이 앱의 핵심 가치 |
 | TextToSpeech SDK | 단계 안내, 상태 변화, 완료 확인을 읽음 | 손과 눈이 버튼에 가 있는 동안의 안내 |
 | SpeechToText SDK | 고정 어휘 3개로 단계 진행 | 화면을 만지지 않고 다음으로 |
 | (AAOS) CarUxRestrictionsManager | 주행 제한 감지 | 정차 전용 |
@@ -687,6 +749,7 @@ fun observe(): Flow<Reading> = callbackFlow {
 | T13 | Compose 화면이 에뮬레이터에서 정상 표시되는가 | 실측 앱을 Compose로 만든다 | 문제가 있으면 View로 바꾼다(`:app`만 영향) | |
 | T14 | 세로형↔가로형 전환 시 Activity 생명주기 | 창 크기를 바꾸며 `onStop`, `onConfigurationChanged` 로그를 본다 | `onStop`이 불리면 창 크기 변경을 백그라운드 전환과 구분하는 방법이 필요하다(POL-E-8) | |
 | T15 | 주간·야간 전환이 앱에 전달되는가 | 시스템 테마를 바꾸고 `uiMode`를 본다 | 전달 안 되면 Pleos 테마 API를 찾는다 | |
+| T16 | 최대 제상의 지원 여부, 풍량·목표 온도의 지원 범위. 최대 제상을 켜면 다른 공조 값이 함께 바뀌는가 | `checkHvacMaxDefrostCapabilities`, `checkHvacFanSpeedCapabilities`, `checkHvacTemperatureCapabilities`의 결과 기록. VC에 최대 제상 카드가 있는지 확인 | 최대 제상을 에뮬레이터에서 바꿀 수 없으면 F1은 시연에서 빼고 F2·F3으로 시연한다. 범위를 읽지 못하면 `AtMax` 대신 "지금보다 올리기"로 바꾼다 | |
 | G1 | 앱 창의 크기(dp, px) | FormFactorConsole 또는 실측 앱에서 창 크기 출력 | 와이어프레임 프레임과 세로·가로 기준 값을 확정 | |
 
 ### 13-4. 순서
@@ -727,7 +790,7 @@ fun observe(): Flow<Reading> = callbackFlow {
 
 | 위험 | 영향 | 대응 |
 |---|---|---|
-| 메서드 이름이 문서 확인 전인 신호가 6개다 | 어댑터 구현 지연 | 실측 앱을 만들 때 API Reference(IDE의 자동 완성)로 확정. 엔진은 영향 없음 |
+| 리스너 이름, 값의 타입과 enum은 API Reference 본문을 열람하지 못해 확인 전이다(메서드 이름 14개는 문서 사이트맵으로 모두 확인) | 어댑터 구현 지연 | 실측 앱을 만들 때 API Reference(IDE의 자동 완성)로 확정. 엔진은 영향 없음 |
 | VC 변경이 일부 도메인에서 콜백으로 오지 않는다 | 해당 코스 제외 | T3을 CRS-01 신호부터 본다. 폴링으로 대체 |
 | 에뮬레이터 장비가 한 대다 | 실측과 어댑터 작업이 한 사람에게 몰린다 | 가짜 신호원으로 나머지 작업을 분리 |
 | 에뮬레이터와 실차의 동작이 다르다 | 실서비스 품질 | 실차 확인 수단이 없다(공모전이 장비를 제공하지 않음). README와 기획서에 한계로 적는다 |
