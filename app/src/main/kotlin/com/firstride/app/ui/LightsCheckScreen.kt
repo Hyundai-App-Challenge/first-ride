@@ -22,6 +22,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.firstride.R
 import com.firstride.app.AppViewModel
 import com.firstride.app.Screen
@@ -32,6 +36,7 @@ import com.firstride.engine.check.checkLights
 import com.firstride.engine.check.supportedLights
 import com.firstride.engine.signal.SignalId
 import com.firstride.engine.signal.Signals
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.combine
 
 /**
@@ -42,16 +47,27 @@ import kotlinx.coroutines.flow.combine
 fun LightsCheckScreen(vm: AppViewModel) {
     val signals = vm.container.signals
     val tts = vm.container.tts
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val voiceEnabled by vm.voiceEnabled.collectAsStateWithLifecycle()
 
-    // null이면 아직 읽는 중. 지원되는 등만 구독한다(AC-10-6). 취소되면 구독이 해제된다.
-    val check by produceState<LightsCheck?>(null, signals) {
-        val lamps = supportedLights(signals)
-        if (lamps.isEmpty()) {
-            value = checkLights(emptyMap())
-            return@produceState
+    // 백그라운드에서는 구독을 해제하고, 복귀 때 현재 값을 새로 확인한다(POL-E-6).
+    val check by produceState<LightsCheck?>(null, signals, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            try {
+                val lamps = supportedLights(signals)
+                if (lamps.isEmpty()) {
+                    value = checkLights(emptyMap())
+                } else {
+                    combine(lamps.map { signals.observe(it) }) { readings -> checkLights(lamps.zip(readings.toList()).toMap()) }
+                        .collect { value = it }
+                }
+                // 관찰이 끝나도 확인 불가/미지원 결과는 STOP까지 표시한다.
+                awaitCancellation()
+            } finally {
+                // 복귀 전에 오래된 요약을 다시 읽지 않는다.
+                value = null
+            }
         }
-        combine(lamps.map { signals.observe(it) }) { readings -> checkLights(lamps.zip(readings.toList()).toMap()) }
-            .collect { value = it }
     }
 
     val loaded = check
@@ -64,8 +80,12 @@ fun LightsCheckScreen(vm: AppViewModel) {
         }
     }
 
-    // 요약이 바뀔 때만 읽는다. 바뀌면 앞의 것은 끊긴다. 음성이 실패해도 화면은 그대로다.
-    LaunchedEffect(summary) { if (summary != null) tts.speak(summary) }
+    // 설정과 생명주기를 함께 따른다. 요약 변경·백그라운드 전환은 이전 재생을 취소한다.
+    LaunchedEffect(summary, voiceEnabled, lifecycle) {
+        if (summary != null && voiceEnabled) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { tts.speak(summary) }
+        }
+    }
     DisposableEffect(Unit) { onDispose { tts.stop() } }
 
     Column(Modifier.fillMaxSize().padding(32.dp).verticalScroll(rememberScrollState())) {
