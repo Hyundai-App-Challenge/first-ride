@@ -1,0 +1,21 @@
+{
+  "courseId": "CRS-02",
+  "steps": {
+    "CRS-02-S1": {
+      "instruction": "공조 조작부의 직사각형 안에 물결선이 있는 뒷유리 열선 버튼을 눌러 주세요.",
+      "locatorText": "공조 조작부 아래쪽, 뒷유리 모양에 물결선이 그려진 버튼이에요.",
+      "locatorAsset": "assets/hvac_rear_defrost.webp"
+    },
+    "CRS-02-S2": {
+      "instruction": "공조 조작부의 풍량 올림 버튼(부채 모양, 화살표 위)을 한 번 눌러 주세요.",
+      "instructionAtLimit": "풍량이 이미 가장 세요. 풍량 내림 버튼(부채 모양, 화살표 아래)을 한 번 눌러 주세요.",
+      "locatorText": "공조 조작부 가운데, 부채 모양에 위·아래 화살표가 있는 버튼이에요.",
+      "locatorAsset": "assets/hvac_fan_speed.webp"
+    },
+    "CRS-02-S3": {
+      "instruction": "공조 조작부의 바람 방향 버튼을 눌러 앞유리 모양에 맞춰 주세요.",
+      "locatorText": "공조 조작부 가운데, 사람 모양에서 바람이 나오는 그림의 버튼이에요.",
+      "locatorAsset": "assets/hvac_fan_direction.webp"
+    }
+  }
+}

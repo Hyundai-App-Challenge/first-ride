@@ -1,8 +1,11 @@
 package com.firstride.engine.judge
 
+import com.firstride.engine.course.Direction
 import com.firstride.engine.course.StepDefinition
 import com.firstride.engine.course.Target
+import com.firstride.engine.signal.SignalId
 import com.firstride.engine.signal.SignalSource
+import com.firstride.engine.signal.SignalValue
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
@@ -37,7 +40,8 @@ class StepRunner(
     private val events = Channel<StepEvent>(Channel.UNLIMITED)
 
     private val signals = (step.action + step.hold).map { it.signal } + step.misoperations.map { it.signal }
-    private val maxSignals = (step.action + step.hold).filter { it.target == Target.AtMax }.map { it.signal }
+    // 지원 범위가 필요한 신호: AtMax의 최댓값, Relative의 끝값(POL-J-10).
+    private val rangeSignals = (step.action + step.hold).filter { it.target == Target.AtMax || it.target is Target.Relative }.map { it.signal }
 
     fun skip() { events.trySend(StepEvent.Skip) }
     fun retry() { events.trySend(StepEvent.Retry) }
@@ -59,6 +63,7 @@ class StepRunner(
                 var next = reduce(prev, e)
                 if (e is StepEvent.Prechecked && next != prev) {
                     next = next.copy(conditions = next.conditions.map { it.copy(polled = source.isPolled(it.def.signal)) })
+                    next = flipRelativeAtLimit(next, e.ranges)
                 }
                 if (e is StepEvent.Retry && prev.phase == Phase.UNVERIFIABLE) begin()
                 _state.value = next
@@ -91,6 +96,27 @@ class StepRunner(
         }
     }
 
+    /**
+     * POL-J-10: 상대 목표인데 시작 값이 이미 그 방향의 끝값이면(풍량이 최대인데 "올리기") 방향을 뒤집는다.
+     * 판정 규칙(reduce)은 그대로이고 상태의 목표만 바꾼다. 정의의 원래 목표에서 매번 다시 정하므로 다시 확인해도 겹치지 않는다.
+     * 화면은 원래 목표와 달라진 것을 보고 instructionAtLimit을 보여 준다([stepView]). 범위를 모르면 뒤집지 않는다.
+     */
+    private fun flipRelativeAtLimit(state: StepState, ranges: Map<SignalId, IntRange?>): StepState {
+        val originals = step.action + step.hold
+        return state.copy(conditions = state.conditions.mapIndexed { i, c ->
+            val orig = originals[i]
+            val t = orig.target
+            val initial = (c.initial as? SignalValue.Number)?.value
+            val range = ranges[orig.signal]
+            val atLimit = t is Target.Relative && initial != null && range != null &&
+                initial == (if (t.direction == Direction.UP) range.last else range.first)
+            val target = if (t is Target.Relative && atLimit) {
+                Target.Relative(if (t.direction == Direction.UP) Direction.DOWN else Direction.UP)
+            } else t
+            c.copy(def = orig.copy(target = target))
+        })
+    }
+
     /** 초기 상태 확인 → 구독. 취소되면 구독이 해제된다. */
     private suspend fun attemptOnce() = coroutineScope {
         val pre = precheck()
@@ -106,7 +132,7 @@ class StepRunner(
     private suspend fun precheck(): StepEvent = withTimeoutOrNull(config.precheckTimeout) {
         coroutineScope {
             val reads = signals.distinct().map { id -> async { id to source.read(id) } }
-            val ranges = maxSignals.distinct().map { id -> async { id to source.range(id) } }
+            val ranges = rangeSignals.distinct().map { id -> async { id to source.range(id) } }
             StepEvent.Prechecked(reads.awaitAll().toMap(), ranges.awaitAll().toMap())
         }
     } ?: StepEvent.PrecheckTimedOut

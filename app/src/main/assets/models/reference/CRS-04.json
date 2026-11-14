@@ -1,0 +1,19 @@
+{
+  "courseId": "CRS-04",
+  "steps": {
+    "CRS-04-S1": {
+      "instruction": "운전대 오른쪽 레버를 첫 번째 칸(Low)에 맞춰 와이퍼를 켜 주세요.",
+      "locatorText": "운전대 오른쪽에 있는 긴 레버예요.",
+      "locatorAsset": "assets/wiper_stalk.webp",
+      "misoperationLocators": {
+        "high": "assets/wiper_stalk.webp",
+        "auto": "assets/wiper_stalk.webp"
+      }
+    },
+    "CRS-04-S2": {
+      "instruction": "운전대 오른쪽 레버를 맨 처음 자리(Off)로 돌려 놓아 주세요.",
+      "locatorText": "운전대 오른쪽에 있는 긴 레버예요.",
+      "locatorAsset": "assets/wiper_stalk.webp"
+    }
+  }
+}

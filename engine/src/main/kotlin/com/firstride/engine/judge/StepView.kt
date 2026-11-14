@@ -59,7 +59,7 @@ fun stepView(state: StepState, step: StepDefinition?, text: StepText?): StepView
 
     val message: String? = when (state.phase) {
         Phase.PRECHECK -> PRECHECK_TEXT
-        Phase.WAITING -> text?.instruction
+        Phase.WAITING -> if (flippedAtLimit(state, step)) text?.instructionAtLimit ?: text?.instruction else text?.instruction
         Phase.ALREADY_AT_TARGET -> ALREADY_AT_TARGET_TEXT
         Phase.PARTIAL -> partialText(done.map { it.label }, unmet.map { it.label })
         Phase.CORRECTION -> state.correction?.correction
@@ -83,6 +83,12 @@ fun stepView(state: StepState, step: StepDefinition?, text: StepText?): StepView
         locatorAsset = asset,
         locatorText = text?.locatorText,
     )
+}
+
+/** 상대 목표의 방향이 시작 값 때문에 정의와 달라졌는가(StepRunner가 끝값에서 뒤집는다, POL-J-10). */
+private fun flippedAtLimit(state: StepState, step: StepDefinition?): Boolean {
+    val originals = step?.let { it.action + it.hold } ?: return false
+    return state.conditions.zip(originals).any { (c, o) -> c.def.target != o.target }
 }
 
 /** "앞유리 제상 확인. 에어컨이 남았어요." 충족된 것이 없으면 남은 것만 말한다. */
