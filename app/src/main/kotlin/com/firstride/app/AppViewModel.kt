@@ -52,7 +52,16 @@ class AppViewModel(
     init {
         start()
         viewModelScope.launch {
-            driveState.collect { if (it == DriveState.RESTRICTED) interrupt() }
+            driveState.collect {
+                if (it != DriveState.RESTRICTED) return@collect
+                interrupt()
+                // 시작 확인 중에 제한이 걸리면 읽기를 멈추고 풀릴 때까지 다시 기다린다(POL-P-1).
+                if (startup?.isActive == true) {
+                    startup?.cancel()
+                    startup = null
+                    start()
+                }
+            }
         }
     }
 
@@ -83,6 +92,7 @@ class AppViewModel(
 
     /** SCR-03의 "시작". 코스를 실습 범위 안에서 돌리고, 끝까지 가면 결과가 기록된 뒤 완료 화면으로 간다. */
     fun startCourse(course: CourseDefinition) {
+        if (driveState.value == DriveState.RESTRICTED) return
         cancelPractice()
         _interruption.value = null
         val runner = CourseRunner(course, container.signals, container.progress)
@@ -123,16 +133,18 @@ class AppViewModel(
     private fun interrupt() {
         val runner = _runner.value ?: return
         val courseId = (_screen.value as? Screen.Step)?.courseId ?: return
-        val stepIndex = runner.step.value?.index ?: 0
+        // 마지막 단계가 끝나 결과를 기록하는 중이면(step이 이미 비었다) 끝까지 두고 음성만 멈춘다.
+        val stepIndex = runner.step.value?.index ?: run { container.tts.stop(); return }
         cancelPractice()
         _interruption.value = Interruption(courseId, stepIndex, container.clock())
     }
 
     private fun cancelPractice() {
+        val wasRunning = practice != null
         practice?.cancel()
         practice = null
         _runner.value = null
-        container.tts.stop()
+        if (wasRunning) container.tts.stop()
     }
 
     /** SCR-10 기록 지우기. 확인은 화면이 받는다(AC-11-3). */
