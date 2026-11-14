@@ -21,7 +21,11 @@ import com.firstride.app.ui.FirstRideTheme
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels {
         viewModelFactory {
-            initializer { AppViewModel((application as FirstRideApp).container, CourseTexts.load(assets)) { CourseCatalog.load(assets) } }
+            initializer {
+                // ViewModel에 남는 코스 로더가 Activity를 붙잡지 않게 한다.
+                val app = application as FirstRideApp
+                AppViewModel(app.container, CourseTexts.load(app.assets)) { CourseCatalog.load(app.assets) }
+            }
         }
     }
 
