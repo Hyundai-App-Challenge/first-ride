@@ -1,8 +1,9 @@
 # 디자인 값 — 첫 탑승 조작 실습 (가칭)
 
-- 문서 상태: 초안 v0.1 (2026-11-14)
+- 문서 상태: 초안 v0.2 (2026-11-15, 색을 DESIGN.md로 옮김)
 - 관련 문서: [사용자 플로우](04-user-flow.md) · [정책서](05-policy.md) 10·11절 · [기술 설계](06-tech-design.md) 12절, 13-3절(G1·T14·T15) · [용어집](02-glossary.md)
 - Figma: [와이어프레임 v0.1](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=0-1) — 이 문서의 값은 그 파일의 변수(Variables)·텍스트 스타일·컴포넌트와 같다. 값을 바꿀 때는 두 곳을 함께 고친다.
+- **색은 [DESIGN.md](../DESIGN.md)가 정한다.** 이 문서는 글자·간격·크기·모서리·컴포넌트 규격·화면 배치를 정한다.
 - 이 문서가 사용자 플로우 9절이 가리키던 `reference/design-guide.md`(만들어지지 않음)를 대신한다.
 - 쓰는 사람: `Theme.kt`와 공통 컴포넌트(`Components.kt` 등)를 바꾸는 사람. 이 문서만 보고 Compose 코드를 쓸 수 있게 적었다.
 
@@ -15,85 +16,31 @@
 | 세로형 앱 창 (내비게이션과 나눠 쓸 때) | **841×1210 dp** | 실측 T14 |
 | 주간·야간 | 시스템을 따른다(`isSystemInDarkTheme()`). 앱에 테마 설정이 없다 | POL-U-3, 실측 T15 |
 | 움직임 | 진행 표시(스피너)와 누름 효과(95% 축소)뿐 | POL-U-5, 기술 설계 12절 |
-| 상태 표시 | 색 + 기호 + 문구. 색만으로 구분하지 않는다 | POL-U-4 |
+| 상태 표시 | 기호 + 문구가 먼저, 색은 보조. 색만으로 구분하지 않는다 | POL-U-4 |
 
 앱은 오른쪽 앱 창 안만 그린다. 창 바깥(왼쪽 차량 화면, 위 상태 표시줄, 아래 공조 바)은 플랫폼 영역이다.
 
 ## 1. 색
 
-Figma 컬렉션 `color`, 모드 `Light`·`Dark`. 대비는 아래 표의 글자/바탕 조합을 모두 계산해 확인했다(본문 4.5:1 이상, 테두리·기호 3:1 이상).
+**색의 기준은 [DESIGN.md](../DESIGN.md)다.** 변수 이름과 값(Light·Dark), Pleos 토큰과의 대응, 상태별·컴포넌트별 색, 대비 계산이 모두 거기에 있다. 이 문서에는 색 값을 다시 적지 않는다.
 
-### 1-1. 기본 색
+코드로 옮길 때의 자리만 여기에 둔다.
 
-| 이름 (Figma 변수) | Light | Dark | 쓰는 곳 | Material 3 `ColorScheme` |
-|---|---|---|---|---|
-| `color/bg/app` | `#F1F3F6` | `#121417` | 화면 바탕 | `background` |
-| `color/bg/surface` | `#FFFFFF` | `#1C1F24` | TopBar, CourseCard, SecondaryButton 바탕 | `surface`, **`surfaceContainerHighest`·`surfaceContainer`·`surfaceContainerLow`도 같은 값** (M3 `Card`의 기본 바탕이 `surfaceContainerHighest`라서) |
-| `color/bg/surface-variant` | `#E8EBF0` | `#262A31` | VoiceBar, 안내 상자(정차 안내 등) | `surfaceVariant` |
-| `color/bg/blocked` | `#E3E6EB` | `#2A2E35` | SCR-08 주행 중 차단 화면 전체 | (앱 색, `AppColors.blockedBg`) |
-| `color/text/primary` | `#16181C` | `#F1F3F6` | 본문, 제목 | `onSurface`, `onBackground` |
-| `color/text/secondary` | `#4A505A` | `#B4BAC4` | 보조 문구(예상 시간, 설명, 위치 문구), 단계 위치 1/3 | `onSurfaceVariant` |
-| `color/text/on-primary` | `#FFFFFF` | `#0A1F52` | PrimaryButton 글자 | `onPrimary` |
-| `color/text/disabled` | `#8A919C` | `#6E7580` | 비활성 버튼 글자 | (앱 색) |
-| `color/action/primary` | `#2350C8` | `#8FB0FF` | PrimaryButton 바탕, TextButton 글자, 대표 코스 강조, 진행 표시 | `primary` (`secondary`·`tertiary`도 같은 값) |
-| `color/action/primary-pressed` | `#1A3EA6` | `#B5CBFF` | PrimaryButton 누름 | (앱 색) |
-| `color/action/secondary-pressed` | `#E8ECF2` | `#2A2E35` | SecondaryButton·TextButton·CourseCard·ListRow 누름 바탕 | (앱 색) |
-| `color/action/disabled` | `#E3E6EB` | `#2A2E35` | 비활성 PrimaryButton 바탕 | (앱 색) |
-| `color/border/strong` | `#6B7380` | `#8A929E` | SecondaryButton 테두리, 상태 이름표(알약) 테두리 | `outline` |
-| `color/border/subtle` | `#DDE1E7` | `#343942` | 구분선(ConditionRow·ListRow 아래), 카드 테두리, Locator 판 테두리 | `outlineVariant` |
-| `color/error` | `#C62828` | `#FF8A80` | 기록 지우기 확인 등 되돌릴 수 없는 동작 | `error` (`onError`는 `#FFFFFF` / `#3B0909`) |
-| `color/locator/plate` | `#F6F7F9` | `#F6F7F9` | Locator 판 바탕. **위치 안내 그림의 바탕과 같은 색**이라 그림 가장자리가 보이지 않는다. 야간에도 바꾸지 않는다(1-4절) | (앱 색) |
-| `color/locator/ink` | `#2C3038` | `#2C3038` | 판 위에 앱이 직접 쓰는 글자(그림이 없을 때의 대체 문구). 그림의 조작부 색과 같다 | (앱 색) |
-| `color/locator/accent` | `#FF8A00` | `#FF8A00` | 참고용. 그림 안의 강조 고리 색. **앱 UI에는 쓰지 않는다** | — |
+| Figma 변수 | Compose |
+|---|---|
+| `bg/app` | `colorScheme.background` |
+| `bg/surface` | `colorScheme.surface`, `surfaceContainer`·`surfaceContainerLow`·`surfaceContainerHigh`·`surfaceContainerHighest`도 같은 값 (M3 `Card` 기본 바탕이 새어 나오지 않게) |
+| `bg/surface-variant` | `colorScheme.surfaceVariant` |
+| `text/primary` | `colorScheme.onSurface`, `onBackground` |
+| `text/secondary` | `colorScheme.onSurfaceVariant` |
+| `action/primary` | `colorScheme.primary` (`secondary`·`tertiary`도 같은 값) |
+| `text/on-primary` | `colorScheme.onPrimary` |
+| `border/subtle` | `colorScheme.outlineVariant`, `outline` |
+| `error` | `colorScheme.error`, `onError` = `status/on` |
+| 그 밖 (`bg/card`, `bg/blocked`, `text/tertiary`, `text/disabled`, `action/*-pressed`, `action/secondary`, `action/disabled`, `status/*`, `locator/*`) | `AppColors` (`LocalAppColors`) |
 
-Material 3 칸 가운데 위 표에 없는 것(`primaryContainer`, `inverseSurface` 등)은 쓰지 않는다. 기본값이 화면에 새어 나오지 않게 `lightColorScheme(...)`·`darkColorScheme(...)`에 `surfaceTint = Color.Transparent`를 준다(카드에 보라색 기운이 끼지 않게).
-
-### 1-2. 판정 상태 8개 (`StateBanner`)
-
-변수 이름: `color/status/<key>/bg`, `…/fg`, `…/icon`. 테두리 색은 `icon`과 같다. 이름표 문구는 용어집 2절의 상태 이름을 따른다.
-
-| 상태 | key | 이름표 | 기호 | bg (L / D) | fg 글자 (L / D) | icon 기호·테두리 (L / D) | 테두리 |
-|---|---|---|---|---|---|---|---|
-| `PRECHECK` | `precheck` | 확인 중 | 스피너 (원호, 유일한 움직임) | `#EEF0F3` / `#2A2E35` | `#3E4450` / `#D3D8E0` | `#3E4450` / `#D3D8E0` | 2dp 실선 |
-| `WAITING` | `waiting` | 기다리는 중 | 채운 원 안에 → | `#E7EEFF` / `#1B2A4D` | `#1D3F99` / `#B9CCFF` | `#2350C8` / `#8FB0FF` | 2dp 실선 |
-| `ALREADY_AT_TARGET` | `already` | 이미 되어 있음 | 채운 원 안에 ↻ (껐다 켜기) | `#DFF3F4` / `#123638` | `#0B5F69` / `#8FDCE2` | `#0B7C88` / `#5CC8D1` | 2dp 실선 |
-| `PARTIAL` | `partial` | 일부 됨 | 채운 원 안에 ◐ | `#E3F4E8` / `#173322` | `#1E6B3A` / `#9FE0B4` | `#1E7B43` / `#5CCB86` | 2dp 실선 |
-| `CORRECTION` | `correction` | 교정 | **삼각형** 안에 ! | `#FFF3C4` / `#3D3000` | `#6B4E00` / `#FFE08A` | `#8F6B00` / `#D9A800` | **3dp** 실선 |
-| `DONE` | `done` | 완료 | 흰 원 안에 ✓ | **`#1E7B43`** / `#7FD9A0` (꽉 찬 초록) | `#FFFFFF` / `#0B2E18` | `#FFFFFF` / `#0B2E18` | 없음 |
-| `UNVERIFIABLE` | `unverifiable` | 확인 불가 | **점선 원** 안에 ? | `#EFEAFB` / `#2B2147` | `#4B2E99` / `#CDBDFF` | `#6A4FC4` / `#9C86F0` | 2dp **점선** |
-| `SKIPPED` | `skipped` | 건너뜀 | 채운 원 안에 » | `#EEF0F3` / `#2A2E35` | `#4A505A` / `#B4BAC4` | `#6B7380` / `#8A929E` | 2dp 실선 |
-
-정한 이유:
-
-- **확인 불가와 미충족(기다리는 중)이 한눈에 다르다**(사용자 플로우 9절): 색(보라 ↔ 파랑), 기호(점선 원 ? ↔ 채운 원 →), 테두리(점선 ↔ 실선) 세 가지가 모두 다르다. 조건 줄에서도 같다(1-3절: 점선 원 ? ↔ 빈 회색 원).
-- **완료는 초록**, 일부 됨은 같은 초록 계열의 옅은 바탕. 완료만 바탕을 꽉 채워 멀리서도 구분된다.
-- **교정은 노랑(주의)**: 위치 안내 그림의 강조색 `#FF8A00`(주황, 색상각 약 32°)과 헷갈리지 않게 더 노란(약 45°) 어두운 색을 기호에만 쓰고, 바탕은 옅은 노랑이다. 기호 모양도 삼각형이라 그림의 둥근 강조 고리와 다르다.
-- 기호 바탕 위 기호 글자(→, ↻ …)의 색은 그 상태의 `bg`다(채운 원의 "구멍" 색).
-- DONE은 2초 뒤 자동으로 넘어가므로 이름표("완료")를 크게 키우지 않는다.
-
-### 1-3. 조건 표시 (`ConditionRow`)
-
-변수 `color/mark/*`는 위 상태 색을 가리키는 별칭(alias)이다.
-
-| Figma 변형 `Status=` | 코드 `ConditionStatus` | 표시 (44dp 원) | 기호 색 (변수) | 기본 문구 (`strings.xml`) | 문구 색 |
-|---|---|---|---|---|---|
-| `Met` | `MET` | 초록으로 채운 원 + ✓ (기호는 `bg/surface` 색) | `mark/met` = `status/partial/icon` | 확인됐어요 | `mark/met` |
-| `AlreadyMet` | `ALREADY_MET` | 테두리만 있는 원 + ✓ | `mark/already` = `status/already/icon` | 이미 맞아요 | `mark/already` |
-| `Unmet` | `UNMET` | 빈 회색 원(기호 없음) | `mark/unmet` = `text/secondary` | 아직이에요 | `text/secondary` |
-| `Toggle` | `TOGGLE_NEEDED` | 테두리 원 + ↻ | `mark/toggle` = `status/already/icon` | 껐다가 다시 켜 주세요 | `mark/toggle` |
-| `Unknown` | `UNKNOWN` | **점선** 원 + ? | `mark/unknown` = `status/unverifiable/icon` | 확인할 수 없어요 | `status/unverifiable/fg` |
-| `Polling` | (`view.polling == true`) | 24dp 스피너 (Figma에는 ⋯로 표시) | `mark/polling` = `text/secondary` | 확인 중 | `text/secondary` |
-| `Wrong` | (없음 — 7절) | 옅은 노랑으로 채운 원 + 노란 테두리 + ! | `mark/wrong` = `status/correction/icon` | 바꿔 주세요 | `status/correction/fg` |
-
-- 원 테두리 3dp. 지금 문구 앞의 글자 기호(`✓ `, `· `, `? `)는 원 안의 기호로 옮기고 문구에서는 뺀다(`strings.xml`의 `condition_*`에서 앞 기호 삭제).
-- 폴링 중이면서 상태가 따로 있는 경우(예: `UNMET` + 폴링)는 원 자리에 스피너, 문구는 "아직이에요 (확인 중)"처럼 지금 코드와 같이 붙인다.
-
-### 1-4. 위치 안내 그림과 어울리기
-
-- 그림(`app/src/main/assets/models/reference/assets/*.webp`)은 바탕 `#F6F7F9`, 조작부 `#2C3038`, 강조 `#FF8A00`로 그려져 있다.
-- 주간: 앱 바탕 `#F1F3F6` 위에 판(`locator/plate` `#F6F7F9`, 테두리 `border/subtle` 2dp, 모서리 24dp)을 두고 그 안에 그림을 `ContentScale.Fit`으로 넣는다. 판 색과 그림 바탕이 같아 그림의 네모 가장자리가 보이지 않는다. 앱 바탕은 판보다 한 단계 어두워 판이 구분된다.
-- **야간**: 그림이 밝은 바탕으로 그려져 있어 판을 어둡게 하면 그림 바탕만 밝은 네모로 뜬다. 그래서 **판을 야간에도 밝게(`#F6F7F9`) 둔다.** 대신 판 크기를 세로형 높이 340dp로 묶어 화면에서 밝은 면적이 커지지 않게 한다. 판 테두리(`border/subtle` Dark `#343942`)가 판과 어두운 바탕 사이를 부드럽게 한다. 야간용 그림(어두운 바탕 판)을 따로 그릴지는 7절.
-- 앱은 그림 위에 강조를 덧그리지 않는다. "어디 있어요"를 누르면 그림은 그대로이고 위치 문구를 읽는다(사용자 플로우 5절).
+- `lightColorScheme(...)`·`darkColorScheme(...)`에 `surfaceTint = Color.Transparent`를 주고 모든 칸을 채워 Material 기본 보라색이 나오지 않게 한다.
+- 글자에 `colorScheme.primary`를 쓰지 않는다. `primary`는 회색 버튼 바탕이다.
 
 ## 2. 글자
 
@@ -158,18 +105,18 @@ Compose: `object Space { val s = 8.dp … }`, `object Radius { val card = 24.dp 
 
 | 컴포넌트 (Figma 이름) | 지금 코드 | 크기·여백·모서리 | 색 변수 | 변형 | 기호·글자 |
 |---|---|---|---|---|---|
-| `PrimaryButton` | `BigButton(primary = true)` | 높이 88, 좌우 32, 모서리 20. 너비는 놓인 자리에 맞춤 | 바탕 `action/primary` / 누름 `action/primary-pressed` / 비활성 `action/disabled` + 글자 `text/disabled`. 글자 `text/on-primary` | `State=Default·Pressed·Disabled` | `label` |
-| `SecondaryButton` | `BigButton(primary = false)` | 위와 같음, 테두리 2dp | 바탕 `bg/surface`, 테두리 `border/strong`, 글자 `text/primary` / 누름 바탕 `action/secondary-pressed` / 비활성 테두리 `border/subtle` + 글자 `text/disabled` | 위와 같음 | `label` |
-| `TextButton` | Material `TextButton` (그만하기, 건너뛰기, "김이 잘 안 걷힐 때") | 높이 88(TopBar 안에서는 TopBar 높이), 좌우 32 | 글자 `action/primary` / 누름 바탕 `action/secondary-pressed` / 비활성 글자 `text/disabled` | 위와 같음 | `label` |
-| `TopBar` | `StepContent` 맨 위 `Row`(진행 위치 + 그만하기) 등 화면마다 따로 | 높이 96, 좌우 32, 아래 구분선(`border/subtle`) | 바탕 `bg/surface`, 선 `border/subtle`, 제목 `text/primary`, 오른쪽 `text/secondary` | 없음 | 왼쪽 뒤로·그만하기(`label`), 가운데 제목(`title`), 오른쪽 1/3(`body`) |
-| `CourseCard` | `HomeScreen.kt`의 `private fun CourseCard` | 높이 ≥ 76(실제 약 122), 안쪽 24, 모서리 24, 테두리 2dp | 바탕 `bg/surface`, 테두리 `border/subtle`, 이름 `text/primary`, 보조 `text/secondary` / 누름 바탕 `action/secondary-pressed`. 대표 코스(첫 실행)는 테두리 `action/primary` 2dp + 상태 알약에 "여기서 시작" | `State=Default·Pressed` | 이름 `title`, "약 1분 · 1단계" `caption`, 상태 알약(시작 전 / 완료 / 건너뜀 있음) `label-sm`·테두리 `border/strong`·모서리 full. 점수·백분율 없음 |
-| `ConditionRow` | `Components.kt`의 `ConditionRow` | 위아래 14, 간격 20, 아래 구분선(`border/subtle`) | 1-3절 | `Status=Unmet·Met·AlreadyMet·Toggle·Wrong·Unknown·Polling` | 표시 원 44, 이름 `row`, 상태 문구 `label-sm`(오른쪽 정렬). 터치 대상 아님 |
-| `ListRow` | 설정·소등 확인·SCR-11의 줄 (지금 화면마다 따로) | 높이 ≥ 76, 위아래 20, 아래 구분선(`border/subtle`) | 이름 `text/primary`, 설명 `text/secondary`, 선 `border/subtle` / 누름 바탕 `action/secondary-pressed` | `State=Default·Pressed` (누를 수 있는 줄만) | 이름 `row`, 설명 `caption`, 값 `body` |
-| `StateBanner` | 없음 (지금 `MessageBlock`이 문구만 그림) | 안쪽 24, 줄 간격 8, 모서리 24 | 1-2절 | `State=` 8개 + `head`(위 줄 보이기, 기본 켬) | 위 줄: 상태 기호 40dp + 이름표(`label-sm`). 제목 `title`, 설명 `body`(없으면 숨김). SCR-04 밖(SCR-06 켜진 등, SCR-11 마무리)에서는 `head = false`로 색만 빌려 쓴다 |
-| `VoiceBar` | `StepScreen.kt`의 `VoiceIndicator` | 높이 64, 좌우 24, 모서리 full | 바탕 `bg/surface-variant`, 글자 `text/primary`(듣는 중) · `text/secondary`(그 밖) | `Mode=Listening·Speaking·Off` | 점 20dp: 듣는 중 = 채운 `action/primary` 점, 재생 중 = 채운 회색 점, 꺼짐 = 빈 원. 점은 깜박이지 않는다. 글자 `label-sm`. 터치 대상 아님(마이크 버튼은 7절) |
-| `Locator` | `StepScreen.kt`의 `Locator` | 세로형 높이 340, 가로형 오른쪽 칸 전체 높이. 모서리 24, 테두리 2dp, 그림 `ContentScale.Fit` | 판 `locator/plate`, 테두리 `border/subtle`. 판 아래 위치 문구 `text/secondary` | 없음 | 그림이 없으면 판 안에 문구(`body`, `locator/ink`) |
+| `PrimaryButton` | `BigButton(primary = true)` | 높이 88, 좌우 32, 모서리 20. 너비는 놓인 자리에 맞춤 | DESIGN.md 3절 | `State=Default·Pressed·Disabled` | `label` |
+| `SecondaryButton` | `BigButton(primary = false)` | 위와 같음. 테두리 없음 | DESIGN.md 3절 | 위와 같음 | `label` |
+| `TextButton` | Material `TextButton` (그만하기, 건너뛰기, "김이 잘 안 걷힐 때") | 높이 88(TopBar 안에서는 TopBar 높이), 좌우 32 | DESIGN.md 3절 | 위와 같음 | `label` |
+| `TopBar` | `StepContent` 맨 위 `Row`(진행 위치 + 그만하기) 등 화면마다 따로 | 높이 96, 좌우 32, 아래 구분선(`border/subtle`) | DESIGN.md 3절 | 없음 | 왼쪽 뒤로·그만하기(`label`), 가운데 제목(`title`), 오른쪽 1/3(`body`) |
+| `CourseCard` | `HomeScreen.kt`의 `private fun CourseCard` | 높이 ≥ 76(실제 약 122), 안쪽 24, 모서리 24, 테두리 없음 | DESIGN.md 3절. 대표 코스(첫 실행)는 상태 알약에 "여기서 시작" | `State=Default·Pressed` | 이름 `title`, "약 1분 · 1단계" `caption`, 상태 알약(시작 전 / 완료 / 건너뜀 있음) `label-sm`·모서리 full·테두리 없음. 점수·백분율 없음 |
+| `ConditionRow` | `Components.kt`의 `ConditionRow` | 위아래 14, 간격 20, 아래 구분선(`border/subtle`) | DESIGN.md 3절 | `Status=Unmet·Met·AlreadyMet·Toggle·Wrong·Unknown·Polling` | 표시 원 44, 이름 `row`, 상태 문구 `label-sm`(오른쪽 정렬). 터치 대상 아님 |
+| `ListRow` | 설정·소등 확인·SCR-11의 줄 (지금 화면마다 따로) | 높이 ≥ 76, 위아래 20, 아래 구분선(`border/subtle`) | DESIGN.md 3절 | `State=Default·Pressed` (누를 수 있는 줄만) | 이름 `row`, 설명 `caption`, 값 `body` |
+| `StateBanner` | 없음 (지금 `MessageBlock`이 문구만 그림) | 안쪽 24, 줄 간격 8, 모서리 24, 테두리 없음 | DESIGN.md 3절 | `State=` 8개 + `head`(위 줄 보이기, 기본 켬) | 위 줄: 상태 기호 40dp + 이름표(`label-sm`). 제목 `title`, 설명 `body`(없으면 숨김). SCR-04 밖(SCR-06 켜진 등, SCR-11 마무리)에서는 `head = false`로 바탕만 빌려 쓴다 |
+| `VoiceBar` | `StepScreen.kt`의 `VoiceIndicator` | 높이 64, 좌우 24, 모서리 full | DESIGN.md 3절 | `Mode=Listening·Speaking·Off` | 점 20dp: 듣는 중 = 채운 점, 재생 중 = 옅은 채운 점, 꺼짐 = 빈 원. 점은 깜박이지 않는다. 글자 `label-sm`. 터치 대상 아님(마이크 버튼은 7절) |
+| `Locator` | `StepScreen.kt`의 `Locator` | 세로형 높이 340, 가로형 오른쪽 칸 전체 높이. 모서리 24, 테두리 없음, 그림 `ContentScale.Fit` | DESIGN.md 3절 | 없음 | 그림이 없으면 판 안에 문구(`body`, `locator/ink`) |
 
-진행 표시: `CircularProgressIndicator`(굵기 4dp) 색은 `action/primary`(SCR-01) 또는 `status/precheck/icon`(SCR-04 확인 중), 크기 32~40dp.
+진행 표시: `CircularProgressIndicator`(굵기 4dp), 색 `text/secondary`, 크기 32~40dp.
 
 기호 구현: Material Icons(Apache 2.0)로 그린다. → `Icons.AutoMirrored.Filled.ArrowForward`, ↻ `Icons.Filled.Autorenew`, ◐ `Icons.Filled.Contrast`, ! 삼각형 `Icons.Filled.Warning`, ✓ `Icons.Filled.Check`, ? `Icons.Filled.QuestionMark`(점선 원은 `Canvas`로), » `Icons.Filled.SkipNext`. `Contrast`·`Autorenew`·`QuestionMark`·`SkipNext`는 `material-icons-extended`에 있다 — 의존성을 늘리기 싫으면 해당 아이콘의 벡터만 `res/drawable`로 옮긴다.
 
@@ -200,7 +147,7 @@ Compose: `object Space { val s = 8.dp … }`, `object Radius { val card = 24.dp 
 
 모두 파일 `7nCbKAdriwwQWVaXXhEIyV`, 페이지 "와이어프레임 v0.1".
 
-- 변수 컬렉션 `color`(Light·Dark), `type`, `space`, `radius`와 텍스트 스타일 9개: 파일의 Local variables / Local styles 패널. 변수는 노드가 아니라 링크가 없다. 각 변수에 Android 코드 이름(`MaterialTheme.colorScheme.primary`, `StatusColors.done.bg` 등)을 적어 두었다(Dev Mode에서 보인다).
+- 변수 컬렉션 `color`(Light·Dark), `type`, `space`, `radius`와 텍스트 스타일 9개: 파일의 Local variables / Local styles 패널. 변수는 노드가 아니라 링크가 없다. 각 변수에 Android 코드 이름(`MaterialTheme.colorScheme.primary`, `appColors.statusConfirmed` 등)을 적어 두었다(Dev Mode에서 보인다).
 - 안내: [00 안내](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=3-2)
 - 컴포넌트: [01 컴포넌트 보드](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=3-24)
   - [PrimaryButton](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=90-494) · [SecondaryButton](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=90-499) · [TextButton](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=90-504)
@@ -228,7 +175,7 @@ Compose: `object Space { val s = 8.dp … }`, `object Radius { val card = 24.dp 
 | 2 | 기준 차종 (PRD D2) | 위치 안내 그림 전체, SCR-10 "기준 차종", 그림 판의 비율(지금 그림은 CRS-01 공조 8장만) | 팀 결정 |
 | 3 | 듣기 시작 방식 (PRD D5) | 마이크 버튼 방식이면 VoiceBar에 누르는 변형(`Mode=Idle`, 높이 76 이상)이 필요하다 | 실측 T9 |
 | 4 | 배지 디자인과 묶음 이름 (PRD D6) | SCR-02 묶음 현황, SCR-07 | 팀 결정 |
-| 5 | 야간용 위치 안내 그림 | 지금은 야간에도 밝은 판(1-4절). 야간 그림(바탕 `#2A2E35`, 조작부 `#E6E8EC`, 강조 `#FF8A00` 그대로)을 따로 그리면 판을 `bg/surface`로 바꿀 수 있다 | 실차·에뮬레이터 야간 화면에서 눈부심 확인 뒤 |
+| 5 | 야간용 위치 안내 그림 | 지금은 야간에도 밝은 판(DESIGN.md 2-5절). 야간 그림(바탕 `#313236`, 조작부 `#E0E1E6`, 강조 `#FFC224` 그대로)을 따로 그리면 판을 `bg/card`로 바꿀 수 있다 | 실차·에뮬레이터 야간 화면에서 눈부심 확인 뒤 |
 | 6 | 에뮬레이터의 시스템 글꼴 | Asta Sans가 아니면 글꼴 파일을 앱에 넣는다(2절) | 에뮬레이터에서 확인 |
 | 7 | 상태 이름표 "교정" | 화면에 보이는 낱말이다. 사용자를 평가하는 말로 읽히지 않는지(POL-W-6) | 사용성 테스트. 바꾸면 용어집과 함께 |
 | 8 | 조건 줄 `Wrong`(교정 대상) | 와이어프레임 CORRECTION 화면은 오조작 조건에 "!"를 단다. 지금 `ConditionStatus`에는 이 값이 없다. 엔진에 값을 더할지, 화면이 교정 상태일 때 대상 조건만 바꿔 그릴지 | 기술 설계 담당 |
