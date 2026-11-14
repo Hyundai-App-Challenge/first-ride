@@ -8,6 +8,7 @@ import com.firstride.app.start.checkCourses
 import com.firstride.engine.course.CourseDefinition
 import com.firstride.engine.drive.DriveState
 import com.firstride.engine.judge.CourseRunner
+import com.firstride.engine.progress.CourseResult
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +43,10 @@ class AppViewModel(
     /** 지금 실행 중인 코스. 단계 진행 화면(SCR-04)이 `runner.step`을 그린다. 실습 중이 아니면 null. */
     private val _runner = MutableStateFlow<CourseRunner?>(null)
     val runner: StateFlow<CourseRunner?> = _runner.asStateFlow()
+
+    /** 방금 끝낸 시도의 결과. 완료 화면(SCR-05)이 건너뜀 여부를 보여 준다. 저장된 최고 기록과 다를 수 있다(POL-R-7). */
+    private val _lastAttempt = MutableStateFlow<CourseResult?>(null)
+    val lastAttempt: StateFlow<CourseResult?> = _lastAttempt.asStateFlow()
 
     /** 끊긴 실습. 제한이 풀리거나 앞으로 돌아왔을 때 이어서 하기를 물을지 정한다(POL-D-6, POL-R-10~12). */
     private val _interruption = MutableStateFlow<Interruption?>(null)
@@ -104,7 +109,7 @@ class AppViewModel(
             val tracer = launch {
                 runner.step.collectLatest { p -> p?.runner?.state?.collect { Variant.trace("step ${p.index + 1}/${p.total} ${it.phase}") } }
             }
-            runner.run()
+            _lastAttempt.value = runner.run()
             tracer.cancel()
             _runner.value = null
             _screen.value = Screen.CourseDone(course.id)

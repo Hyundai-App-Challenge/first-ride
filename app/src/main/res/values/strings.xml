@@ -29,4 +29,40 @@
     <string name="hidden_courses_title">이 차량에서 쓸 수 없는 코스</string>
     <string name="hidden_reason_unsupported">이 차량에서 확인할 수 없는 기능이에요</string>
     <string name="hidden_reason_permission">차량 정보를 읽는 권한이 없어요</string>
+
+
+    <!-- SCR-02 홈 -->
+    <string name="home_title">어떤 걸 익혀 볼까요?</string>
+    <string name="home_start_here">여기서 시작</string>
+    <string name="course_status_not_started">시작 전</string>
+    <string name="course_status_has_skipped">건너뜀 있음</string>
+    <string name="course_status_completed">✓ 완료</string>
+    <string name="course_minutes">약 %1$d분</string>
+
+    <!-- SCR-03 코스 소개 -->
+    <string name="intro_steps">%1$d단계</string>
+    <string name="intro_park_notice">차를 세운 상태에서 진행하세요.</string>
+    <string name="intro_start">시작하기</string>
+
+    <!-- SCR-04 단계 진행 -->
+    <string name="step_progress">%1$d / %2$d 단계</string>
+    <string name="step_quit">그만하기</string>
+    <string name="step_replay">다시 듣기</string>
+    <string name="step_where">어디 있어요</string>
+    <string name="step_skip">건너뛰기</string>
+    <string name="step_recheck">다시 확인</string>
+    <string name="condition_met">✓ 확인됐어요</string>
+    <string name="condition_already_met">✓ 이미 맞아요</string>
+    <string name="condition_unmet">· 아직이에요</string>
+    <string name="condition_toggle">· 껐다가 다시 켜 주세요</string>
+    <string name="condition_unknown">\? 확인할 수 없어요</string>
+    <string name="condition_polling">(확인 중)</string>
+    <string name="step_done_mark">✓</string>
+
+    <!-- SCR-05 코스 완료 -->
+    <string name="done_completed">%1$s 코스를 마쳤어요</string>
+    <string name="done_has_skipped">건너뛴 단계가 있어요</string>
+    <string name="done_retry">다시 하기</string>
+    <string name="done_next_course">다음 코스</string>
+    <string name="done_home">홈으로</string>
 </resources>
