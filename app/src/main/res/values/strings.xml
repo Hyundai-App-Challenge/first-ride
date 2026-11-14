@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 앱 이름(D1)이 정해지기 전의 임시값 -->
+    <string name="app_name">첫 탑승 조작 실습</string>
+</resources>
