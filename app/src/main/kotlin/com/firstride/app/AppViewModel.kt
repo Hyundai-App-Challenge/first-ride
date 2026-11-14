@@ -27,9 +27,11 @@ import com.firstride.engine.voice.VoiceCoordinator
 import com.firstride.engine.voice.applyVoiceAction
 import com.firstride.engine.voice.narrateCourse
 import com.firstride.engine.voice.narrateStep
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -43,6 +45,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * 앱 전체의 화면 상태와 실습 범위. 화면 전환은 여기서만 한다(기술 설계 12절).
@@ -101,6 +105,13 @@ class AppViewModel(
 
     private var startup: Job? = null
     private var practice: Job? = null
+    private val practiceMutex = Mutex()
+    private var pausedRunner: CourseRunner? = null
+
+    /** 자식 음성·구독의 정리까지 직렬화해 이전 stop이 다음 실습을 멈추지 않게 한다. */
+    private fun launchPractice(block: suspend CoroutineScope.() -> Unit): Job = viewModelScope.launch {
+        practiceMutex.withLock { coroutineScope(block) }
+    }
 
     /** 지금 실습의 음성 조율기. 실습이 아니면 null. */
     private var voice: VoiceCoordinator? = null
@@ -110,7 +121,10 @@ class AppViewModel(
         start()
         viewModelScope.launch {
             driveState.collect {
-                if (it != DriveState.RESTRICTED) return@collect
+                if (it != DriveState.RESTRICTED) {
+                    onForeground()
+                    return@collect
+                }
                 interrupt()
                 // 시작 확인 중에 제한이 걸리면 읽기를 멈추고 풀릴 때까지 다시 기다린다(POL-P-1).
                 if (startup?.isActive == true) {
@@ -151,12 +165,16 @@ class AppViewModel(
     fun startCourse(course: CourseDefinition) {
         if (driveState.value == DriveState.RESTRICTED) return
         cancelPractice()
-        _interruption.value = null
+        clearInterruption()
         val runner = CourseRunner(course, container.signals, container.progress)
+        restoreBefore = course.id to viewModelScope.async { snapshotBefore(course, container.signals) }
+        launchCourse(course, runner)
+    }
+
+    private fun launchCourse(course: CourseDefinition, runner: CourseRunner) {
         _runner.value = runner
         _screen.value = Screen.Step(course.id)
-        restoreBefore = course.id to viewModelScope.async { snapshotBefore(course, container.signals) }
-        practice = viewModelScope.launch {
+        practice = launchPractice {
             val voice = VoiceCoordinator(
                 container.tts,
                 stt = stt,
@@ -194,11 +212,11 @@ class AppViewModel(
     fun startFollowUp(course: CourseDefinition) {
         if (driveState.value == DriveState.RESTRICTED || course.followUps.isEmpty()) return
         cancelPractice()
-        _interruption.value = null
+        clearInterruption()
         val runner = FollowUpRunner(course, container.signals)
         _followUp.value = runner
         _screen.value = Screen.FollowUp(course.id)
-        practice = viewModelScope.launch {
+        practice = launchPractice {
             val voice = VoiceCoordinator(container.tts, voiceEnabled = { voiceEnabled.value }).also { this@AppViewModel.voice = it }
             launch { voice.run() }      // 끝난 뒤에도 마지막 문구를 읽을 수 있게 취소될 때까지 둔다
             runner.run()
@@ -243,16 +261,36 @@ class AppViewModel(
     /** "그만하기": 기록하지 않고 홈으로(POL-R-6). 이어서 하기도 묻지 않는다. */
     fun quitCourse() {
         cancelPractice()
-        _interruption.value = null
+        clearInterruption()
         _screen.value = Screen.Home
     }
 
     /** 앱이 백그라운드로 갔다(Activity onStop). 창 크기 변경에는 오지 않는다(실측 T14). */
     fun onBackground() = interrupt()
 
+    /** 기한 경과는 복귀 시 확인하고, 재개 버튼에서도 다시 확인한다. */
+    fun onForeground() {
+        if (_interruption.value != null) shouldAskResume()
+    }
+
+    fun resumeInterruptedCourse() {
+        if (driveState.value != DriveState.PARKED || !shouldAskResume()) return
+        val cut = _interruption.value ?: return
+        val course = _catalog.value?.visible?.firstOrNull { it.id == cut.courseId }
+        val runner = pausedRunner
+        if (course == null || runner == null) { dismissInterruption(); return }
+        clearInterruption()
+        launchCourse(course, runner)
+    }
+
+    private fun clearInterruption() {
+        pausedRunner = null
+        _interruption.value = null
+    }
+
     /** 이어서 하기를 묻지 않고 홈으로(POL-D-6의 "홈으로", 30분 경과 POL-R-12). */
     fun dismissInterruption() {
-        _interruption.value = null
+        clearInterruption()
         if (_screen.value is Screen.Step) _screen.value = Screen.Home
     }
 
@@ -273,9 +311,12 @@ class AppViewModel(
         }
         val runner = _runner.value ?: return
         val courseId = (_screen.value as? Screen.Step)?.courseId ?: return
-        // 마지막 단계가 끝나 결과를 기록하는 중이면(step이 이미 비었다) 끝까지 두고 음성만 멈춘다.
-        val stepIndex = runner.step.value?.index ?: run { container.tts.stop(); return }
+        // 마지막 단계가 끝나 결과를 기록하는 중이면 끝까지 두고 음성만 멈춘다.
+        val total = _catalog.value?.visible?.firstOrNull { it.id == courseId }?.steps?.size ?: return
+        val stepIndex = runner.nextStepIndex
+        if (stepIndex >= total) { container.tts.stop(); return }
         cancelPractice()
+        pausedRunner = runner
         _interruption.value = Interruption(courseId, stepIndex, container.clock())
     }
 

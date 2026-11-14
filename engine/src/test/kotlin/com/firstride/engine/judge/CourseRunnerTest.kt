@@ -8,6 +8,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
@@ -80,5 +81,64 @@ class CourseRunnerTest {
         course.step.value!!.runner.skip(); runCurrent()
         assertEquals(CourseResult.HAS_SKIPPED, result.await())
         assertEquals(CourseResult.COMPLETED, store.result("T-01"))
+    }
+
+    @Test fun `POL-R-11 재개는 같은 단계에서 새로 조회해 이미 목표인 값을 완료로 치지 않는다`() = runTest {
+        val src = source()
+        val store = MemStore()
+        val course = CourseRunner(twoStepCourse(), src, store)
+        val first = backgroundScope.launch { course.run() }; runCurrent()
+        src.set(defrost, Token("ON")); advanceTimeBy(2_000); runCurrent()
+        src.set(fan, Number(5)); runCurrent()
+        first.cancelAndJoin()
+        assertEquals(1, course.nextStepIndex)
+        assertEquals(0, src.activeSubscriptions)
+        val resumed = backgroundScope.async { course.run() }; runCurrent()
+        assertEquals(1, course.step.value?.index)
+        assertEquals(Phase.ALREADY_AT_TARGET, course.step.value!!.runner.state.value.phase)
+        assertEquals(emptyList(), store.calls)
+        src.set(fan, Number(0)); runCurrent()
+        src.set(fan, Number(5)); advanceTimeBy(2_000); runCurrent()
+        assertEquals(CourseResult.COMPLETED, resumed.await())
+    }
+
+    @Test fun `POL-R-5 재개 전 건너뜀을 보존해 완료로 바꾸지 않는다`() = runTest {
+        val src = source()
+        val store = MemStore()
+        val course = CourseRunner(twoStepCourse(), src, store)
+        val first = backgroundScope.launch { course.run() }; runCurrent()
+        course.step.value!!.runner.skip(); runCurrent()
+        first.cancelAndJoin()
+        val resumed = backgroundScope.async { course.run() }; runCurrent()
+        src.set(fan, Number(5)); advanceTimeBy(2_000); runCurrent()
+        assertEquals(CourseResult.HAS_SKIPPED, resumed.await())
+        assertEquals(listOf("T-01" to CourseResult.HAS_SKIPPED), store.calls)
+    }
+
+    @Test fun `POL-R-8 완료한 실행기를 다시 돌리면 처음부터 새 시도다`() = runTest {
+        val src = source()
+        val store = MemStore()
+        val course = CourseRunner(twoStepCourse(), src, store)
+        val first = backgroundScope.async { course.run() }; runCurrent()
+        src.set(defrost, Token("ON")); advanceTimeBy(2_000); runCurrent()
+        src.set(fan, Number(5)); advanceTimeBy(2_000); runCurrent()
+        first.await()
+        val again = backgroundScope.launch { course.run() }; runCurrent()
+        assertEquals(0, course.step.value?.index)
+        assertEquals(Phase.ALREADY_AT_TARGET, course.step.value!!.runner.state.value.phase)
+        assertEquals(1, store.calls.size)
+        again.cancelAndJoin()
+    }
+
+    @Test fun `POL-R-10 동시 재개도 이전 구독 정리 후 실행한다`() = runTest {
+        val src = source()
+        val course = CourseRunner(twoStepCourse(), src, MemStore())
+        val first = backgroundScope.launch { course.run() }
+        val second = backgroundScope.launch { course.run() }; runCurrent()
+        assertEquals(3, src.activeSubscriptions)  // 첫 단계는 제상·에어컨·순환 세 신호를 쓴다.
+        first.cancelAndJoin(); runCurrent()
+        assertEquals(3, src.activeSubscriptions)
+        second.cancelAndJoin()
+        assertEquals(0, src.activeSubscriptions)
     }
 }
