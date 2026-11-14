@@ -13,6 +13,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -55,6 +56,7 @@ class AppViewModel(
     private var practice: Job? = null
 
     init {
+        viewModelScope.launch { _screen.collect { Variant.trace("screen $it") } }
         start()
         viewModelScope.launch {
             driveState.collect {
@@ -104,7 +106,11 @@ class AppViewModel(
         _runner.value = runner
         _screen.value = Screen.Step(course.id)
         practice = viewModelScope.launch {
+            val tracer = launch {
+                runner.step.collectLatest { p -> p?.runner?.state?.collect { Variant.trace("step ${p.index + 1}/${p.total} ${it.phase}") } }
+            }
             _lastAttempt.value = runner.run()
+            tracer.cancel()
             _runner.value = null
             _screen.value = Screen.CourseDone(course.id)
         }

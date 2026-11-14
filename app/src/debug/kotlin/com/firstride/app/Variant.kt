@@ -33,6 +33,11 @@ internal object Variant {
         else FakeSignalSource().also { fake = it; seed(it) }
         return CountingSignalSource(source)
     }
+
+    /** 실습 흐름(화면, 단계 상태)을 logcat FR-TRACE로 남긴다. tools/check-crs01.sh가 읽는다. */
+    fun trace(message: String) {
+        Log.d("FR-TRACE", message)
+    }
 }
 
 /** 개발자 패널을 쓰기 전에도 모든 신호가 읽히도록 보통의 시작 값을 둔다. 값이 없으면 확인 불가가 된다. */

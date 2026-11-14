@@ -134,6 +134,10 @@ class MeasureActivity : ComponentActivity() {
             override fun onWiperStateUpdated(p0: ai.pleos.playground.vehicle.constant.control.WiperState?) = log("raw cb wiperState $p0")
             override fun onFailed(p0: Exception) = err(p0)
         })
+        val win = raw.getWindow()
+        win.checkWindowPositionCapabilities({ c, m -> log("raw cap windowPos ${c.accessType} ${m.map { it.key.values.toList() to it.value }}") }, err)
+        win.checkWindowLockCapabilities({ c, a -> log("raw cap windowLock ${c.accessType} ${a.map { it.values.toList() }}") }, err)
+        raw.getDoor().checkDoorLockCapabilities({ c, a -> log("raw cap doorLock ${c.accessType} ${a.map { it.values.toList() }}") }, err)
         log("raw register ac/recirc/defroster (no read)")
         hvac.registerHvacAcState(all, object : HvacAcStateListener {
             override fun onHvacAcStateUpdated(p0: Boolean?) = log("raw cb ac $p0 thread=${Thread.currentThread().name}")
