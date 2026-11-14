@@ -643,6 +643,22 @@ GitHub Actions에서 `./gradlew :engine:test`를 돌린다. 에뮬레이터가 �
 | `hvac.maxDefrost` | `getHvac()` | `getHvacMaxDefrostState` | `registerHvacMaxDefrostState` | 메서드 확인 (2026-11-14). VC의 Climate 카드 목록에 최대 제상이 없어 에뮬레이터에서 값을 바꿀 수 있는지 **[실측 T16]** |
 | `hvac.temperature` | `getHvac()` | `getHvacTemperature` | `registerHvacTemperature` | 메서드 확인. 운전석·동승석 영역 인자 사용. VC 범위 16~30℃, 0.5℃ 단위 |
 
+**HVAC 실측 확정 (11-14, SDK 2.3.2를 javap로 확인 + 에뮬레이터 실측 T6).**
+
+| 신호 ID | 영역 | 값 타입 | 리스너 (콜백 메서드) |
+|---|---|---|---|
+| `hvac.frontDefroster` / `rearDefroster` | `WindowArea(FRONT_WINDSHIELD)` / `(REAR_WINDSHIELD)` | `Boolean?` | `HvacDefrosterStateListener` (`onHvacDefrosterStateUpdated`) |
+| `hvac.ac` | 1·2열 좌석을 묶은 `SeatArea` 하나 | `Boolean?` | `HvacAcStateListener` (`onHvacAcStateUpdated`) |
+| `hvac.recirculation` | 위와 같음 | `Boolean?` (true = 내기 순환) | `HvacRecirculationStateListener` (`onHvacAutoRecirculationStateUpdated` — 자동 내기 순환과 같은 이름) |
+| `hvac.maxDefrost` | 위와 같음 | `Boolean?` | `HvacMaxDefrostStateListener` |
+| `hvac.fanSpeed` | 1열 좌·우를 묶은 `SeatArea` | `Int?` | `HvacFanSpeedListener` |
+| `hvac.fanDirection` | 1열 좌·우를 묶은 `SeatArea` | `FanDirectionType?` | 없음(폴링) |
+| `hvac.temperature` | 좌석별 `SeatArea(ROW_1_LEFT)` | `Float?` ℃ (`TemperatureUnit.CELSIUS`) | `HvacTemperatureListener` |
+
+- **영역 규칙**: 영역을 고정하지 않는다. `checkXxxCapabilities`가 돌려준 영역 중 운전석(`ROW_1_LEFT`)을 포함하는 것(제상은 해당 유리)을 골라 조회·구독에 쓴다. 운전석 하나로 묶어 부르면 "area ID 0x1 not supported"로 실패한다(`platform/.../AreaResolver.kt`).
+- 도메인 객체는 `getHvac()`가 아니라 `getHVAC()`다.
+- 리스너는 모두 `VehicleListener.onFailed(Exception)`을 함께 가진다. SDK의 예외 클래스는 난독화되어 있어 `ErrorCode` enum을 돌려주는 메서드를 리플렉션으로 찾는다. 퍼미션이 없으면 콜백이 아니라 `SecurityException`을 바로 던진다.
+
 도메인 객체를 얻는 메서드 이름(`getHvac()` 등)은 문서의 규칙(`getXxx()`)에 따른 것이고 `getDoor()`, `getDisplay()`, `getBrake()`만 예제로 확인했다.
 
 메서드 이름은 Pleos 문서 사이트맵의 API Reference 페이지 목록으로 확인했다(페이지 주소가 메서드 이름이다). 인자와 반환 타입은 본문을 열람하지 못했다.
@@ -757,23 +773,23 @@ fun observe(): Flow<Reading> = callbackFlow {
 | # | 확인할 것 | 절차 | 결과에 따른 설계 | 결과 |
 |---|---|---|---|---|
 | T1 | 에뮬레이터와 VC가 도는가 | 설치 → AVD → Cold boot → VC 접속 | 안 되면 모든 작업이 막힌다 | 하드웨어 충족. 실행은 미확인 |
-| T2 | 퍼미션을 선언하면 신호가 읽히는가 | 실측 앱에 10-1절 퍼미션 선언 후 실행. `ERROR_SECURITY_PERMISSION`이 오는 줄이 있는가 | 거부되는 도메인의 코스는 뺀다 | |
-| T3 | VC 변경이 구독 콜백으로 오는가, 지연은 | 신호마다 VC에서 값을 바꾸고 콜백 시각을 본다 | 오지 않는 신호는 폴링으로 돌린다(어댑터만 변경). 지연이 1초를 넘으면 AC-02-1의 수치를 고친다 | |
-| T4 | 구독 등록 직후 현재 값이 오는가 | 등록만 하고 값을 바꾸지 않은 채 콜백이 오는지 본다 | 어느 쪽이든 4-1절 계약으로 흡수. 온다면 어댑터의 선조회를 빼도 된다 | |
-| T5 | 풍향 조회가 VC 변경을 반영하는가 | VC에서 풍향을 바꾸고 조회 값을 본다 | 반영 안 되면 CRS-02의 풍향 단계를 뺀다 | |
-| T6 | 신호별 값 목록, 영역 구분 | 실측 앱이 받은 값을 그대로 기록. 제상의 전면·후면, 창문 위치의 단위·방향, 와이퍼·방향지시등의 값 | 4-3절의 토큰 대응표와 코스 정의의 목표 값을 확정 | |
-| T7 | 에뮬레이터가 돌려주는 지원 여부 | 신호마다 `checkXxxCapabilities` 결과 기록 | 미지원 신호의 코스는 시연에서 뺀다 | |
+| T2 | 퍼미션을 선언하면 신호가 읽히는가 | 실측 앱에 10-1절 퍼미션 선언 후 실행. `ERROR_SECURITY_PERMISSION`이 오는 줄이 있는가 | 거부되는 도메인의 코스는 뺀다 || **통과 (11-14, B).** `CAR_CLIMATE`는 보호 수준 normal이라 선언만 하면 설치 때 허용된다. 선언하지 않으면 SDK가 `SecurityException`("… need Permission")을 **바로 던진다**(콜백이 아님). 어댑터는 이것을 `DENIED`·`Failed(PERMISSION)`으로 낸다. 나머지 도메인은 W-27·W-35에서 본다 |
+| T3 | VC 변경이 구독 콜백으로 오는가, 지연은 | 신호마다 VC에서 값을 바꾸고 콜백 시각을 본다 | 오지 않는 신호는 폴링으로 돌린다(어댑터만 변경). 지연이 1초를 넘으면 AC-02-1의 수치를 고친다 || **통과 — HVAC 8종 (11-14, B).** VC 변경(HTTP `PUT /vehicle/hvac`, `tools/vc.sh`)이 매번 콜백 한 번으로 왔다(두 차례 10회·12회 모두). 요청 시작부터 콜백까지 약 0.2초 이하(콜백이 요청 직후 찍은 에뮬레이터 시각보다 먼저 기록됨). AC-02-1의 1초는 그대로 둔다. 주의: VC 세션이 3초 넘게 쉬었다 다시 열리면 VC가 자기 상태를 다시 내보내 순환이 외기로 바뀐 적이 두 번 있다. 앱이 아니라 VC의 동작이다 |
+| T4 | 구독 등록 직후 현재 값이 오는가 | 등록만 하고 값을 바꾸지 않은 채 콜백이 오는지 본다 | 어느 쪽이든 4-1절 계약으로 흡수. 온다면 어댑터의 선조회를 빼도 된다 || **온다 (11-14, B).** 값을 바꾸지 않고 등록만 해도 약 1.3초 뒤 현재 값이 콜백으로 온다(앞유리 제상, 에어컨, 순환). 콜백은 binder 스레드에서 온다. 어댑터는 등록 → 조회 순서로 하고, 조회 응답 전에 콜백이 오면 조회 값을 버린다(낡은 값이 새 값을 덮지 않게) |
+| T5 | 풍향 조회가 VC 변경을 반영하는가 | VC에서 풍향을 바꾸고 조회 값을 본다 | 반영 안 되면 CRS-02의 풍향 단계를 뺀다 || **반영된다 (11-14, B).** VC Fan Direction(Driver)을 Floor로 바꾸자 500ms 폴링이 `FLOOR`를 읽었다. 값 토큰은 SDK `FanDirectionType` 이름 그대로: `FACE`, `FLOOR`, `FACE_AND_FLOOR`, `DEFROST`, `FACE_AND_DEFROST`, `DEFROST_AND_FLOOR`, `FACE_AND_FLOOR_AND_DEFROST`(`UNKNOWN`은 EMPTY 실패). VC에서 고를 수 있는 것은 Face·Floor·Defrost 셋 |
+| T6 | 신호별 값 목록, 영역 구분 | 실측 앱이 받은 값을 그대로 기록. 제상의 전면·후면, 창문 위치의 단위·방향, 와이퍼·방향지시등의 값 | 4-3절의 토큰 대응표와 코스 정의의 목표 값을 확정 || **HVAC 확정 (11-14, B).** 값: 제상·에어컨·최대 제상 `Boolean` → `ON`/`OFF`. 순환 `Boolean`(true = 내기 순환) → `RECIRCULATE`/`FRESH`. 풍량 `Int` 0~8(VC에서 0도 읽힌다). 온도 `Float` ℃ → 0.1℃ 정수(25.5 → 255). **영역**: 제상은 유리별 `WindowArea(FRONT_WINDSHIELD)`·`(REAR_WINDSHIELD)`. 에어컨·순환·최대 제상은 1·2열 좌석을 묶은 영역 하나, 풍량·풍향은 1열 좌·우를 묶은 영역, 온도는 좌석별. 운전석 하나(`ROW_1_LEFT`)로 읽으면 "area ID 0x1 not supported"로 실패한다 → 어댑터는 지원 여부 응답에서 운전석을 포함하는 영역을 골라 쓴다 |
+| T7 | 에뮬레이터가 돌려주는 지원 여부 | 신호마다 `checkXxxCapabilities` 결과 기록 | 미지원 신호의 코스는 시연에서 뺀다 || **HVAC 8종 모두 지원 (11-14, B).** `checkHvac*Capabilities`가 모두 `READ_WRITE`. Light·Wiper·TurnSignal·Window·Door는 W-27·W-35에서 본다 |
 | T8 | TTS `ON_DEVICE` 한국어 | 실측 앱에서 한국어 문장 말하기 | 11절 분기 | |
 | T9 | STT `ON_DEVICE` 한국어, 이어 듣기, 마이크 퍼미션 | 세 어휘를 각 10번 말해 인식 결과를 기록. `onEndedRecognition` 뒤 바로 `request` | 11절 분기. 인식 결과의 변형을 어휘 매칭 테스트에 넣는다 | |
 | T10 | VC 기어 주입이 주행 제한에 반영되는가. DO 미선언 앱에 플랫폼이 무엇을 띄우는가 | VC에서 기어를 D로 바꾸고 `isRequiresDistractionOptimization()`과 화면을 본다 | 반영 안 되면 FR-07은 단위 테스트까지만 하고 시연에서 뺀다. README에 한계로 적는다 | |
 | T11 | 확인 불가를 재현할 방법 | 퍼미션을 빼고 빌드, 에뮬레이터의 Vehicle 서비스 중지 등 | 방법이 없으면 시연에서는 단위 테스트 실행 화면으로 대신하고 그 사실을 밝힌다 | |
 | T12 | VC 외부등 모드와 미등·하향등 상태의 관계 | 모드를 Off → Tail lamp → Low beam → Auto로 바꾸며 두 신호를 본다 | CRS-03의 단계 순서와 목표를 확정 | |
-| T13 | Compose 화면이 에뮬레이터에서 정상 표시되는가 | 실측 앱을 Compose로 만든다 | 문제가 있으면 View로 바꾼다(`:app`만 영향) | |
+| T13 | Compose 화면이 에뮬레이터에서 정상 표시되는가 | 실측 앱을 Compose로 만든다 | 문제가 있으면 View로 바꾼다(`:app`만 영향) || **통과 (11-14, B).** debug의 실측 화면(Compose)이 정상 표시된다 |
 | T14 | 세로형↔가로형 전환 시 Activity 생명주기 | 창 크기를 바꾸며 `onStop`, `onConfigurationChanged` 로그를 본다 | `onStop`이 불리면 창 크기 변경을 백그라운드 전환과 구분하는 방법이 필요하다(POL-E-8) | |
 | T15 | 주간·야간 전환이 앱에 전달되는가 | 시스템 테마를 바꾸고 `uiMode`를 본다 | 전달 안 되면 Pleos 테마 API를 찾는다 | |
-| T16 | 최대 제상의 지원 여부, 풍량·목표 온도의 지원 범위. 최대 제상을 켜면 다른 공조 값이 함께 바뀌는가 | `checkHvacMaxDefrostCapabilities`, `checkHvacFanSpeedCapabilities`, `checkHvacTemperatureCapabilities`의 결과 기록. VC에 최대 제상 카드가 있는지 확인 | 최대 제상을 에뮬레이터에서 바꿀 수 없으면 F1은 시연에서 빼고 F2·F3으로 시연한다. 범위를 읽지 못하면 `AtMax` 대신 "지금보다 올리기"로 바꾼다 | |
+| T16 | 최대 제상의 지원 여부, 풍량·목표 온도의 지원 범위. 최대 제상을 켜면 다른 공조 값이 함께 바뀌는가 | `checkHvacMaxDefrostCapabilities`, `checkHvacFanSpeedCapabilities`, `checkHvacTemperatureCapabilities`의 결과 기록. VC에 최대 제상 카드가 있는지 확인 | 최대 제상을 에뮬레이터에서 바꿀 수 없으면 F1은 시연에서 빼고 F2·F3으로 시연한다. 범위를 읽지 못하면 `AtMax` 대신 "지금보다 올리기"로 바꾼다 || **일부 (11-14, B).** 최대 제상: 지원(`READ_WRITE`), 값 읽기 됨. 그러나 **VC에 최대 제상 조작이 없어 에뮬레이터에서 값을 바꿀 수 없다** → 분기대로 F1은 시연에서 빼고 F2·F3으로 시연한다. 풍량 범위: 지원 여부 응답은 1~8(VC는 0~8이고 0도 읽힌다). 온도 범위: 15.0~30.0℃(VC는 16~30). `range()`는 각각 `1..8`, `150..300`. 최대 제상을 켰을 때 다른 공조 값이 함께 바뀌는지는 바꿀 수단이 없어 보지 못했다 |
 | T17 | `:app`의 `debugImplementation(testFixtures(project(":engine")))`가 되는가. release APK에 가짜 구현의 클래스가 없는가 | W-02에서 debug·release를 모두 빌드하고, release APK의 클래스 목록에서 `FakeSignalSource`를 찾아본다 | 안 되면 가짜 구현을 `:engine-fakes` 모듈로 뗀다 | **통과 (11-14, B).** AGP 8.8.2에서 `debugImplementation(testFixtures(project(":engine")))`로 빌드된다. dexdump로 보면 debug APK에는 `FakeSignalSource` 참조가 있고 release APK에는 없다. `:engine-fakes`는 만들지 않는다 |
-| G1 | 앱 창의 크기(dp, px) | FormFactorConsole 또는 실측 앱에서 창 크기 출력 | 와이어프레임 프레임과 세로·가로 기준 값을 확정 | |
+| G1 | 앱 창의 크기(dp, px) | FormFactorConsole 또는 실측 앱에서 창 크기 출력 | 와이어프레임 프레임과 세로·가로 기준 값을 확정 || **1682×1210 px, 160dpi(density 1.0) → 1682×1210 dp (11-14, B).** 앱 창이 처음 그려질 때 1682×1120 dp였다가 곧 1682×1210 dp로 바뀐다. 기본 상태의 앱 창은 가로로 긴 창이다. 세로형·가로형 기준 값은 A가 정한다 |
 
 ### 13-4. 순서
 
