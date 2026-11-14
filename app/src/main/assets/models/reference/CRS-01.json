@@ -1,0 +1,32 @@
+{
+  "courseId": "CRS-01",
+  "steps": {
+    "CRS-01-S1": {
+      "instruction": "앞유리 김서림 제거 버튼을 누르세요.",
+      "locatorText": "공조 조작부 왼쪽 위, 부채꼴 모양 버튼이에요.",
+      "locatorAsset": "assets/hvac_front_defrost.webp",
+      "conditionLocators": {
+        "hvac.ac": "assets/hvac_ac.webp",
+        "hvac.recirculation": "assets/hvac_recirculation.webp"
+      },
+      "misoperationLocators": {
+        "recirc": "assets/hvac_recirculation.webp"
+      }
+    },
+    "CRS-01-F1": {
+      "instruction": "최대 제상 버튼을 눌러 보세요.",
+      "locatorText": "공조 조작부에서 최대 제상 버튼을 찾아 보세요.",
+      "locatorAsset": "assets/hvac_max_defrost.webp"
+    },
+    "CRS-01-F2": {
+      "instruction": "풍량을 가장 세게 올려 보세요.",
+      "locatorText": "공조 조작부의 풍량 버튼으로 올릴 수 있어요.",
+      "locatorAsset": "assets/hvac_fan_speed.webp"
+    },
+    "CRS-01-F3": {
+      "instruction": "온도를 가장 높게 올려 보세요.",
+      "locatorText": "공조 조작부의 온도 버튼으로 올릴 수 있어요.",
+      "locatorAsset": "assets/hvac_temperature.webp"
+    }
+  }
+}

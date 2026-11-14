@@ -25,6 +25,8 @@ data class CourseDefinition(
     val name: String,
     val estimatedSeconds: Int,
     val steps: List<StepDefinition>,
+    /** 코스 소개(SCR-03)의 한 줄 설명. 왜 알아야 하는지. */
+    val summary: String = "",
     val followUps: List<FollowUpDef> = emptyList(),
     val exhaustedText: String? = null,
 )

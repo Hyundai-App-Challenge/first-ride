@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- FR-16 후속 조치와 SCR-11, SCR-05의 원상 복귀, 묶음·배지(W-37, W-38). 이 파일은 후속 조치 묶음만 고친다. -->
+
+    <!-- SCR-03, SCR-05 진입 (POL-F-13: 정차 상태에서 쓰는 기능) -->
+    <string name="followup_entry_intro">김이 잘 안 걷힐 때</string>
+    <string name="followup_entry_done">아직 김이 남아 있어요</string>
+    <string name="followup_entry_notice">차를 세운 상태에서 쓰는 안내예요.</string>
+
+    <!-- SCR-11 -->
+    <string name="followup_checking">차량 상태를 확인하고 있어요.</string>
+    <string name="followup_ask">김이 걷혔나요?</string>
+    <string name="followup_yes">걷혔어요</string>
+    <string name="followup_no">아직이요</string>
+    <string name="followup_quit">그만하기</string>
+    <string name="followup_resolved">다행이에요. 도움이 됐다면 좋겠어요.</string>
+    <string name="followup_exhausted_default">앱이 안내할 수 있는 조치는 모두 했어요. 취급설명서를 확인하거나 정비소에 문의하세요.</string>
+    <string name="followup_restore_instruction">먼저 처음 조합을 다시 맞춰 주세요. 남은 것: %1$s</string>
+    <string name="followup_home">홈으로</string>
+
+    <!-- SCR-05 원상 복귀 안내 (FR-14). 앱은 되돌리지 않고 알리기만 한다 -->
+    <string name="restore_title">실습하느라 바뀐 것이 남아 있어요</string>
+    <string name="restore_hint">필요하면 직접 되돌려 주세요.</string>
+    <string name="restore_unverified">확인하지 못한 것: %1$s</string>
+</resources>

@@ -51,6 +51,7 @@ object CourseParser {
         val name: String,
         val estimatedSeconds: Int,
         val steps: List<StepDto>,
+        val summary: String = "",
         val followUps: List<FollowUpDto> = emptyList(),
         val exhaustedText: String? = null,
     )
@@ -88,6 +89,7 @@ object CourseParser {
 
     private fun CourseDto.toDomain() = CourseDefinition(
         id, name, estimatedSeconds,
+        summary = summary,
         steps = steps.map { s ->
             StepDefinition(
                 s.id,

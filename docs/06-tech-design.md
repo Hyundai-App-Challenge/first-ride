@@ -196,7 +196,7 @@ Android 모듈의 `debugImplementation`에서 JVM 모듈의 test fixtures를 가
 | `hvac.maxDefrost` | `ON` / `OFF` | CRS-01 후속 조치 |
 | `hvac.temperature` | 숫자 (0.1℃ 단위의 정수. 22.5℃ → 225) | CRS-01 후속 조치 |
 
-값 이름은 설계상의 이름이다. SDK가 실제로 주는 값과의 대응은 어댑터가 맡고, 실측 T6으로 확정한다.
+값 이름은 설계상의 이름이다. SDK가 실제로 주는 값과의 대응은 어댑터가 맡고, 실측 T6으로 확정한다. 어댑터는 표의 값으로 바꿀 수 없는 SDK 값(예: 와이퍼의 간헐 단, 등화의 `DAYTIME_RUNNING`)을 SDK 이름 그대로 토큰으로 낸다. 이런 값은 어떤 목표와도 맞지 않아 완료로도 꺼짐으로도 읽히지 않는다.
 
 ## 5. 판정 엔진
 
@@ -557,7 +557,7 @@ flowchart TD
 
 ### 8-3. 주의 분산 최적화(DO) 선언
 
-**선언하지 않는다 [가정].** 이 앱은 주행 중에 쓸 기능이 없다. 선언하지 않은 앱은 플랫폼이 주행 중 사용을 막는다. 그래도 앱 안의 차단 화면(SCR-08)과 범위 취소는 그대로 구현한다. 플랫폼이 화면을 가리더라도 음성과 구독은 앱이 직접 멈춰야 하기 때문이다. 미선언 앱에 플랫폼이 실제로 무엇을 띄우는지는 **[실측 T10]** 이다.
+**선언하지 않는다 (실측 T10으로 확정, 11-14).** 이 앱은 주행 중에 쓸 기능이 없다. 선언하지 않으면 기어 D에서 플랫폼이 앱 창을 "주행 중에는 사용할 수 없습니다." 회색 화면으로 덮는다. 앱의 SCR-08은 그 아래에 있고, 리스너 실패 때의 마지막 차단(POL-D-7)이자 제한이 풀리는 순간의 화면이다. 선언하지 않은 앱은 플랫폼이 주행 중 사용을 막는다. 그래도 앱 안의 차단 화면(SCR-08)과 범위 취소는 그대로 구현한다. 플랫폼이 화면을 가리더라도 음성과 구독은 앱이 직접 멈춰야 하기 때문이다. 미선언 앱에 플랫폼이 실제로 무엇을 띄우는지는 **[실측 T10]** 이다.
 
 ## 9. 테스트 전략
 
@@ -631,17 +631,33 @@ GitHub Actions에서 `./gradlew :engine:test`를 돌린다. 에뮬레이터가 �
 | `hvac.ac` | `getHvac()` | `getHvacAcState` | `registerHvacAcState` | 메서드 확인 |
 | `hvac.recirculation` | `getHvac()` | `getHvacRecirculationState` | `registerHvacRecirculationState` | 메서드 확인 (2026-11-14) |
 | `hvac.fanSpeed` | `getHvac()` | `getHvacFanSpeed` | `registerHvacFanSpeed` | 메서드 확인 |
-| `hvac.fanDirection` | `getHvac()` | `getHvacFanDirection` | **없음 → 폴링** | 구독 메서드가 목록에 없음 |
-| `light.lowBeam` | `getLight()` | `getCurrentLowBeamLightState` | `registerLowBeamLightState` | 메서드 확인 |
-| `light.tailLamp` | `getLight()` | `getCurrentTailLampLightState` | `registerTailLampLightState` | 메서드 확인 |
-| `light.cabin` | `getLight()` | `getCurrentCabinLightState` | `registerCabinLightState` | 메서드 확인 |
-| `wiper.state` | `getWiper()` | `getCurrentWiperState` | `registerWiperState` | 메서드 확인 (2026-11-14). 스위치 값은 `getCurrentWiperSwitch`로 따로 있음 |
-| `turnSignal.state` | `getTurnSignal()` | `getCurrentTurnSignalState` | `registerTurnSignalState` | 메서드 확인 (2026-11-14) |
-| `window.driverPosition` | `getWindow()` | `getCurrentWindowPosition` | `registerWindowPosition` | 메서드 확인 (2026-11-14). 영역 인자 사용 |
-| `window.lock` | `getWindow()` | `getCurrentWindowLockState` | `registerWindowLockState` | 메서드 확인 (2026-11-14) |
-| `door.lock` | `getDoor()` | `getDoorLockState` | `registerDoorLockState` | 메서드 확인 (2026-11-14) |
+| `hvac.fanDirection` | `getHvac()` | `getHvacFanDirection` | **없음 → 폴링** | 실측 확정 (11-14, T5). 토큰은 `FanDirectionType` 이름 |
+| `light.lowBeam` | `getLight()` | `getCurrentLowBeamLightState` | `registerLowBeamLightState` | 실측 확정 (11-14). `LightStateListener.onLightStateUpdated`, 영역 없음 |
+| `light.tailLamp` | `getLight()` | `getCurrentTailLampLightState` | `registerTailLampLightState` | 실측 확정 (11-14) |
+| `light.cabin` | `getLight()` | `getCurrentCabinLightState` | `registerCabinLightState` | 실측 확정 (11-14) |
+| `wiper.state` | `getWiper()` | `getCurrentWiperSwitch(WindowArea(FRONT_WINDSHIELD))` | **없음 → 폴링** | 실측 확정 (11-14). 단은 스위치 값에만 있다. `registerWiperState`는 ON/OFF뿐이라 쓰지 않는다 |
+| `turnSignal.state` | `getTurnSignal()` | `getCurrentTurnSignalState` | `registerTurnSignalState` | 실측 확정 (11-14). `TurnSignalValue` OFF/LEFT/RIGHT → 같은 이름 토큰. 영역 없음. VC Blink·Flash 모두 LEFT/RIGHT |
+| `window.driverPosition` | `getWindow()` | `getCurrentWindowPosition` | `registerWindowPosition` | 실측 확정 (11-14). 영역 `WindowArea(ROW_1_LEFT)`(창문마다 따로). 값 0~10, **클수록 열림**(VC 0~100의 1/10: 50 → 5). 범위 `0..10`. 동승석 창문을 바꾸면 값이 오지 않는다 |
+| `window.lock` | `getWindow()` | `getCurrentWindowLockState` | `registerWindowLockState` | 실측 확정 (11-14). 영역은 네 창문을 묶은 것(운전석 포함)과 뒷좌석 왼쪽·오른쪽 각각. 어댑터는 묶은 영역을 쓴다. `Boolean` true → `ON`. VC Window Lock(All)로 바뀌고, 뒷좌석 하나만 잠그면 바뀌지 않는다 |
+| `door.lock` | `getDoor()` | `getDoorLockState` | `registerDoorLockState` | 실측 확정 (11-14). 영역은 네 문을 묶은 것(그 밖에 후드). `Boolean` true → `LOCKED` |
 | `hvac.maxDefrost` | `getHvac()` | `getHvacMaxDefrostState` | `registerHvacMaxDefrostState` | 메서드 확인 (2026-11-14). VC의 Climate 카드 목록에 최대 제상이 없어 에뮬레이터에서 값을 바꿀 수 있는지 **[실측 T16]** |
 | `hvac.temperature` | `getHvac()` | `getHvacTemperature` | `registerHvacTemperature` | 메서드 확인. 운전석·동승석 영역 인자 사용. VC 범위 16~30℃, 0.5℃ 단위 |
+
+**HVAC 실측 확정 (11-14, SDK 2.3.2를 javap로 확인 + 에뮬레이터 실측 T6).**
+
+| 신호 ID | 영역 | 값 타입 | 리스너 (콜백 메서드) |
+|---|---|---|---|
+| `hvac.frontDefroster` / `rearDefroster` | `WindowArea(FRONT_WINDSHIELD)` / `(REAR_WINDSHIELD)` | `Boolean?` | `HvacDefrosterStateListener` (`onHvacDefrosterStateUpdated`) |
+| `hvac.ac` | 1·2열 좌석을 묶은 `SeatArea` 하나 | `Boolean?` | `HvacAcStateListener` (`onHvacAcStateUpdated`) |
+| `hvac.recirculation` | 위와 같음 | `Boolean?` (true = 내기 순환) | `HvacRecirculationStateListener` (`onHvacAutoRecirculationStateUpdated` — 자동 내기 순환과 같은 이름) |
+| `hvac.maxDefrost` | 위와 같음 | `Boolean?` | `HvacMaxDefrostStateListener` |
+| `hvac.fanSpeed` | 1열 좌·우를 묶은 `SeatArea` | `Int?` | `HvacFanSpeedListener` |
+| `hvac.fanDirection` | 1열 좌·우를 묶은 `SeatArea` | `FanDirectionType?` | 없음(폴링) |
+| `hvac.temperature` | 좌석별 `SeatArea(ROW_1_LEFT)` | `Float?` ℃ (`TemperatureUnit.CELSIUS`) | `HvacTemperatureListener` |
+
+- **영역 규칙**: 영역을 고정하지 않는다. `checkXxxCapabilities`가 돌려준 영역 중 운전석(`ROW_1_LEFT`)을 포함하는 것(제상은 해당 유리)을 골라 조회·구독에 쓴다. 운전석 하나로 묶어 부르면 "area ID 0x1 not supported"로 실패한다(`platform/.../AreaResolver.kt`).
+- 도메인 객체는 `getHvac()`가 아니라 `getHVAC()`다.
+- 리스너는 모두 `VehicleListener.onFailed(Exception)`을 함께 가진다. SDK의 예외 클래스는 난독화되어 있어 `ErrorCode` enum을 돌려주는 메서드를 리플렉션으로 찾는다. 퍼미션이 없으면 콜백이 아니라 `SecurityException`을 바로 던진다.
 
 도메인 객체를 얻는 메서드 이름(`getHvac()` 등)은 문서의 규칙(`getXxx()`)에 따른 것이고 `getDoor()`, `getDisplay()`, `getBrake()`만 예제로 확인했다.
 
@@ -715,6 +731,8 @@ fun observe(): Flow<Reading> = callbackFlow {
 | TTS가 동작하지 않음 | 화면 문구만으로 진행(AC-05-4). 시연 영상에는 한계로 밝힌다 |
 | 다른 미디어와 겹쳐 들림 | TTS 요청 전에 `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`으로 포커스를 요청하고 끝나면 반환한다(오디오 포커스 가이드) |
 
+**실측 (11-14, B)**: TTS 소리는 음성 서비스(`ai.pleos.playground.caas`)가 `USAGE_MEDIA`·`CONTENT_TYPE_SPEECH`로 재생하고, 재생 중에 CarAudioService의 포커스 보유자가 없다. 즉 엔진이 스스로 포커스를 요청하지 않아 음악이 나오는 중이면 겹쳐 들릴 것이다. 귀로 확인(미디어 재생 + 안내)은 장비 앞에서 해야 해 W-40에서 한다.
+
 ## 12. 화면 구조
 
 | 항목 | 설계 |
@@ -757,23 +775,23 @@ fun observe(): Flow<Reading> = callbackFlow {
 | # | 확인할 것 | 절차 | 결과에 따른 설계 | 결과 |
 |---|---|---|---|---|
 | T1 | 에뮬레이터와 VC가 도는가 | 설치 → AVD → Cold boot → VC 접속 | 안 되면 모든 작업이 막힌다 | 하드웨어 충족. 실행은 미확인 |
-| T2 | 퍼미션을 선언하면 신호가 읽히는가 | 실측 앱에 10-1절 퍼미션 선언 후 실행. `ERROR_SECURITY_PERMISSION`이 오는 줄이 있는가 | 거부되는 도메인의 코스는 뺀다 | |
-| T3 | VC 변경이 구독 콜백으로 오는가, 지연은 | 신호마다 VC에서 값을 바꾸고 콜백 시각을 본다 | 오지 않는 신호는 폴링으로 돌린다(어댑터만 변경). 지연이 1초를 넘으면 AC-02-1의 수치를 고친다 | |
-| T4 | 구독 등록 직후 현재 값이 오는가 | 등록만 하고 값을 바꾸지 않은 채 콜백이 오는지 본다 | 어느 쪽이든 4-1절 계약으로 흡수. 온다면 어댑터의 선조회를 빼도 된다 | |
-| T5 | 풍향 조회가 VC 변경을 반영하는가 | VC에서 풍향을 바꾸고 조회 값을 본다 | 반영 안 되면 CRS-02의 풍향 단계를 뺀다 | |
-| T6 | 신호별 값 목록, 영역 구분 | 실측 앱이 받은 값을 그대로 기록. 제상의 전면·후면, 창문 위치의 단위·방향, 와이퍼·방향지시등의 값 | 4-3절의 토큰 대응표와 코스 정의의 목표 값을 확정 | |
-| T7 | 에뮬레이터가 돌려주는 지원 여부 | 신호마다 `checkXxxCapabilities` 결과 기록 | 미지원 신호의 코스는 시연에서 뺀다 | |
-| T8 | TTS `ON_DEVICE` 한국어 | 실측 앱에서 한국어 문장 말하기 | 11절 분기 | |
-| T9 | STT `ON_DEVICE` 한국어, 이어 듣기, 마이크 퍼미션 | 세 어휘를 각 10번 말해 인식 결과를 기록. `onEndedRecognition` 뒤 바로 `request` | 11절 분기. 인식 결과의 변형을 어휘 매칭 테스트에 넣는다 | |
-| T10 | VC 기어 주입이 주행 제한에 반영되는가. DO 미선언 앱에 플랫폼이 무엇을 띄우는가 | VC에서 기어를 D로 바꾸고 `isRequiresDistractionOptimization()`과 화면을 본다 | 반영 안 되면 FR-07은 단위 테스트까지만 하고 시연에서 뺀다. README에 한계로 적는다 | |
-| T11 | 확인 불가를 재현할 방법 | 퍼미션을 빼고 빌드, 에뮬레이터의 Vehicle 서비스 중지 등 | 방법이 없으면 시연에서는 단위 테스트 실행 화면으로 대신하고 그 사실을 밝힌다 | |
-| T12 | VC 외부등 모드와 미등·하향등 상태의 관계 | 모드를 Off → Tail lamp → Low beam → Auto로 바꾸며 두 신호를 본다 | CRS-03의 단계 순서와 목표를 확정 | |
-| T13 | Compose 화면이 에뮬레이터에서 정상 표시되는가 | 실측 앱을 Compose로 만든다 | 문제가 있으면 View로 바꾼다(`:app`만 영향) | |
-| T14 | 세로형↔가로형 전환 시 Activity 생명주기 | 창 크기를 바꾸며 `onStop`, `onConfigurationChanged` 로그를 본다 | `onStop`이 불리면 창 크기 변경을 백그라운드 전환과 구분하는 방법이 필요하다(POL-E-8) | |
-| T15 | 주간·야간 전환이 앱에 전달되는가 | 시스템 테마를 바꾸고 `uiMode`를 본다 | 전달 안 되면 Pleos 테마 API를 찾는다 | |
-| T16 | 최대 제상의 지원 여부, 풍량·목표 온도의 지원 범위. 최대 제상을 켜면 다른 공조 값이 함께 바뀌는가 | `checkHvacMaxDefrostCapabilities`, `checkHvacFanSpeedCapabilities`, `checkHvacTemperatureCapabilities`의 결과 기록. VC에 최대 제상 카드가 있는지 확인 | 최대 제상을 에뮬레이터에서 바꿀 수 없으면 F1은 시연에서 빼고 F2·F3으로 시연한다. 범위를 읽지 못하면 `AtMax` 대신 "지금보다 올리기"로 바꾼다 | |
-| T17 | `:app`의 `debugImplementation(testFixtures(project(":engine")))`가 되는가. release APK에 가짜 구현의 클래스가 없는가 | W-02에서 debug·release를 모두 빌드하고, release APK의 클래스 목록에서 `FakeSignalSource`를 찾아본다 | 안 되면 가짜 구현을 `:engine-fakes` 모듈로 뗀다 | |
-| G1 | 앱 창의 크기(dp, px) | FormFactorConsole 또는 실측 앱에서 창 크기 출력 | 와이어프레임 프레임과 세로·가로 기준 값을 확정 | |
+| T2 | 퍼미션을 선언하면 신호가 읽히는가 | 실측 앱에 10-1절 퍼미션 선언 후 실행. `ERROR_SECURITY_PERMISSION`이 오는 줄이 있는가 | 거부되는 도메인의 코스는 뺀다 || **통과 (11-14, B).** `CAR_CLIMATE`는 보호 수준 normal이라 선언만 하면 설치 때 허용된다. 선언하지 않으면 SDK가 `SecurityException`("… need Permission")을 **바로 던진다**(콜백이 아님). 어댑터는 이것을 `DENIED`·`Failed(PERMISSION)`으로 낸다. 나머지 도메인은 W-27·W-35에서 본다 |
+| T3 | VC 변경이 구독 콜백으로 오는가, 지연은 | 신호마다 VC에서 값을 바꾸고 콜백 시각을 본다 | 오지 않는 신호는 폴링으로 돌린다(어댑터만 변경). 지연이 1초를 넘으면 AC-02-1의 수치를 고친다 || **통과 — HVAC 8종 (11-14, B).** VC 변경(HTTP `PUT /vehicle/hvac`, `tools/vc.sh`)이 매번 콜백 한 번으로 왔다(두 차례 10회·12회 모두). 요청 시작부터 콜백까지 약 0.2초 이하(콜백이 요청 직후 찍은 에뮬레이터 시각보다 먼저 기록됨). AC-02-1의 1초는 그대로 둔다. 주의: VC 세션이 3초 넘게 쉬었다 다시 열리면 VC가 자기 상태를 다시 내보내 순환이 외기로 바뀐 적이 두 번 있다. 앱이 아니라 VC의 동작이다 |
+| T4 | 구독 등록 직후 현재 값이 오는가 | 등록만 하고 값을 바꾸지 않은 채 콜백이 오는지 본다 | 어느 쪽이든 4-1절 계약으로 흡수. 온다면 어댑터의 선조회를 빼도 된다 || **온다 (11-14, B).** 값을 바꾸지 않고 등록만 해도 약 1.3초 뒤 현재 값이 콜백으로 온다(앞유리 제상, 에어컨, 순환). 콜백은 binder 스레드에서 온다. 어댑터는 등록 → 조회 순서로 하고, 조회 응답 전에 콜백이 오면 조회 값을 버린다(낡은 값이 새 값을 덮지 않게) |
+| T5 | 풍향 조회가 VC 변경을 반영하는가 | VC에서 풍향을 바꾸고 조회 값을 본다 | 반영 안 되면 CRS-02의 풍향 단계를 뺀다 || **반영된다 (11-14, B).** VC Fan Direction(Driver)을 Floor로 바꾸자 500ms 폴링이 `FLOOR`를 읽었다. 값 토큰은 SDK `FanDirectionType` 이름 그대로: `FACE`, `FLOOR`, `FACE_AND_FLOOR`, `DEFROST`, `FACE_AND_DEFROST`, `DEFROST_AND_FLOOR`, `FACE_AND_FLOOR_AND_DEFROST`(`UNKNOWN`은 EMPTY 실패). VC에서 고를 수 있는 것은 Face·Floor·Defrost 셋 |
+| T6 | 신호별 값 목록, 영역 구분 | 실측 앱이 받은 값을 그대로 기록. 제상의 전면·후면, 창문 위치의 단위·방향, 와이퍼·방향지시등의 값 | 4-3절의 토큰 대응표와 코스 정의의 목표 값을 확정 || **HVAC 확정 (11-14, B).** 값: 제상·에어컨·최대 제상 `Boolean` → `ON`/`OFF`. 순환 `Boolean`(true = 내기 순환) → `RECIRCULATE`/`FRESH`. 풍량 `Int` 0~8(VC에서 0도 읽힌다). 온도 `Float` ℃ → 0.1℃ 정수(25.5 → 255). **영역**: 제상은 유리별 `WindowArea(FRONT_WINDSHIELD)`·`(REAR_WINDSHIELD)`. 에어컨·순환·최대 제상은 1·2열 좌석을 묶은 영역 하나, 풍량·풍향은 1열 좌·우를 묶은 영역, 온도는 좌석별. 운전석 하나(`ROW_1_LEFT`)로 읽으면 "area ID 0x1 not supported"로 실패한다 → 어댑터는 지원 여부 응답에서 운전석을 포함하는 영역을 골라 쓴다 |
+| T7 | 에뮬레이터가 돌려주는 지원 여부 | 신호마다 `checkXxxCapabilities` 결과 기록 | 미지원 신호의 코스는 시연에서 뺀다 || **HVAC 8종 모두 지원 (11-14, B).** `checkHvac*Capabilities`가 모두 `READ_WRITE`. Light·Wiper·TurnSignal·Window·Door는 W-27·W-35에서 본다 |
+| T8 | TTS `ON_DEVICE` 한국어 | 실측 앱에서 한국어 문장 말하기 | 11절 분기 || **통과 (11-14, B).** `Mode.ON_DEVICE` + `Locale.KOREA`로 한국어 문장이 끝까지 재생되고 `onDone`이 온다(첫 문장 약 3.7초, 첫 호출은 엔진 연결로 약 1초 늦게 시작). 화자 `seoyoon`. **인터넷 퍼미션 없이** 동작한다(매니페스트에서 SDK의 `INTERNET`을 `tools:node="remove"`로 뺌). `stop()` → `onStop`, 재생 중 코루틴 취소 → 재생 멈춤. 주의: `setLocale`·`addEventListener`는 `initialize`의 `onSuccess` 뒤에만 부를 수 있다(앞서 부르면 SDK 안에서 예외로 앱이 죽음). `stop()` 뒤 앞 문장의 `onStop`이 늦게 오므로 어댑터는 시작한 문장의 끝남·중지만 받는다. `TTS_SERVICE`는 보호 수준 normal. **위험**: SDK 매니페스트의 `INTERNET`에는 "CCG Validation 체크를 위한 권한"이라는 주석이 있다. 에뮬레이터에서는 없어도 되지만 마켓·실차 검증에서 무엇을 보는지는 모른다. STT도 인터넷 없이 되는지는 T9에서 함께 본다 |
+| T9 | STT `ON_DEVICE` 한국어, 이어 듣기, 마이크 퍼미션 | 세 어휘를 각 10번 말해 인식 결과를 기록. `onEndedRecognition` 뒤 바로 `request` | 11절 분기. 인식 결과의 변형을 어휘 매칭 테스트에 넣는다 || **일부만 (11-14, B, 원격이라 마이크 없음).** `Mode.ON_DEVICE` + `Locale.KOREA`로 초기화되고 `request()`가 받아들여진다(인터넷 퍼미션 없이). 엔진이 "ReadyToStartRecognition"까지 간 뒤 소리가 없으면 `onEndedRecognition`도 오류도 보내지 않는다 → 어댑터(`PleosStt`)는 15초 시간 제한으로 Error를 낸다. 에뮬레이터 로그에 "Failed to create voice virtio-snd-mic0"(Windows 쪽 마이크 장치 없음). `stop()`·코루틴 취소로 듣기를 끝낼 수 있다. **남은 것(장비 앞에서)**: 세 어휘 각 10번 인식 결과, 무음일 때 언제 끝나는가, 이어 듣기 간격, `RECORD_AUDIO`가 필요한가 |
+| T10 | VC 기어 주입이 주행 제한에 반영되는가. DO 미선언 앱에 플랫폼이 무엇을 띄우는가 | VC에서 기어를 D로 바꾸고 `isRequiresDistractionOptimization()`과 화면을 본다 | 반영 안 되면 FR-07은 단위 테스트까지만 하고 시연에서 뺀다. README에 한계로 적는다 || **반영된다 (11-14, B).** VC Gear를 D로 바꾸면 `CarUxRestrictions.isRequiresDistractionOptimization()`이 참 → `RESTRICTED`, P로 바꾸면 `PARKED`(4회 모두). 요청부터 콜백까지 약 0.2초 이하(M6 1초 이내). 속도와 무관하게 기어 D만으로 제한된다. **DO 미선언 앱에 플랫폼이 띄우는 것**: 앱 창 전체를 회색 화면 + 앱 아이콘 + "주행 중에는 사용할 수 없습니다."로 덮는다. 이때 앱의 Activity에는 `onPause`·`onStop`이 오지 않는다 → 음성·구독은 앱이 `DrivingGate`를 보고 직접 멈춰야 한다(8-2절 그대로). VC 요청: `tools/vc.sh set gear gear=Drive` / `gear=Park` |
+| T11 | 확인 불가를 재현할 방법 | 퍼미션을 빼고 빌드, 에뮬레이터의 Vehicle 서비스 중지 등 | 방법이 없으면 시연에서는 단위 테스트 실행 화면으로 대신하고 그 사실을 밝힌다 || **재현 방법 없음 (11-14, B).** VC에는 신호를 끊거나 오류를 내는 조작이 없다. 퍼미션을 빼면 시작 때 코스가 숨겨질 뿐(단계 중 확인 불가가 아님). 단계 진행 중 `am force-stop ai.pleos.playground.service.vehicle`로 차량 서비스를 멈추면 SDK가 **실패 콜백을 보내지 않아** 단계가 `WAITING`에 머문다(허위 완료는 없고 건너뛸 수 있다). 앱을 다시 시작하면 SDK가 서비스를 다시 붙여 정상으로 돌아온다. → 분기대로 시연에서는 확인 불가를 단위 테스트(`POL-J-21` 등) 실행 화면으로 보이고 그 사실을 밝힌다. 서비스가 단계 중에 죽는 경우를 알 수 없는 것은 알려진 한계로 README에 적는다 |
+| T12 | VC 외부등 모드와 미등·하향등 상태의 관계 | 모드를 Off → Tail lamp → Low beam → Auto로 바꾸며 두 신호를 본다 | CRS-03의 단계 순서와 목표를 확정 || **확정 (11-14, B).** VC Exterior Lights Mode(`tools/vc.sh set lights feature=headlamp_mode value=…`) 순서별 결과: Off → Tail lamp(`Position`): 미등 ON / → Low beam: 하향등 ON(미등은 ON 유지) / Low beam → Tail lamp: 하향등 OFF / → Off: 미등 OFF / Off → Low beam: 미등·하향등 함께 ON / → Auto(주간): 둘 다 OFF. 즉 하향등 모드는 미등을 포함한다. 실내등은 VC Cabin Lights Switch로 ON/OFF. 등화 상태 값은 `LightState` ON/OFF/DAYTIME_RUNNING(주간주행등은 토큰 `DAYTIME_RUNNING`으로 그대로 낸다). 등화 3종 모두 지원(구독 가능), 영역 인자 없음 |
+| T13 | Compose 화면이 에뮬레이터에서 정상 표시되는가 | 실측 앱을 Compose로 만든다 | 문제가 있으면 View로 바꾼다(`:app`만 영향) || **통과 (11-14, B).** debug의 실측 화면(Compose)이 정상 표시된다 |
+| T14 | 세로형↔가로형 전환 시 Activity 생명주기 | 창 크기를 바꾸며 `onStop`, `onConfigurationChanged` 로그를 본다 | `onStop`이 불리면 창 크기 변경을 백그라운드 전환과 구분하는 방법이 필요하다(POL-E-8) || **통과 (11-14, B).** 앱 창 오른쪽 끝의 손잡이(⋮)를 끌어 창을 1682×1210 ↔ 841×1210 dp(내비게이션과 나눠 쓰는 세로로 긴 창)로 바꾸면 `onConfigurationChanged`만 오고 `onPause`·`onStop`은 오지 않는다(`configChanges`에 화면 크기·방향 선언). **Pleos의 홈 키는 앱을 가리지 않는다**(왼쪽 창만 바뀌고 앱은 resumed·visible 그대로). 다른 앱이 앱 창을 차지하면(`am start -a android.settings.SETTINGS`) `onPause` → `onStop`. → `onStop`을 백그라운드 전환으로 써도 창 크기 변경과 헷갈리지 않는다. 세로형은 841×1210 dp, 가로형은 1682×1210 dp |
+| T15 | 주간·야간 전환이 앱에 전달되는가 | 시스템 테마를 바꾸고 `uiMode`를 본다 | 전달 안 되면 Pleos 테마 API를 찾는다 || **통과 (11-14, B).** `adb shell cmd uimode night yes/no`로 바꾸면 앱의 `uiMode`가 19(주간) ↔ 35(야간)로 바뀐다. `configChanges`에 `uiMode`가 없으면 Activity가 다시 만들어진다(`onStop`·`onDestroy`) → `uiMode`를 더해 `onConfigurationChanged`만 오게 했다. Compose의 `isSystemInDarkTheme`로 따른다. VC에서 주야간을 바꾸는 방법은 아직 못 찾았다 |
+| T16 | 최대 제상의 지원 여부, 풍량·목표 온도의 지원 범위. 최대 제상을 켜면 다른 공조 값이 함께 바뀌는가 | `checkHvacMaxDefrostCapabilities`, `checkHvacFanSpeedCapabilities`, `checkHvacTemperatureCapabilities`의 결과 기록. VC에 최대 제상 카드가 있는지 확인 | 최대 제상을 에뮬레이터에서 바꿀 수 없으면 F1은 시연에서 빼고 F2·F3으로 시연한다. 범위를 읽지 못하면 `AtMax` 대신 "지금보다 올리기"로 바꾼다 || **일부 (11-14, B).** 최대 제상: 지원(`READ_WRITE`), 값 읽기 됨. 그러나 **VC에 최대 제상 조작이 없어 에뮬레이터에서 값을 바꿀 수 없다** → 분기대로 F1은 시연에서 빼고 F2·F3으로 시연한다. 풍량 범위: 지원 여부 응답은 1~8(VC는 0~8이고 0도 읽힌다). 온도 범위: 15.0~30.0℃(VC는 16~30). `range()`는 각각 `1..8`, `150..300`. 최대 제상을 켰을 때 다른 공조 값이 함께 바뀌는지는 바꿀 수단이 없어 보지 못했다 |
+| T17 | `:app`의 `debugImplementation(testFixtures(project(":engine")))`가 되는가. release APK에 가짜 구현의 클래스가 없는가 | W-02에서 debug·release를 모두 빌드하고, release APK의 클래스 목록에서 `FakeSignalSource`를 찾아본다 | 안 되면 가짜 구현을 `:engine-fakes` 모듈로 뗀다 | **통과 (11-14, B).** AGP 8.8.2에서 `debugImplementation(testFixtures(project(":engine")))`로 빌드된다. dexdump로 보면 debug APK에는 `FakeSignalSource` 참조가 있고 release APK에는 없다. `:engine-fakes`는 만들지 않는다 |
+| G1 | 앱 창의 크기(dp, px) | FormFactorConsole 또는 실측 앱에서 창 크기 출력 | 와이어프레임 프레임과 세로·가로 기준 값을 확정 || **1682×1210 px, 160dpi(density 1.0) → 1682×1210 dp (11-14, B).** 앱 창이 처음 그려질 때 1682×1120 dp였다가 곧 1682×1210 dp로 바뀐다. 기본 상태의 앱 창은 가로로 긴 창이다. 세로형·가로형 기준 값은 A가 정한다 |
 
 ### 13-4. 순서
 
@@ -792,10 +810,10 @@ fun observe(): Flow<Reading> = callbackFlow {
 | 항목 | 설계 |
 |---|---|
 | 산출물 | release APK. Gradle 작업으로 `apk/팀명_앱이름_release.apk`에 복사한다(공모전 규정) **[미정 D1: 앱 이름]** |
-| 서명 | release 키스토어는 저장소에 넣지 않는다. 비밀값은 저장소에서 빼도 된다고 공지에 있다 |
+| 서명 | release 키스토어는 저장소에 넣지 않는다. 비밀값은 저장소에서 빼도 된다고 공지에 있다. `app/build.gradle.kts`가 `~/.android-keys/keystore.properties`(또는 `-Pfirstride.signing=<경로>`)를 읽는다. 파일이 없으면 서명하지 않은 release APK가 나온다 |
 | 난독화 | 끈다 **[가정]**. Pleos SDK의 유지 규칙이 문서에 없어 축소하다 깨질 위험을 피한다 |
 | debug 전용 코드 | 가짜 신호원은 `engine/src/testFixtures/`에, 개발자 패널과 가짜 신호원을 고르는 조립 코드는 `app/src/debug/`에만 둔다 |
-| Gradle wrapper | W-02에서 추가한다. 그 뒤로 모든 명령은 `./gradlew`로 쓴다 |
+| Gradle wrapper | W-02에서 추가했다(Gradle 8.10.2). 모든 명령은 `./gradlew`로 쓴다 |
 | README 필수 항목 | 앱 이름·한 줄 소개, 실행 방법, 테스트 환경·필요한 설정, 사용한 에뮬레이터 버전과 화면 규격, APK 위치 |
 | README에 더 적을 것 | 알려진 한계(POL-J-23~25, 실측에서 뺀 코스·기능), 테스트 실행 방법(`./gradlew :engine:test`), 모듈 구조 |
 | 제출 절차 | 접수 메일에 저장소 주소와 최종 커밋 해시 기재, 11-16까지 공개 전환 |
