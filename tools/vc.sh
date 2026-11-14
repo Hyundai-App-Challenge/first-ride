@@ -5,6 +5,7 @@
 #   tools/vc.sh set gear gear=Drive
 #   tools/vc.sh state            # 전체 상태(JSON)
 #   tools/vc.sh state hvac       # 한 영역만
+#   tools/vc.sh keepalive 120    # 120초 동안 세션을 살려 둔다(뒤에서 돌린다: tools/vc.sh keepalive 120 &)
 #
 # VC는 브라우저 세션이 살아 있어야 값을 받는다("emulator_inactive"). 그래서 요청 전에 세션 신호를 한 번 보낸다.
 # 주의: 세션이 3초 넘게 끊겼다 다시 열리면 VC가 자기 상태를 차량에 다시 내보내 값이 바뀔 수 있다(순환이 외기로 바뀐 적이 있다).
@@ -34,5 +35,12 @@ case "${1:-}" in
       "$curl_bin" -s -m 5 "$base/vehicle/state"
     fi
     ;;
-  *) sed -n '2,10p' "$0"; exit 1 ;;
+  keepalive)
+    end=$((SECONDS + ${2:-60}))
+    while (( SECONDS < end )); do
+      "$curl_bin" -s -m 2 -X POST "$base/browser/session?client=firstride-cli" >/dev/null || true
+      sleep 1
+    done
+    ;;
+  *) sed -n '2,11p' "$0"; exit 1 ;;
 esac
