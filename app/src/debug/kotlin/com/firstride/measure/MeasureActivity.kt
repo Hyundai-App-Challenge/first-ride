@@ -31,6 +31,7 @@ import com.firstride.platform.drive.CarDrivingGate
 import com.firstride.platform.vehicle.VehicleConnection
 import com.firstride.platform.voice.PleosStt
 import com.firstride.platform.voice.PleosTts
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -110,15 +111,20 @@ class MeasureActivity : ComponentActivity() {
         // T9(일부): STT 초기화, 한 번 듣기의 결과와 걸린 시간, 듣는 중 취소. am start에 --ez stt true
         if (intent.getBooleanExtra("stt", false)) lifecycleScope.launch {
             val stt = PleosStt(this@MeasureActivity)
-            repeat(2) { i ->
-                val t = SystemClock.elapsedRealtime()
-                log("stt listen#${i + 1} -> ${stt.listenOnce()} after ${SystemClock.elapsedRealtime() - t}ms")
+            try {
+                repeat(2) { i ->
+                    val t = SystemClock.elapsedRealtime()
+                    log("stt listen#${i + 1} -> ${stt.listenOnce()} after ${SystemClock.elapsedRealtime() - t}ms")
+                }
+                val job = launch { log("stt listen#3 -> ${stt.listenOnce()}") }
+                delay(1500)
+                log("stt cancel listen#3 at +1500ms")
+                job.cancelAndJoin()
+            } finally {
+                // Activity 파괴 시 lifecycleScope가 취소돼도 SDK 리스너를 정리한다.
+                stt.release()
+                log("stt cleanup finished")
             }
-            val job = launch { log("stt listen#3 -> ${stt.listenOnce()}") }
-            delay(1500)
-            log("stt cancel listen#3 at +1500ms")
-            job.cancel()
-            stt.release()
         }
         runCatching { rawProbe() }.onFailure { log("raw probe threw ${it.javaClass.name}: ${it.message}") }
     }

@@ -22,3 +22,16 @@
 - LOW 단계 시작 문구, HIGH·AUTO 교정 문구, OFF 단계 문구를 uiautomator에서 각각 확인했다. WAITING → CORRECTION → CORRECTION → 2/2 WAITING → CourseDone을 확인했다(AC-CRS04-1).
 - 검증 환경은 Git Bash이며 `/dev/tty`만 MSYS 경로 변환에서 제외했다. 전역 MSYS_NO_PATHCONV는 Windows curl의 `/dev/null` 쓰기를 막아 종료 코드 23을 만들므로 사용하지 않았다. 이는 검증 명령 환경 설정이며 앱 코드 변경은 없다.
 - 실차의 레버 배치와 실제 음성 인식 검증은 이번 범위가 아니다. 기준 차종용 그림은 동료 PR #34·#38에서 보강 중이다.
+
+
+# W-48 STT 측정 SDK 정리 검증
+
+검증일: 2026-11-15. debug 측정 화면만 변경했다.
+
+- 수정 전: STT 측정 화면을 열고 약 2초 후 Back으로 닫았다. SDK stop과 Activity onDestroy는 있으나 SDK release가 없었다.
+- 수정 후 같은 취소 경로: SDK stop → release → `stt cleanup finished` → onDestroy를 확인했다.
+- 정상 경로: 무입력 측정 두 번의 제한 시간과 세 번째 듣기 취소를 기다린 뒤 Activity를 닫았다. 약 31.5초에 SDK release와 cleanup이 각각 1회였고 이후 onDestroy에서도 중복되지 않았다.
+- `gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug` 통과. W-47 병합 후 통합 구성에서도 재실행했다.
+- 실제 환경: Pleos Connect v2.1.0, emulator-5554, com.firstride.qa39. 인식 텍스트는 검증 출력에 포함하지 않았다.
+
+늦게 도착하는 STT 최종 결과의 요청 간 격리, 세 어휘 정확도, 앱의 STT 연결은 이번 수정에 포함하지 않았다.
