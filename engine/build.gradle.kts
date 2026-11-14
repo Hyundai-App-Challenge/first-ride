@@ -16,4 +16,10 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }
 
-tasks.test { useJUnitPlatform() }
+tasks.test {
+    useJUnitPlatform()
+    // 테스트가 외부 모듈의 실제 코스·차종 자산을 읽으므로 데이터 변경도 입력으로 추적한다.
+    inputs.dir(rootProject.file("app/src/main/assets"))
+        .withPropertyName("courseAssets")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+}
