@@ -36,4 +36,19 @@ Gradle 루트는 저장소 루트입니다. 모듈 구조와 의존 방향은 [�
 - Android API 28 이상, Gradle 8 이상, Kotlin
 - 사용 SDK: Vehicle SDK 2.3.2, TextToSpeech SDK 3.3.1, SpeechToText SDK 3.3.1
 
-실행 방법, 테스트 환경, 에뮬레이터 버전과 화면 규격, APK 위치는 앱 코드가 들어오면 이 문서에 추가합니다.
+- 빌드: Gradle 8.10.2, AGP 8.8.2, JDK 17, Kotlin 2.0.0
+- 저장: DataStore. 서버와 데이터베이스를 쓰지 않고, 네트워크 퍼미션을 선언하지 않습니다
+
+### 테스트
+
+판정 엔진(`:engine`)은 순수 Kotlin 모듈이라 에뮬레이터 없이 테스트합니다.
+
+```bash
+gradle :engine:test --no-daemon
+```
+
+Gradle wrapper는 아직 없습니다. 추가되면 `./gradlew :engine:test`로 바뀝니다.
+
+Windows에서 Gradle 데몬이 `Bad address: listen` 오류로 죽으면 JDK 배포판을 바꿔 보세요. Eclipse Adoptium 17.0.5에서 이 오류가 났고 Amazon Corretto 17.0.12에서 해결됐습니다.
+
+실행 방법, 에뮬레이터 버전과 화면 규격, APK 위치는 앱 모듈이 들어오면 이 문서에 추가합니다.

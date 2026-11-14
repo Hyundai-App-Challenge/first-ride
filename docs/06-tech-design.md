@@ -25,18 +25,24 @@
 
 | 항목 | 선택 | 이유 | 대안 |
 |---|---|---|---|
-| 언어 | Kotlin | SDK 예제가 Kotlin 우선, 코루틴으로 비동기 콜백을 감싼다 | Java |
+| 언어 | Kotlin 2.0.0 | SDK 예제가 Kotlin 우선, 코루틴으로 비동기 콜백을 감싼다. `:engine`은 `kotlin("jvm")`과 `jvmToolchain(17)` | Java |
 | 최소 버전 | API 28 (공모전 조건), 대상은 에뮬레이터 이미지(API 34) | | |
-| 빌드 | Gradle 8 이상, Kotlin DSL | 공모전 개발 환경 조건 | |
+| 빌드 | Gradle 8.10.2, AGP 8.8.2, JDK 17, Kotlin DSL | B의 장비에서 release APK 생성까지 확인한 조합(개발 계획 1절). Gradle wrapper는 W-02에서 넣는다 | |
 | 화면 | Jetpack Compose, 단일 Activity | 세로형·가로형을 한 코드로 대응하기 쉽다. 상태 → 화면 구조가 판정 상태와 잘 맞는다 **[실측 T13]** | XML View |
-| 비동기 | 코루틴 + Flow | SDK의 `onComplete/onFailed`, `registerXxx` 콜백을 `suspend`와 `Flow`로 감싼다 | |
+| 비동기 | 코루틴 + Flow (kotlinx-coroutines 1.8.1) | SDK의 `onComplete/onFailed`, `registerXxx` 콜백을 `suspend`와 `Flow`로 감싼다 | |
 | 의존성 주입 | 직접 조립(앱 시작 시 한 곳에서 생성) | 객체 수가 적다. 라이브러리를 늘리지 않는다 | Hilt |
 | 저장 | DataStore (Preferences) | 저장 항목이 10개 안팎(POL-S-1). 데이터베이스가 필요 없다 | Room |
-| 코스 정의 | `assets/`의 JSON + kotlinx.serialization | 코드와 분리(FR-13) | |
-| 테스트 | JUnit, kotlinx-coroutines-test (가상 시간) | 타이머(3초, 15초, 2초)를 실제로 기다리지 않고 테스트한다 | |
+| 코스 정의 | `assets/`의 JSON + kotlinx-serialization-json 1.6.3 (`plugin.serialization`) | 코드와 분리(FR-13) | |
+| 테스트 | `kotlin("test")`(JUnit Platform), kotlinx-coroutines-test 1.8.1 (가상 시간) | 타이머(3초, 15초, 2초)를 실제로 기다리지 않고 테스트한다 | |
+| 가짜 구현의 위치 | `java-test-fixtures` 플러그인, `engine/src/testFixtures/` | `:engine`의 테스트와 `:app`의 debug 빌드가 같은 가짜 신호원을 쓴다. 본 소스가 아니라서 release APK에 들어가지 않는다(4-2절) | `:app`의 `src/debug/`에 복사 |
+| 패키지 | `com.firstride.*` (`:engine`은 `com.firstride.engine`) | **임시값.** 앱 이름(PRD D1)이 정해지면 바꾼다 | |
 | 네트워크 | **없음.** 인터넷 퍼미션을 선언하지 않는다 | POL-P-5 | |
 
 화면 기술(Compose)은 **[가정: 팀 숙련도]** 다. View로 바꿔도 3절의 `engine`, `platform` 모듈은 영향을 받지 않는다.
+
+`:engine`의 구성(Kotlin 2.0.0, 라이브러리 버전, 테스트 도구, test fixtures, 패키지)은 A가 2026-11-14에 정해 전달한 것이다. `main`에는 W-03(고정 인터페이스)까지 들어 있다.
+
+**JDK 배포판 주의.** A의 장비(Windows)에서 Eclipse Adoptium JDK 17.0.5로는 Gradle 데몬이 `Bad address: listen` 오류로 죽었고, Amazon Corretto 17.0.12로 바꿔 해결했다. 같은 오류가 나면 JDK 배포판부터 바꿔 본다. wrapper가 들어가기 전까지 A는 `gradle :engine:test --no-daemon`으로 테스트를 돌린다.
 
 ## 3. 모듈 구조
 
@@ -51,7 +57,7 @@ flowchart LR
 
 | 모듈 | 종류 | 들어가는 것 | 의존 |
 |---|---|---|---|
-| `:engine` | **순수 Kotlin/JVM** (Android 의존 없음) | 신호 인터페이스, 판정 엔진, 코스 모델·검증, 음성 조율 로직, 진행 기록 규칙, 가짜 구현(테스트·개발용) | 없음 |
+| `:engine` | **순수 Kotlin/JVM** (Android 의존 없음) | 신호 인터페이스, 판정 엔진, 코스 모델·검증, 음성 조율 로직, 진행 기록 규칙. 가짜 구현(테스트·개발용)은 `src/testFixtures/`에 따로 둔다 | 없음 |
 | `:platform` | Android 라이브러리 | Vehicle SDK 어댑터, TTS·STT 어댑터, 주행 제한 감지, DataStore 저장소 | `:engine`, Pleos SDK |
 | `:app` | Android 앱 | Compose 화면, ViewModel, 조립, 매니페스트, `assets/`(코스 정의, 위치 안내 자산) | `:engine`, `:platform` |
 
@@ -61,13 +67,15 @@ flowchart LR
 **패키지** (`:engine`)
 
 ```
-signal/     SignalId, SignalValue, Reading, SignalSource, FakeSignalSource
+signal/     SignalId, SignalValue, Reading, SignalSource, Signals(신호 ID와 값 목록)
 course/     CourseDefinition, StepDefinition, Condition, Target, CourseValidator
 judge/      StepState, Phase, StepEvent, reduce(), StepRunner, CourseRunner
 voice/      VoicePort(Tts, Stt), VoiceCoordinator, VocabularyMatcher
 progress/   CourseResult, ProgressStore(인터페이스), BadgeRule
 drive/      DriveState, DrivingGate(인터페이스)
 ```
+
+패키지의 뿌리는 `com.firstride.engine`이다(임시값). `FakeSignalSource`와 가짜 음성 포트는 `engine/src/testFixtures/kotlin/` 아래 같은 패키지에 둔다.
 
 **담당 나누기 (제안)** **[미정]**
 
@@ -149,7 +157,21 @@ class FakeSignalSource : SignalSource {
 
 쓰임새는 두 가지다.
 1. **단위 테스트.** 판정 엔진의 모든 테스트가 이것으로 돈다.
-2. **화면 개발.** debug 빌드에서만 가짜 신호원과 값을 바꾸는 개발자 패널을 켠다. 에뮬레이터가 없는 PC에서도 화면을 만들 수 있다. **release 빌드에는 가짜 신호원 코드가 들어가지 않는다**(소스 세트를 `debug/`로 분리). 테스트용 더미 데이터를 금지하는 Pleos 심사 기준과 부딪치지 않게 하기 위해서다.
+2. **화면 개발.** debug 빌드에서만 가짜 신호원과 값을 바꾸는 개발자 패널을 켠다. 에뮬레이터가 없는 PC에서도 화면을 만들 수 있다.
+
+**release 빌드에 들어가지 않게 하는 방법.** 가짜 신호원은 `:engine`의 본 소스가 아니라 test fixtures(`engine/src/testFixtures/`)에 둔다. `:engine`의 테스트는 이것을 자동으로 쓰고, `:app`은 debug 빌드에서만 가져온다.
+
+```kotlin
+// app/build.gradle.kts
+dependencies {
+    implementation(project(":engine"))
+    debugImplementation(testFixtures(project(":engine")))   // release에는 없다
+}
+```
+
+가짜 신호원을 고르는 조립 코드와 개발자 패널은 `:app`의 `src/debug/`에 둔다. `src/main/`과 `src/release/`는 가짜 구현의 클래스를 참조하지 않는다. 테스트용 더미 데이터를 금지하는 Pleos 심사 기준과 부딪치지 않게 하기 위해서다.
+
+Android 모듈의 `debugImplementation`에서 JVM 모듈의 test fixtures를 가져오는 구성이 AGP 8.8.2에서 실제로 되는지는 B가 W-02에서 확인한다 **[실측 T17]**. 안 되면 가짜 구현을 별도 모듈(`:engine-fakes`)로 떼어 `debugImplementation`으로 가져온다.
 
 ### 4-3. 신호 목록
 
@@ -543,8 +565,8 @@ flowchart TD
 
 | 층 | 대상 | 도구 | 어디서 | 수 |
 |---|---|---|---|---|
-| L1 | `reduce`, 목표 판정, 어휘 매칭, 배지 규칙, 코스 검증 | JUnit | 어느 PC든 | 많이 (정책당 1개 이상) |
-| L2 | `StepRunner`, `CourseRunner`, `VoiceCoordinator` | JUnit + 가짜 신호원·가짜 음성 포트 + 가상 시간 | 어느 PC든 | 시나리오별 |
+| L1 | `reduce`, 목표 판정, 어휘 매칭, 배지 규칙, 코스 검증 | `kotlin("test")` | 어느 PC든 | 많이 (정책당 1개 이상) |
+| L2 | `StepRunner`, `CourseRunner`, `VoiceCoordinator` | `kotlin("test")` + 가짜 신호원·가짜 음성 포트(test fixtures) + 가상 시간 | 어느 PC든 | 시나리오별 |
 | L3 | `:platform` 어댑터가 4-1절 계약을 지키는가 | 에뮬레이터 + VC 수동 조작 + 실측 앱(13절) | 에뮬레이터 장비 | 신호당 1회 |
 | L4 | 2차 PT 시연 흐름 13장면(사용자 플로우 8절) | 에뮬레이터 수동 | 에뮬레이터 장비 | 제출 전마다 |
 
@@ -655,7 +677,7 @@ fun observe(): Flow<Reading> = callbackFlow {
 | `ERROR_NOT_SUPPORTED_PROPERTY`, `_AREA`, `_VALUE_TYPE` | `UNSUPPORTED` | 코스 숨김 |
 | `ERROR_SECURITY_PERMISSION` | `PERMISSION` | 코스 숨김, 설정 화면에 이유 |
 | `ERROR_SERVICE_CONNECTION_FAILURE` | `CONNECTION` | 연결 오류 화면 또는 확인 불가 |
-| `ERROR_DRIVING_RESTRICTED` | `DRIVING` | 주행 제한으로 처리 |
+| `ERROR_DRIVING_RESTRICTED` | `UNKNOWN` | 확인 불가. 주행 제한 자체는 `DrivingGate`가 감지해 실습 범위를 취소한다(8절). `FailReason`에 주행 제한 값은 없다 |
 | `ERROR_EMPTY_RESULT`, `ERROR_INTERNAL_SERVICE`, `ERROR_UNDEFINED`, `VehicleException`이 아닌 예외 | `EMPTY` / `UNKNOWN` | 확인 불가 |
 
 주의: 문서는 "비동기 콜백이 끝나기 전에 `release()`를 호출하지 말라"고 한다. `Vehicle` 인스턴스는 앱 수명 동안 하나만 두고, 실습 범위가 취소될 때는 구독만 해제한다. `release()`는 앱이 종료될 때만 부른다.
@@ -750,6 +772,7 @@ fun observe(): Flow<Reading> = callbackFlow {
 | T14 | 세로형↔가로형 전환 시 Activity 생명주기 | 창 크기를 바꾸며 `onStop`, `onConfigurationChanged` 로그를 본다 | `onStop`이 불리면 창 크기 변경을 백그라운드 전환과 구분하는 방법이 필요하다(POL-E-8) | |
 | T15 | 주간·야간 전환이 앱에 전달되는가 | 시스템 테마를 바꾸고 `uiMode`를 본다 | 전달 안 되면 Pleos 테마 API를 찾는다 | |
 | T16 | 최대 제상의 지원 여부, 풍량·목표 온도의 지원 범위. 최대 제상을 켜면 다른 공조 값이 함께 바뀌는가 | `checkHvacMaxDefrostCapabilities`, `checkHvacFanSpeedCapabilities`, `checkHvacTemperatureCapabilities`의 결과 기록. VC에 최대 제상 카드가 있는지 확인 | 최대 제상을 에뮬레이터에서 바꿀 수 없으면 F1은 시연에서 빼고 F2·F3으로 시연한다. 범위를 읽지 못하면 `AtMax` 대신 "지금보다 올리기"로 바꾼다 | |
+| T17 | `:app`의 `debugImplementation(testFixtures(project(":engine")))`가 되는가. release APK에 가짜 구현의 클래스가 없는가 | W-02에서 debug·release를 모두 빌드하고, release APK의 클래스 목록에서 `FakeSignalSource`를 찾아본다 | 안 되면 가짜 구현을 `:engine-fakes` 모듈로 뗀다 | |
 | G1 | 앱 창의 크기(dp, px) | FormFactorConsole 또는 실측 앱에서 창 크기 출력 | 와이어프레임 프레임과 세로·가로 기준 값을 확정 | |
 
 ### 13-4. 순서
@@ -771,7 +794,8 @@ fun observe(): Flow<Reading> = callbackFlow {
 | 산출물 | release APK. Gradle 작업으로 `apk/팀명_앱이름_release.apk`에 복사한다(공모전 규정) **[미정 D1: 앱 이름]** |
 | 서명 | release 키스토어는 저장소에 넣지 않는다. 비밀값은 저장소에서 빼도 된다고 공지에 있다 |
 | 난독화 | 끈다 **[가정]**. Pleos SDK의 유지 규칙이 문서에 없어 축소하다 깨질 위험을 피한다 |
-| debug 전용 코드 | 가짜 신호원, 개발자 패널은 `src/debug/`에만 둔다 |
+| debug 전용 코드 | 가짜 신호원은 `engine/src/testFixtures/`에, 개발자 패널과 가짜 신호원을 고르는 조립 코드는 `app/src/debug/`에만 둔다 |
+| Gradle wrapper | W-02에서 추가한다. 그 뒤로 모든 명령은 `./gradlew`로 쓴다 |
 | README 필수 항목 | 앱 이름·한 줄 소개, 실행 방법, 테스트 환경·필요한 설정, 사용한 에뮬레이터 버전과 화면 규격, APK 위치 |
 | README에 더 적을 것 | 알려진 한계(POL-J-23~25, 실측에서 뺀 코스·기능), 테스트 실행 방법(`./gradlew :engine:test`), 모듈 구조 |
 | 제출 절차 | 접수 메일에 저장소 주소와 최종 커밋 해시 기재, 11-16까지 공개 전환 |

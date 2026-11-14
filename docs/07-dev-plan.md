@@ -26,6 +26,8 @@
 | 실측 T1 | **통과.** Pleos Connect v2.1.0 (rev 2) 에뮬레이터 부팅, VC 접속, VC의 공조 전원 변경이 에뮬레이터에 반영되는 것을 확인했다 |
 | 화면 규격 | 2560×1440, 160dpi, API 34. 앱 창은 화면의 오른쪽 약 2/3. 정확한 창 크기는 실측 G1 |
 | 빌드 환경 | WSL에서 JDK 17, AGP 8.8.2, Gradle 8.10.2, Kotlin 2.0.0, minSdk 28로 서명된 release APK를 만들어 에뮬레이터에 설치·실행했다 |
+| `:engine` 구성 (A, 11-14) | Kotlin 2.0.0(jvm, serialization 플러그인), coroutines 1.8.1, serialization-json 1.6.3, 테스트는 `kotlin("test")`와 coroutines-test, `java-test-fixtures`. 패키지는 `com.firstride.engine`(임시). W-03(고정 인터페이스)은 `main`에 병합됐다. Gradle wrapper는 아직 없다 |
+| JDK 주의 | A의 장비(Windows)에서 Eclipse Adoptium JDK 17.0.5는 Gradle 데몬이 `Bad address: listen`으로 죽는다. Amazon Corretto 17.0.12로 해결했다 |
 | 원격 작업 | B가 11-15 저녁까지 원격(SSH, 원격 데스크톱)으로만 자기 장비를 쓴다. 맥북 마이크가 에뮬레이터로 넘어가지 않아 B는 이 기간에 STT 실측(T9)을 하기 어렵다 |
 | 미검증 | OBS 녹화(화면 2개 + TTS 소리). 시연 영상의 전제다 |
 | 팀 결정 | D1(앱 이름), D2(기준 차종), D3(김서림 제거 목표 조합) 미정. 기한이 오늘이다 |
@@ -57,7 +59,7 @@
 | 신호 ID와 값 토큰 목록 | 기술 설계 4-3절. 실측 T6으로 값이 달라지면 어댑터가 흡수한다 |
 | 코스 정의 형식(차종 공통 파일, 차종별 파일) | 기술 설계 6-2절 |
 | `TtsPort`, `SttPort`, `ProgressStore`, `DrivingGate` | 기술 설계 7-1절, 5-7절, 8-1절 |
-| 패키지 이름과 모듈 경계 | 기술 설계 3절. 패키지 이름은 D1(앱 이름)에 묶인다 |
+| 패키지 이름과 모듈 경계 | 기술 설계 3절. 패키지 이름은 D1(앱 이름)에 묶인다. 정해지기 전의 임시값은 `com.firstride`다(`:engine`은 `com.firstride.engine`) |
 
 ## 4. 1단계 — 11-15 접수 제출본
 
@@ -74,7 +76,7 @@
 | ID | 작업 | 담당 | 선행 | 완료 기준 | 추정(h) |
 |---|---|---|---|---|---|
 | W-01 | 팀 결정 D1·D2·D3. 못 정하면 임시값으로 진행하고 `[가정]`으로 적는다 | 공동 | — | PRD 10절 갱신 | 0.5 |
-| W-02 | Gradle 3모듈 뼈대, Pleos Maven 저장소와 SDK 3종 의존성 해석, release 서명, `apk/` 복사 작업 | B | W-01 | `./gradlew :engine:test assembleRelease` 성공, 에뮬레이터에 설치 (NFR-13) | 2 |
+| W-02 | Gradle 3모듈 뼈대, Pleos Maven 저장소와 SDK 3종 의존성 해석, release 서명, `apk/` 복사 작업. A가 넣은 `settings.gradle.kts`(`:engine`만 있음)와 합치고 Gradle wrapper를 추가한다. `:app`이 `:engine`의 test fixtures를 debug에서만 가져오는 구성을 확인한다(실측 T17) | B | W-01 | `./gradlew :engine:test assembleRelease` 성공, 에뮬레이터에 설치 (NFR-13). release APK에 가짜 구현이 없다 | 2 |
 | W-03 | 3절의 인터페이스를 코드로 작성 | A 작성, B 리뷰 | W-02 | `main`에 병합 | 1.5 |
 | W-04 | `FakeSignalSource`, 코스 모델, JSON 파서 | A | W-03 | 기술 설계 4-2절의 API | 2 |
 | W-05 | `reduce`, 조건 상태, `Target.Equals`, L1 테스트 | A | W-04 | AC-02-2·3·4·5·6·11·12·13·14와 AC-CRS01-1~4가 테스트로 통과. 테스트 이름에 정책 ID | 5 |
@@ -224,7 +226,7 @@ PRD 6-3절의 자기체크 방식 비교 검증은 비교용 화면("했어요" 
 - 상대의 승인이 필요한 변경은 둘이다. `reduce`가 있는 파일, 3절의 고정 인터페이스. 나머지는 CI가 통과하면 스스로 병합한다.
 - 테스트 이름에 정책 ID를 넣는다(기술 설계 9-2절). 수용 기준을 통과시킨 PR은 설명에 AC 번호를 적는다.
 - 실측 결과는 그날 기술 설계 13-3절의 결과 칸에 적는다. A가 코스 정의의 값을 여기서 가져간다.
-- 가짜 신호원과 개발자 패널은 `src/debug/`에만 둔다. release APK에 들어가지 않는다.
+- 가짜 신호원은 `engine/src/testFixtures/`에 두고 `:app`은 `debugImplementation(testFixtures(project(":engine")))`로만 가져온다. 개발자 패널은 `app/src/debug/`에만 둔다. 둘 다 release APK에 들어가지 않는다(기술 설계 4-2절).
 - 하루에 한 번 15분 동안 맞춘다: 끝낸 W-번호, 막힌 것, 인터페이스 변경 요청.
 - 에뮬레이터 확인은 만든 사람이 자기 장비에서 한다. PR에 VC에서 바꾼 값과 본 결과를 적는다. 실측 항목(T, G 번호)만 B가 맡는다.
 - 두 장비의 에뮬레이터 버전(v2.1.0 rev 2)과 AVD 설정을 같게 둔다. 한쪽에서만 재현되는 문제는 실측 표에 적는다.
