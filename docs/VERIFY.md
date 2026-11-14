@@ -194,3 +194,15 @@
 - 모든 단계는 `gradlew.bat :engine:test --console=plain`을 사용했으며 새 입력 검증 스크립트가 성공했다. 엔진 185개, 실패 0.
 - JSON 바이트는 같은 명령의 finally에서 복원했으며 동시 수정 여부도 확인했다. JSON git diff 없음.
 - `gradlew.bat :app:assembleDebug` 성공. 빌드 입력 선언만 바꿔 화면 재검증이나 Gradle 자체를 복제한 단위 테스트는 추가하지 않았다. 새 의존성은 없다.
+
+
+# W-61 코스 로더 Activity 캡처 검증
+
+검증일: 2026-11-15. ViewModel에 보관하는 코스 로더가 Application 자산을 사용하도록 최소 수정했다. 화면 배치는 유지한다.
+
+- javap 전후 확인: 코스 로더 Function0의 인수가 `MainActivity`에서 `FirstRideApp`으로 바뀌었다. ViewModel에 저장되는 로더의 Activity 직접 참조 경로가 없다.
+- `gradlew.bat :app:testDebugUnitTest :app:assembleDebug` 성공(app 10개, 실패 0).
+- 실제 Pleos/emulator-5554/com.firstride.qa39/fake에서 코스 로딩 후 와이퍼 2/2단계에 진입했다. font_scale 1.0→1.1로 Local Activity 인스턴스가 바뀌었고 프로세스 PID와 2/2단계는 유지됐다. 원래 1.0 복원 후에도 2/2를 확인하고 그만하기로 홈 복귀했다.
+- 초기 UI 검사는 글자 크기 변경 후 포커스가 왼쪽 DrivingView로 옮겨 다른 창을 읽었다. 픽셀·창 포커스를 확인하고 기존 Activity를 재사용하는 reorder-to-front로 앱 창을 선택한 뒤 같은 조건을 통과했다.
+
+실제 힙 덤프·GC 회수량은 측정하지 않았다. 검증은 직접 캡처 경로와 재생성 동작을 대상으로 한다. 새 의존성이나 글자 크기 설정 변경을 남기지 않았다.
