@@ -206,3 +206,17 @@
 - 초기 UI 검사는 글자 크기 변경 후 포커스가 왼쪽 DrivingView로 옮겨 다른 창을 읽었다. 픽셀·창 포커스를 확인하고 기존 Activity를 재사용하는 reorder-to-front로 앱 창을 선택한 뒤 같은 조건을 통과했다.
 
 실제 힙 덤프·GC 회수량은 측정하지 않았다. 검증은 직접 캡처 경로와 재생성 동작을 대상으로 한다. 새 의존성이나 글자 크기 설정 변경을 남기지 않았다.
+
+
+# W-62 시작·홈 조회의 백그라운드 중지 검증
+
+검증일: 2026-11-15. Pleos Connect v2.1.0 / emulator-5554 / com.firstride.qa39.
+
+- 임시 debug 지원 조회 지연·대기 수 probe로 수정 전 시작 13개, 홈 3개가 Activity STOPPED 뒤에도 대기함을 재현했다. 신호 지원 결과는 fake이고 Activity·DrivingGate는 실제 에뮬레이터를 사용했다.
+- 수정 후 시작 확인 도중 백그라운드에서 대기 0개, 숨은 화면의 실제 VC D→P 전환에도 새 조회 0회를 확인했다. 복귀 시 시작 확인이 재실행돼 홈에 도달했다.
+- 홈 지원 확인 3개도 백그라운드에서 0개로 취소됐고, 복귀 시 미완료 조회를 다시 실행했다. 완료 후 다시 백그라운드·복귀하면 추가 조회가 없었다.
+- 초기 시도는 앱 창 준비 전에 Settings를 열어 STOPPED에 도달하지 못했다. 창 포커스 대기를 추가했다. 이후 8초 probe 중 adb 재연결로 홈 확인을 놓쳐 20초로 늘린 실행에서 전체 조건이 통과했다.
+- 임시 probe를 제거하고 Variant.kt diff가 없음을 확인했다. `gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug` 성공. 보고서 합계 engine 185/platform 41/app 10개, 실패 0이며 변경 없는 작업에는 Gradle의 기존 결과를 재사용했다.
+- 최종 APK의 real SDK에서 시작→CRS-01 WAITING→Settings→복귀 확인→이어 하기 WAITING→그만하기→홈을 통과했다. fake 복구 후 글자 크기 1.0→1.1로 Activity 인스턴스 변경·동일 PID·와이퍼 2/2 유지, 원래 1.0 복원 후 2/2 유지를 확인하고 홈으로 돌아왔다.
+
+QA 신호원 fake·기어 P·글자 크기를 복구했다. 실제 SDK의 지원 조회 지연 장애와 실차는 주입·실측하지 않았다. 완료한 홈 조회는 같은 구성의 캐시이며 소등 확인 화면의 현재 상태 재조회는 그대로 유지한다.
