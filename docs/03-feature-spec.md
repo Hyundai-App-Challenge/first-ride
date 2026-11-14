@@ -469,7 +469,7 @@
 | S1 | 와이퍼 켜기 (Low) | 와이퍼 Off → Low |
 | S2 | 와이퍼 끄기 | 와이퍼 → Off |
 
-- AC-CRS04-1: S1에서 High나 Auto로 바꾸면 완료가 아니라 "한 단계 낮은 Low로 맞춰 보세요" 안내가 나온다(오조작 규칙) (실측 T6: VC의 Low/High/Auto/Off가 토큰 `LOW`/`HIGH`/`AUTO`/`OFF`로 온다. 그 밖의 단(간헐 등)은 완료도 오조작도 아니다).
+- AC-CRS04-1: S1에서 High나 Auto로 바꾸면 완료가 아니라 LOW 표시에 맞추라는 안내가 나온다(오조작 규칙) (실측 T6: VC의 Low/High/Auto/Off가 토큰 `LOW`/`HIGH`/`AUTO`/`OFF`로 온다. 그 밖의 단(간헐 등)은 완료도 오조작도 아니다).
 
 ### CRS-05. 방향지시등 — Should · 11-15 ○
 
