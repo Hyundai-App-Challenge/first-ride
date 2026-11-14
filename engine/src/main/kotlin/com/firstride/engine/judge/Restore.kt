@@ -1,20 +1,17 @@
 package com.firstride.engine.judge
 
 import com.firstride.engine.course.CourseDefinition
-import com.firstride.engine.signal.FailReason
 import com.firstride.engine.signal.Reading
 import com.firstride.engine.signal.SignalId
 import com.firstride.engine.signal.SignalSource
 import com.firstride.engine.signal.SignalValue
+import com.firstride.engine.signal.observeWithInitialTimeout
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.produceIn
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** 실습 후 원상 복귀 안내(FR-14)의 목록. 이름은 코스 정의의 조건 라벨이다. */
@@ -57,20 +54,8 @@ fun observeRestore(
 ): Flow<RestoreReport> {
     val ids = coveredSignals(course).keys.toList()
     if (ids.isEmpty()) return flowOf(RestoreReport(emptyList(), emptyList()))
-    return combine(ids.map { id -> restoreReadings(id, source, config) }) { readings ->
+    return combine(ids.map { id -> source.observeWithInitialTimeout(id, config.precheckTimeout) }) { readings ->
         restoreReport(course, before, ids.zip(readings).toMap())
-    }
-}
-
-/** 첫 응답만 제한한다. 제한 후에도 관찰을 유지해 늦게 온 실제 값을 반영한다. */
-private fun restoreReadings(id: SignalId, source: SignalSource, config: JudgeConfig): Flow<Reading> = flow {
-    coroutineScope {
-        val readings = source.observe(id).produceIn(this)
-        try {
-            val first = withTimeoutOrNull(config.precheckTimeout) { readings.receiveCatching() }
-            emit(first?.getOrNull() ?: Reading.Failed(if (first == null) FailReason.TIMEOUT else FailReason.EMPTY))
-            emitAll(readings)
-        } finally { readings.cancel() }
     }
 }
 

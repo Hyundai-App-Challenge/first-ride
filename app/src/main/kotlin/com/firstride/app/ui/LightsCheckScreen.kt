@@ -32,12 +32,11 @@ import com.firstride.app.Screen
 import com.firstride.engine.check.LampState
 import com.firstride.engine.check.LightsCheck
 import com.firstride.engine.check.LightsOutcome
-import com.firstride.engine.check.checkLights
+import com.firstride.engine.check.observeLights
 import com.firstride.engine.check.supportedLights
 import com.firstride.engine.signal.SignalId
 import com.firstride.engine.signal.Signals
 import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.flow.combine
 
 /**
  * SCR-06 소등 확인(FR-10). 하향등·미등·실내등을 읽어 보여 주고, 화면이 열려 있는 동안 구독해 바뀌면 갱신한다(AC-10-4).
@@ -55,12 +54,7 @@ fun LightsCheckScreen(vm: AppViewModel) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             try {
                 val lamps = supportedLights(signals)
-                if (lamps.isEmpty()) {
-                    value = checkLights(emptyMap())
-                } else {
-                    combine(lamps.map { signals.observe(it) }) { readings -> checkLights(lamps.zip(readings.toList()).toMap()) }
-                        .collect { value = it }
-                }
+                observeLights(lamps, signals).collect { value = it }
                 // 관찰이 끝나도 확인 불가/미지원 결과는 STOP까지 표시한다.
                 awaitCancellation()
             } finally {
