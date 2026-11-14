@@ -5,6 +5,8 @@ import android.util.Log
 import com.firstride.engine.signal.FakeSignalSource
 import com.firstride.engine.signal.SignalId
 import com.firstride.engine.signal.SignalSource
+import com.firstride.engine.signal.SignalValue
+import com.firstride.engine.signal.Signals
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
@@ -28,9 +30,25 @@ internal object Variant {
 
     fun signalSource(context: Context, vehicle: () -> SignalSource): SignalSource {
         val source = if (File(context.filesDir, REAL_FLAG).exists()) vehicle()
-        else FakeSignalSource().also { fake = it }
+        else FakeSignalSource().also { fake = it; seed(it) }
         return CountingSignalSource(source)
     }
+}
+
+/** 개발자 패널을 쓰기 전에도 모든 신호가 읽히도록 보통의 시작 값을 둔다. 값이 없으면 확인 불가가 된다. */
+private fun seed(f: FakeSignalSource) {
+    Signals.tokens.forEach { (id, values) ->
+        val v = when (id) {
+            Signals.HVAC_RECIRCULATION -> "FRESH"
+            Signals.DOOR_LOCK -> "LOCKED"
+            else -> if (values == null) "FACE" else if ("OFF" in values) "OFF" else values.first()
+        }
+        f.set(id, SignalValue.Token(v))
+    }
+    f.set(Signals.HVAC_FAN_SPEED, SignalValue.Number(3)); f.setRange(Signals.HVAC_FAN_SPEED, 0..8)
+    f.set(Signals.HVAC_TEMPERATURE, SignalValue.Number(225)); f.setRange(Signals.HVAC_TEMPERATURE, 160..300)
+    f.set(Signals.WINDOW_DRIVER_POSITION, SignalValue.Number(0)); f.setRange(Signals.WINDOW_DRIVER_POSITION, 0..100)
+    f.setPolled(Signals.HVAC_FAN_DIRECTION, true)
 }
 
 private class CountingSignalSource(private val inner: SignalSource) : SignalSource by inner {

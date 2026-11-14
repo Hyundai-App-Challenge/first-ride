@@ -2,6 +2,7 @@
   "id": "CRS-01",
   "name": "김서림 제거",
   "estimatedSeconds": 60,
+  "summary": "앞유리가 뿌옇게 될 때 김을 걷어 내는 방법을 익혀요.",
   "steps": [
     {
       "id": "CRS-01-S1",

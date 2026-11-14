@@ -41,6 +41,7 @@ object CourseValidator {
             checkLength(s.doneText, "${s.id}.doneText", ::err)
             s.misoperations.forEach { checkLength(it.correction, "${s.id}/${it.id}.correction", ::err) }
         }
+        checkLength(course.summary, "${course.id}.summary", ::err)
         course.followUps.forEach { checkTarget(it.condition.signal, it.condition.target, it.id, ::err) }
         course.exhaustedText?.let { checkLength(it, "${course.id}.exhaustedText", ::err) }
 

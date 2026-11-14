@@ -4,16 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -21,11 +19,20 @@ import com.firstride.app.AppViewModel
 import com.firstride.app.FirstRideApp
 import com.firstride.app.Screen
 import com.firstride.app.start.CourseCatalog
+import com.firstride.app.start.CourseTexts
 import com.firstride.app.ui.ConnectionErrorScreen
+import com.firstride.app.ui.CourseDoneScreen
+import com.firstride.app.ui.CourseIntroScreen
+import com.firstride.app.ui.DevPanel
 import com.firstride.app.ui.DrivingBlockScreen
-import com.firstride.engine.drive.DriveState
+import com.firstride.app.ui.FirstRideTheme
+import com.firstride.app.ui.HomeScreen
 import com.firstride.app.ui.SettingsScreen
 import com.firstride.app.ui.StartScreen
+import com.firstride.app.ui.StepScreen
+import com.firstride.engine.course.CourseDefinition
+import com.firstride.engine.drive.DriveState
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val vm: AppViewModel by viewModels {
@@ -43,34 +50,73 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
-                Surface {
-                    val screen by vm.screen.collectAsStateWithLifecycle()
-                    val catalog by vm.catalog.collectAsStateWithLifecycle()
-                    val drive by vm.driveState.collectAsStateWithLifecycle()
-                    // 주행 제한은 화면 전환보다 위에 있다(POL-D-2, 기술 설계 12절).
-                    if (drive == DriveState.RESTRICTED) DrivingBlockScreen() else when (val s = screen) {
-                        Screen.Start -> StartScreen()
-                        Screen.ConnectionError -> ConnectionErrorScreen(onRetry = vm::start)
-                        Screen.Settings -> SettingsScreen(catalog, onClear = vm::clearRecords, onBack = { vm.navigate(Screen.Home) })
-                        // 홈과 나머지 화면은 W-14(A)에서 채운다. 아래는 흐름을 확인하기 위한 자리 표시다.
-                        Screen.Home -> Column(Modifier.padding(32.dp)) {
-                            val visible = catalog?.visible.orEmpty()
-                            if (visible.isEmpty()) Text(stringResource(R.string.no_supported_courses))
-                            visible.forEach { c -> TextButton(onClick = { vm.startCourse(c) }) { Text(c.name) } }
-                            TextButton(onClick = { vm.navigate(Screen.Settings) }) { Text(stringResource(R.string.settings_title)) }
+            FirstRideTheme {
+                Box {
+                    Surface {
+                        val screen by vm.screen.collectAsStateWithLifecycle()
+                        val catalog by vm.catalog.collectAsStateWithLifecycle()
+                        val drive by vm.driveState.collectAsStateWithLifecycle()
+                        val runner by vm.runner.collectAsStateWithLifecycle()
+                        val lastAttempt by vm.lastAttempt.collectAsStateWithLifecycle()
+                        val texts = remember { CourseTexts.load(assets) }
+                        val scope = rememberCoroutineScope()
+                        val visible = catalog?.visible.orEmpty()
+                        // 음성 조율(W-11) 전까지 "다시 듣기"와 "어디 있어요"는 TTS를 바로 부른다.
+                        val speak: (String) -> Unit = { text -> scope.launch { vm.container.tts.speak(text) } }
+
+                        // 주행 제한은 화면 전환보다 위에 있다(POL-D-2, 기술 설계 12절).
+                        if (drive == DriveState.RESTRICTED) DrivingBlockScreen() else when (val s = screen) {
+                            Screen.Start -> StartScreen()
+                            Screen.ConnectionError -> ConnectionErrorScreen(onRetry = vm::start)
+                            Screen.Settings -> SettingsScreen(catalog, onClear = vm::clearRecords, onBack = { vm.navigate(Screen.Home) })
+                            Screen.Home -> HomeScreen(
+                                courses = visible,
+                                progress = vm.container.progress,
+                                onOpen = { vm.navigate(Screen.CourseIntro(it.id)) },
+                                onSettings = { vm.navigate(Screen.Settings) },
+                            )
+                            is Screen.CourseIntro -> WithCourse(visible, s.courseId, onMissing = { vm.navigate(Screen.Home) }) { course ->
+                                CourseIntroScreen(course, onStart = { vm.startCourse(course) }, onBack = { vm.navigate(Screen.Home) })
+                            }
+                            is Screen.Step -> {
+                                val course = visible.firstOrNull { it.id == s.courseId }
+                                StepScreen(
+                                    runner = runner,
+                                    course = course,
+                                    texts = texts[s.courseId],
+                                    loadImage = { path -> CourseTexts.loadImage(assets, path) },
+                                    onSpeak = speak,
+                                    onQuit = vm::quitCourse,
+                                )
+                            }
+                            is Screen.CourseDone -> WithCourse(visible, s.courseId, onMissing = { vm.navigate(Screen.Home) }) { course ->
+                                CourseDoneScreen(
+                                    course = course,
+                                    attempt = lastAttempt,
+                                    next = visible.getOrNull(visible.indexOf(course) + 1),
+                                    onNext = { visible.getOrNull(visible.indexOf(course) + 1)?.let { vm.navigate(Screen.CourseIntro(it.id)) } },
+                                    onRetry = { vm.startCourse(course) },
+                                    onHome = { vm.navigate(Screen.Home) },
+                                )
+                            }
+                            else -> Text("$s")
                         }
-                        is Screen.Step -> Column(Modifier.padding(32.dp)) {
-                            val runner by vm.runner.collectAsStateWithLifecycle()
-                            val progress = runner?.step?.collectAsStateWithLifecycle()?.value
-                            val phase = progress?.runner?.state?.collectAsStateWithLifecycle()?.value?.phase
-                            Text("${s.courseId} ${progress?.let { "${it.index + 1}/${it.total}" } ?: ""} $phase")
-                            TextButton(onClick = vm::quitCourse) { Text("그만하기") }
-                        }
-                        else -> Text("$s")
                     }
+                    DevPanel()
                 }
             }
         }
     }
+}
+
+/** 코스를 찾아 그린다. 숨겨졌거나 없으면 홈으로 보낸다(그리는 도중이 아니라 효과로). */
+@Composable
+private fun WithCourse(
+    courses: List<CourseDefinition>,
+    id: String,
+    onMissing: () -> Unit,
+    content: @Composable (CourseDefinition) -> Unit,
+) {
+    val course = courses.firstOrNull { it.id == id }
+    if (course != null) content(course) else LaunchedEffect(id) { onMissing() }
 }
