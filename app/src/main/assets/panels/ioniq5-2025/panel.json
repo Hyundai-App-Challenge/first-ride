@@ -20,9 +20,9 @@
     {"id":"direction","label":"바람 방향","rect":[0.505,0.566,0.037,0.04],"field":"driver_direction","kind":"choice","state":["driver","fan_direction"],"choices":[{"value":1,"label":"얼굴"},{"value":2,"label":"발"},{"value":4,"label":"앞유리"}],"view":"climate"},
     {"id":"temp-up","label":"운전석 온도 올리기","rect":[0.361,0.424,0.03,0.033],"field":"driver_temp","kind":"step","state":["driver","temp_c"],"delta":0.5,"min":16,"max":30,"view":"climate"},
     {"id":"temp-down","label":"운전석 온도 내리기","rect":[0.356,0.488,0.03,0.033],"field":"driver_temp","kind":"step","state":["driver","temp_c"],"delta":-0.5,"min":16,"max":30,"view":"climate"},
-    {"id":"headlights","view":"lights","label":"조명 돌림 스위치","rect":[0.31,0.35,0.17,0.28],"domain":"lights","endpoint":"lights","params":{"feature":"headlamp_mode"},"field":"value","state":["headlamp_mode"],"kind":"choice","choices":[{"value":"Off","label":"OFF"},{"value":"Auto","label":"AUTO"},{"value":"Position","label":"미등"},{"value":"LowBeam","label":"전조등"}],"interaction":"dial"},
-    {"id":"turn","view":"lights","label":"방향지시등 레버","rect":[0.76,0.38,0.18,0.38],"domain":"lights","endpoint":"turn-signal","field":"mode","state":["turn_signal_mode"],"kind":"choice","choices":[{"value":"BlinkLeft","label":"왼쪽"},{"value":"Off","label":"중립"},{"value":"BlinkRight","label":"오른쪽"}],"interaction":"lever"},
-    {"id":"wiper","view":"wipers","label":"앞유리 와이퍼 레버","rect":[0.47,0.01,0.18,0.83],"domain":"body","endpoint":"body","field":"front_wiper","state":["wipers","front","mode"],"kind":"choice","choices":[{"value":"Off","label":"OFF"},{"value":"Auto","label":"AUTO"},{"value":"Low","label":"LO · 보통"},{"value":"High","label":"HI · 빠르게"}],"interaction":"lever"},
+    {"id":"headlights","view":"lights","label":"조명 돌림 스위치","rect":[0.3,0.35,0.2,0.31],"domain":"lights","endpoint":"lights","params":{"feature":"headlamp_mode"},"field":"value","state":["headlamp_mode"],"kind":"choice","choices":[{"value":"Off","label":"OFF","rect":[0.50219,0.585812,0.064234,0.050343]},{"value":"Auto","label":"AUTO","rect":[0.50219,0.519451,0.064234,0.050343]},{"value":"Position","label":"미등","rect":[0.50219,0.443936,0.064234,0.050343]},{"value":"LowBeam","label":"전조등","rect":[0.50219,0.379863,0.064234,0.050343]}],"interaction":"dial"},
+    {"id":"turn","view":"turn","label":"방향지시등 레버","rect":[0.28,0.03,0.3,0.9],"domain":"lights","endpoint":"turn-signal","field":"mode","state":["turn_signal_mode"],"kind":"choice","choices":[{"value":"BlinkLeft","label":"왼쪽","rect":[0.350365,0.697941,0.189781,0.20595]},{"value":"Off","label":"중립","rect":[0.328467,0.393593,0.189781,0.20595]},{"value":"BlinkRight","label":"오른쪽","rect":[0.343066,0.084668,0.189781,0.20595]}],"interaction":"lever"},
+    {"id":"wiper","view":"wipers","label":"앞유리 와이퍼 레버","rect":[0.4,0.02,0.29,0.75],"domain":"body","endpoint":"body","field":"front_wiper","state":["wipers","front","mode"],"kind":"choice","choices":[{"value":"Off","label":"OFF","rect":[0.484672,0.608696,0.160584,0.132723]},{"value":"Auto","label":"AUTO","rect":[0.471533,0.437071,0.160584,0.132723]},{"value":"Low","label":"LO · 보통","rect":[0.454015,0.263158,0.160584,0.132723]},{"value":"High","label":"HI · 빠르게","rect":[0.430657,0.084668,0.160584,0.132723]}],"interaction":"lever"},
     {"id":"window-up","view":"door","label":"운전석 창문 올리기","rect":[0.705,0.26,0.058,0.055],"domain":"body","endpoint":"body","field":"window_fl","state":["windows","front_left"],"kind":"step","delta":-10,"min":0,"max":100},
     {"id":"window-down","view":"door","label":"운전석 창문 내리기","rect":[0.745,0.32,0.058,0.055],"domain":"body","endpoint":"body","field":"window_fl","state":["windows","front_left"],"kind":"step","delta":10,"min":0,"max":100},
     {"id":"window-lock","view":"door","label":"뒷좌석 창문 잠금","rect":[0.46,0.52,0.08,0.09],"domain":"window_lock","endpoint":"window-lock","params":{"area":"all"},"field":"locked","state":["locked","all"],"kind":"toggle"},
@@ -75,9 +75,21 @@
       "photo": "assets/lights.png",
       "crop": [0.22,0.23,0.78,0.65],
       "source": "https://ownersmanual.hyundai.com/full_webhelp/NE1/2025/ko_KR/id23C69600V5Z.html",
-      "description": "운전대 뒤 왼쪽 레버예요. 끝의 돌림 스위치로 조명, 긴 레버로 방향지시등을 조작해요.",
+      "description": "레버 끝을 위아래로 굴리거나, 사진에 인쇄된 OFF·AUTO·미등·전조등 표시를 눌러요.",
       "photoWidth": 685,
-      "photoHeight": 437
+      "photoHeight": 437,
+      "links": [{"view":"turn","label":"방향지시 레버 전체 보기","rect":[0.76,0.42,0.18,0.18]}]
+    },
+    {
+      "id": "turn",
+      "parent": "lights",
+      "name": "방향지시등 레버",
+      "photo": "assets/turn.png",
+      "photoWidth": 685,
+      "photoHeight": 437,
+      "crop": [0.08,0,0.92,1],
+      "source": "https://ownersmanual.hyundai.com/full_webhelp/NE1/2025/ko_KR/id23C697005HS.html",
+      "description": "위쪽 끝 A는 오른쪽, 아래쪽 끝 A는 왼쪽, 가운데는 중립이에요. 노란 테두리는 지금 선택된 위치예요. B의 원터치 동작은 지원하지 않아요."
     },
     {
       "id": "wipers",
@@ -85,7 +97,7 @@
       "photo": "assets/wipers.png",
       "crop": [0,0,1,1],
       "source": "https://ownersmanual.hyundai.com/full_webhelp/NE1/2025/ko_KR/id23C6B060A4Y.html",
-      "description": "운전대 뒤 오른쪽 레버예요. LO는 보통 속도, HI는 빠른 속도, OFF는 정지예요.",
+      "description": "운전대 뒤 오른쪽 레버예요. LO는 보통 속도, HI는 빠른 속도, OFF는 정지예요. 사진의 MIST·와셔액 동작은 지원하지 않아요.",
       "photoWidth": 685,
       "photoHeight": 437
     },
@@ -109,7 +121,8 @@
       "source": "https://ownersmanual.hyundai.com/full_webhelp/NE1/2025/ko_KR/id23C5F0V04ZJ.html",
       "description": "닫힌 자물쇠는 모든 도어 잠금, 열린 자물쇠는 잠금 해제예요.",
       "photoWidth": 685,
-      "photoHeight": 437
+      "photoHeight": 437,
+      "parent": "door"
     }
   ]
 }

@@ -89,11 +89,22 @@ class InteriorSimulatorTest(unittest.TestCase):
             self.assertEqual(self.call('GET', '/' + view['photo'])[0], 200)
             for link in view.get('links', []):
                 self.assertIn(link['view'], views)
+            if 'parent' in view:
+                self.assertIn(view['parent'], views)
+                self.assertNotEqual(view['parent'], view['id'])
         for control in panel['controls']:
             x, y, w, h = views[control['view']]['crop']
             rx, ry, rw, rh = control['rect']
             self.assertTrue(x <= rx < rx + rw <= x + w)
             self.assertTrue(y <= ry < ry + rh <= y + h)
+            if 'interaction' in control:
+                centres = []
+                for choice in control['choices']:
+                    cx, cy, cw, ch = choice['rect']
+                    self.assertTrue(x <= cx < cx + cw <= x + w)
+                    self.assertTrue(y <= cy < cy + ch <= y + h)
+                    centres.append(cy + ch / 2)
+                self.assertEqual(centres, sorted(centres, reverse=True), control['id'])
         for course in (f'CRS-0{i}' for i in range(1, 7)):
             text = json.loads((sim.MODEL / f'{course}.json').read_text(encoding='utf-8'))
             for step in text['steps'].values():

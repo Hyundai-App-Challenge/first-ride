@@ -31,7 +31,7 @@ function rows() {
   const body = [['와이퍼', choiceName('wiper')], ['운전석 창문 열림', b ? `${b.windows.front_left}%` : '—'],
     ['뒷좌석 창문 잠금', onOff(state?.window_lock?.locked?.all)], ['도어 잠금', onOff(b?.door_locks?.all)]];
   if (view.id === 'climate') return hvac;
-  if (view.id === 'lights') return lights;
+  if (['lights', 'turn'].includes(view.id)) return lights;
   if (view.id === 'wipers') return body.slice(0, 1);
   if (['door', 'locks'].includes(view.id)) return body.slice(1);
   return [...lights, body[0], hvac[7], hvac[5]];
@@ -99,7 +99,7 @@ function update() {
   const wiper = connected ? state?.body?.wipers?.front?.mode : null;
   $('wiper-preview').dataset.mode = wiper || '';
   $('wiper-motion-state').textContent = !connected ? '차량 연결 확인 중' : wiper === 'Auto' ? 'AUTO · 강우 감지 대기 (강우 감지 미연동)' : `현재 ${choiceName('wiper')}`;
-  $('lights-preview').hidden = view.id !== 'lights';
+  $('lights-preview').hidden = !['lights', 'turn'].includes(view.id);
   for (const [id, mode] of [['blink-left', 'BlinkLeft'], ['blink-right', 'BlinkRight']]) {
     $(id).classList.toggle('blinking', connected && state.lights.turn_signal_mode === mode);
   }
@@ -135,19 +135,27 @@ async function change(control, choice) {
 function makeButton(control, label = control.label, choice) {
   const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.disabled = true;
   button.setAttribute('aria-label', label); button.dataset.control = control.id;
+  if (choice !== undefined) button.dataset.value = String(choice);
   if (['toggle', 'set'].includes(control.kind) || choice !== undefined) button.setAttribute('aria-pressed', 'false');
   const item = {button, control, choice, suppressUntil: 0};
-  button.addEventListener('click', () => { if (Date.now() >= item.suppressUntil) change(control, choice); });
+  button.addEventListener('click', event => { if (event.detail === 0 || Date.now() >= item.suppressUntil) change(control, choice); });
   if (control.interaction && choice === undefined) makeGesture(item);
   if (control.id.startsWith('window-') && control.kind === 'step') makeWindowHold(item);
   buttons.push(item); return button;
 }
 function showPosition(item, index) {
   const {button, control} = item;
-  button.style.setProperty('--position', Math.max(0, index) / (control.choices.length - 1));
   button.setAttribute('aria-valuenow', String(Math.max(0, index)));
   button.setAttribute('aria-valuetext', index < 0 || !connected ? '확인 중' : control.choices[index].label);
   button.dataset.mode = index < 0 || !connected ? '—' : control.choices[index].label;
+  if (item.marker) {
+    item.marker.hidden = index < 0 || !connected;
+    if (!item.marker.hidden) {
+      place(item.marker, control.choices[index].rect);
+      item.marker.dataset.value = control.choices[index].value;
+      item.marker.classList.toggle('preview', Boolean(item.dragging));
+    }
+  }
 }
 function makeGesture(item) {
   const {button, control} = item;
@@ -155,7 +163,7 @@ function makeGesture(item) {
   button.setAttribute('role', 'slider');
   button.setAttribute('aria-valuemin', '0'); button.setAttribute('aria-valuemax', String(control.choices.length - 1));
   button.setAttribute('aria-orientation', 'vertical');
-  button.setAttribute('aria-label', control.label + (control.interaction === 'dial' ? ' · 돌리거나 위아래로 끌어 조작' : ' · 위아래로 끌어 조작'));
+  button.setAttribute('aria-label', control.label + (control.interaction === 'dial' ? ' · 위아래로 굴려 조작' : ' · 위아래로 끌어 조작'));
   const select = index => change(control, control.choices[index].value);
   button.addEventListener('keydown', event => {
     const offsets = {ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1};
@@ -166,27 +174,22 @@ function makeGesture(item) {
     select(event.key === 'Home' ? 0 : event.key === 'End' ? control.choices.length - 1 : Math.max(0, Math.min(control.choices.length - 1, current + offsets[event.key])));
   });
   button.addEventListener('pointerdown', event => {
-    if (event.button !== 0 || button.disabled || busy) return;
+    if (event.button !== 0 || button.disabled || busy || item.dragging) return;
     const index = control.choices.findIndex(c => c.value === valueOf(control));
     if (index < 0) return;
     button.focus({preventScroll: true});
-    const bounds = button.getBoundingClientRect(), cx = bounds.x + bounds.width / 2, cy = bounds.y + bounds.height / 2;
-    item.dragging = {id: event.pointerId, x: event.clientX, y: event.clientY, index, preview: index, cx, cy,
-      angle: Math.atan2(event.clientY - cy, event.clientX - cx), rotation: 0,
-      circular: control.interaction === 'dial' && Math.hypot(event.clientX - cx, event.clientY - cy) > Math.min(bounds.width, bounds.height) * .3,
-      step: Math.max(28, bounds.height / control.choices.length), moved: false};
+    const centres = control.choices.map(c => c.rect[1] + c.rect[3] / 2);
+    const spacing = (Math.max(...centres) - Math.min(...centres)) / (centres.length - 1);
+    // 원통 회전과 레버의 상하 위치는 사진의 표시 간격을 따른다. 평면 원형 회전은 사용하지 않는다.
+    item.dragging = {id: event.pointerId, x: event.clientX, y: event.clientY, index, preview: index,
+      step: spacing * $('photo').getBoundingClientRect().height, moved: false};
     button.setPointerCapture(event.pointerId);
   });
   button.addEventListener('pointermove', event => {
     const drag = item.dragging; if (!drag || drag.id !== event.pointerId) return;
     if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 10 && !drag.moved) return;
     drag.moved = true;
-    let steps = (drag.y - event.clientY) / drag.step;
-    if (drag.circular) {
-      const angle = Math.atan2(event.clientY - drag.cy, event.clientX - drag.cx);
-      drag.rotation += Math.atan2(Math.sin(angle - drag.angle), Math.cos(angle - drag.angle)); drag.angle = angle;
-      steps = drag.rotation / (Math.PI / 3);
-    }
+    const steps = (drag.y - event.clientY) / drag.step;
     drag.preview = Math.max(0, Math.min(control.choices.length - 1, drag.index + Math.round(steps)));
     showPosition(item, drag.preview);
     $('feedback').textContent = `놓으면 ${control.choices[drag.preview].label}(으)로 조작해요.`;
@@ -194,9 +197,15 @@ function makeGesture(item) {
   const finish = (event, cancel) => {
     const drag = item.dragging; if (!drag || drag.id !== event.pointerId) return;
     item.dragging = null;
-    if (drag.moved) item.suppressUntil = Date.now() + 500;
+    const photo = $('photo').getBoundingClientRect();
+    const px = (event.clientX - photo.x) / photo.width, py = (event.clientY - photo.y) / photo.height;
+    const tapped = !drag.moved && !cancel ? control.choices.findIndex(c => {
+      const [x, y, w, h] = c.rect; return x <= px && px <= x + w && y <= py && py <= y + h;
+    }) : -1;
+    if (drag.moved || tapped >= 0) item.suppressUntil = Date.now() + 500;
     if (button.hasPointerCapture(event.pointerId)) button.releasePointerCapture(event.pointerId);
     if (!cancel && drag.moved && drag.preview !== drag.index) select(drag.preview);
+    else if (tapped >= 0 && tapped !== drag.index) select(tapped);
     else {
       if (cancel && drag.moved) $('feedback').textContent = '조작을 취소했어요.';
       update();
@@ -222,6 +231,31 @@ function makeWindowHold(item) {
   });
   for (const event of ['pointerup', 'pointercancel', 'lostpointercapture', 'blur']) button.addEventListener(event, stop);
 }
+function makePhotoTap(item) {
+  const {button, control, choice} = item;
+  // 사진의 터치 제스처는 pointerup으로 확정하고 호환 click은 중복 제거한다. 키보드 click은 유지한다.
+  button.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || button.disabled || busy || item.dragging) return;
+    button.focus({preventScroll: true});
+    item.dragging = {id: event.pointerId, x: event.clientX, y: event.clientY, moved: false};
+    button.setPointerCapture(event.pointerId);
+  });
+  button.addEventListener('pointermove', event => {
+    const drag = item.dragging;
+    if (drag?.id === event.pointerId) drag.moved ||= Math.hypot(event.clientX - drag.x, event.clientY - drag.y) >= 10;
+  });
+  const finish = (event, cancel) => {
+    const drag = item.dragging; if (drag?.id !== event.pointerId) return;
+    item.dragging = null; item.suppressUntil = Date.now() + 500;
+    if (button.hasPointerCapture(event.pointerId)) button.releasePointerCapture(event.pointerId);
+    const bounds = button.getBoundingClientRect();
+    const inside = event.clientX >= bounds.left && event.clientX <= bounds.right && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
+    if (!cancel && !drag.moved && !button.disabled && inside) change(control, choice);
+  };
+  button.addEventListener('pointerup', event => finish(event, false));
+  button.addEventListener('pointercancel', event => finish(event, true));
+  button.addEventListener('lostpointercapture', event => finish(event, true));
+}
 function cancelInteractions() {
   for (const item of buttons) {
     item.held = false;
@@ -243,9 +277,10 @@ function showView(id, focus = false) {
   buttons = []; $('hotspots').replaceChildren(); $('control-list').replaceChildren();
   $('view-title').textContent = view.name; $('scene-description').textContent = view.description;
   $('controls-title').textContent = view.id === 'overview' ? '실내 둘러보기' : '이곳의 조작';
-  $('back').hidden = view.id === 'overview'; $('back').textContent = view.id === 'locks' ? '← 창문 · 잠금' : '← 운전석 전체';
+  $('back').hidden = view.id === 'overview';
+  $('back').textContent = '← ' + panel.views.find(v => v.id === (view.parent || 'overview')).name;
   $('show-labels').hidden = view.id === 'overview'; $('panel').dataset.view = view.id;
-  for (const button of $('views').children) button.setAttribute('aria-pressed', String(button.dataset.view === view.id));
+  for (const button of $('views').children) button.setAttribute('aria-pressed', String(button.dataset.view === (view.parent || view.id)));
   const [x, y, w, h] = view.crop;
   $('panel').style.aspectRatio = `${w * view.photoWidth} / ${h * view.photoHeight}`;
   $('photo').src = '/' + view.photo; $('photo').alt = `아이오닉5 ${view.name}. ${view.description}`;
@@ -260,6 +295,17 @@ function showView(id, focus = false) {
     const spot = makeButton(control); spot.className = 'hotspot'; spot.title = control.label;
     const label = document.createElement('span'); label.className = 'label'; label.textContent = control.label;
     spot.replaceChildren(label); place(spot, control.rect, true); $('hotspots').append(spot);
+    if (control.interaction) {
+      const item = buttons.find(entry => entry.button === spot);
+      const marker = document.createElement('div'); marker.className = 'selection-marker'; marker.dataset.control = control.id;
+      marker.setAttribute('aria-hidden', 'true'); item.marker = marker; $('hotspots').append(marker);
+      // 조명 표시는 끝 스위치 바깥에 있다. 레버 위치는 같은 드래그 영역 안에서 탭으로 선택한다.
+      for (const choice of control.interaction === 'dial' ? control.choices : []) {
+        const target = makeButton(control, choice.label, choice.value); target.className = 'mode-target'; target.textContent = '';
+        makePhotoTap(buttons.find(entry => entry.button === target));
+        target.title = choice.label; place(target, choice.rect, true); $('hotspots').append(target);
+      }
+    }
     if (control.kind === 'choice') {
       const group = document.createElement('fieldset'), legend = document.createElement('legend'); legend.textContent = control.label;
       group.id = `choices-${control.id}`; group.append(legend);
@@ -269,10 +315,11 @@ function showView(id, focus = false) {
     } else $('control-list').append(makeButton(control));
   }
   if (view.id === 'overview') {
-    for (const target of panel.views.filter(v => !['overview', 'locks'].includes(v.id))) $('control-list').append(navigateButton(target.id, target.name + ' →'));
-  } else if (view.id === 'door') $('control-list').append(navigateButton('locks', '도어 잠금 버튼 확대 →'));
+    for (const target of panel.views.filter(v => v.id !== 'overview' && !v.parent)) $('control-list').append(navigateButton(target.id, target.name + ' →'));
+  } else for (const link of view.links || []) $('control-list').append(navigateButton(link.view, link.label + ' →'));
   if (view.id === 'wipers') $('photo-hint').textContent = '레버를 위로 끌면 OFF → AUTO → LO → HI, 아래로 끌면 반대예요. 놓으면 반영돼요.';
-  if (view.id === 'lights') $('photo-hint').textContent = '끝 스위치는 돌리거나 위아래로 끌어 조작해요. 방향지시 레버는 위로 올리면 오른쪽, 내리면 왼쪽이에요.';
+  if (view.id === 'lights') $('photo-hint').textContent = '끝 스위치를 위로 굴리면 OFF → AUTO → 미등 → 전조등, 아래로 굴리면 반대예요. 사진의 표시도 누를 수 있어요.';
+  if (view.id === 'turn') $('photo-hint').textContent = '레버를 위쪽 A로 올리면 오른쪽, 아래쪽 A로 내리면 왼쪽, 가운데는 중립이에요.';
   if (view.id === 'door') $('photo-hint').textContent = '창문 버튼을 누르고 있으면 계속 움직이고 놓으면 멈춰요. 아래 버튼으로도 조작할 수 있어요.';
   document.querySelector('.photo-scroll').scrollLeft = 0;
   update(); if (focus) $('view-title').focus({preventScroll: true});
@@ -294,10 +341,10 @@ async function poll() {
 async function start() {
   try {
     panel = await request('/api/panel');
-    for (const target of panel.views.filter(v => v.id !== 'locks')) {
+    for (const target of panel.views.filter(v => !v.parent)) {
       const button = navigateButton(target.id, target.name); button.dataset.view = target.id; $('views').append(button);
     }
-    $('back').addEventListener('click', () => showView(view.id === 'locks' ? 'door' : 'overview', true));
+    $('back').addEventListener('click', () => showView(view.parent || 'overview', true));
     $('show-labels').addEventListener('click', () => {
       const visible = $('panel').classList.toggle('labels-visible'); $('show-labels').setAttribute('aria-pressed', String(visible)); $('show-labels').textContent = visible ? '버튼 이름 숨기기' : '버튼 이름 보기';
     });
