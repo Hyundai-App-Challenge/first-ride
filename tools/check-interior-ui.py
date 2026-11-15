@@ -64,7 +64,10 @@ SCRIPT = r"""
     const position=choice('headlights','미등'); position.click();
     await wait(()=>row('조명')==='미등' && !position.disabled, 'position lights');
     choice('headlights','전조등').click(); await wait(()=>row('조명')==='전조등' && !position.disabled, 'headlights');
-    choice('turn','왼쪽').click(); await wait(()=>row('방향지시등')==='왼쪽' && !position.disabled, 'turn signal');
+    document.querySelector('#hotspots .scene-link').click(); await validateScene();
+    const left=choice('turn','왼쪽');
+    left.click(); await wait(()=>row('방향지시등')==='왼쪽' && !left.disabled, 'turn signal');
+    document.getElementById('back').click(); check(document.getElementById('panel').dataset.view==='lights', 'turn parent back');
     navigation('wipers'); await validateScene();
     choice('wiper','LO · 보통').click(); await wait(()=>row('와이퍼')==='LO · 보통' && !choice('wiper','OFF').disabled, 'wiper');
     navigation('door'); await validateScene();
@@ -168,7 +171,7 @@ if __name__ == '__main__':
                 raise SystemExit('FAIL browser smoke; inspect captures/ioniq5-web-' + name + '.html')
             if args.mobile and 'data-viewport="390"' not in dom:
                 raise SystemExit('FAIL: mobile viewport was not 390 CSS pixels')
-            print(f'PASS {name}: 6 scenes, screen switching, all signal domains, hit targets, P gate, failure/recovery, no overflow')
+            print(f'PASS {name}: 7 scenes, screen switching, all signal domains, hit targets, P gate, failure/recovery, no overflow')
     finally:
         app.shutdown()
         app.server_close()
