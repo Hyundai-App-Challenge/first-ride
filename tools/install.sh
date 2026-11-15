@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 source tools/app-target.sh
 type="${1:-debug}"
 case "$type" in debug|release) ;; *) echo "사용: tools/install.sh [debug|release]" >&2; exit 1 ;; esac
+target_user=$(current_android_user)
 if [[ "$type" == release ]]; then apk=$(ls apk/*.apk | head -1); else apk=app/build/outputs/apk/debug/app-debug.apk; fi
 adb="tools/adb.sh"
 # Windows의 adb.exe는 WSL 경로를 읽지 못하므로 Windows 경로로 바꿔 넘긴다.
@@ -17,4 +18,4 @@ if ! out=$("$adb" install -r -d "$apk" 2>&1); then
   echo "설치에 실패했다. 기존 앱은 삭제하지 않았다. APK의 패키지·서명과 APP_ID를 확인한다." >&2
   exit 1
 fi
-"$adb" shell am start -n "$component"
+"$adb" shell am start --user "$target_user" -n "$component"

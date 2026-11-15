@@ -230,6 +230,10 @@ class CourseSuite:
 
     def open(self, course_id, action):
         name = json.loads((ROOT / "app/src/main/assets/courses" / (course_id + ".json")).read_text(encoding="utf-8"))["name"]
+        if course_id == "CRS-01":
+            name = os.environ.get("START_TEXT") or name
+        if action == "시작하기":
+            action = os.environ.get("INTRO_START") or action
         self.device.call("logcat", "-c")
         self.device.tap(name)
         self.device.tap(action)
@@ -258,6 +262,12 @@ class CourseSuite:
             self.start(course_id); d.phase("ALREADY_AT_TARGET")
             self.change("hvac", "WAITING", front_defroster=False)
             self.change("hvac", "screen CourseDone", front_defroster=True); self.home()
+            # 기존 check-crs01.sh의 초기 내기 순환 수용 기준(2c)도 유지한다.
+            v.set("hvac", power=True, ac=False, recirc=True, front_defroster=False)
+            self.start(course_id); d.phase("WAITING")
+            self.change("hvac", "CORRECTION", front_defroster=True)
+            d.tap("그만하기"); d.wait_text("설정")
+            print("PASS CRS-01 initial recirculation correction (2c)", flush=True)
         elif course_id == "CRS-02":
             v.set("hvac", power=True, rear_defroster=False, fan_speed=3, driver_direction=1)
             self.start(course_id); d.phase("1/3 WAITING")
@@ -403,20 +413,20 @@ class CourseSuite:
         # 재개 시점을 시작 전 값으로 덮지 않는다. 최초 풍량3까지 직접 되돌려야 목록에서 빠진다.
         labels = ("뒷유리 열선", "풍량", "앞유리 쪽 바람")
         for label in labels:
-            d.wait_text("· " + label)
+            d.wait_text(label)
         for field, value, label in (("rear_defroster", False, labels[0]), ("fan_speed", 3, labels[1]),
                                     ("driver_direction", 1, labels[2])):
-            v.set("hvac", **{field: value}); d.wait_absent("· " + label)
+            v.set("hvac", **{field: value}); d.wait_absent(label)
         d.wait_absent("실습하느라 바뀐 것이 남아 있어요")
         d.background(); v.set("hvac", rear_defroster=True)
-        d.wait_text("· 뒷유리 열선")
-        v.set("hvac", rear_defroster=False); d.wait_absent("· 뒷유리 열선")
+        d.wait_text("뒷유리 열선")
+        v.set("hvac", rear_defroster=False); d.wait_absent("뒷유리 열선")
         self.change("gear", "drive RESTRICTED", gear="Drive")
         wait_for(lambda: d.subscriptions() == 0, "hidden restore subscriptions 0")
         v.set("hvac", fan_speed=4)
         self.change("gear", "drive PARKED", gear="Park")
-        d.wait_text("· 풍량")
-        v.set("hvac", fan_speed=3); d.wait_absent("· 풍량"); d.tap("홈으로")
+        d.wait_text("풍량")
+        v.set("hvac", fan_speed=3); d.wait_absent("풍량"); d.tap("홈으로")
         d.wait_text("설정")
 
         completed = d.progress_hash()

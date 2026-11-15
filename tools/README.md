@@ -10,8 +10,8 @@
 | `vc.sh state [영역]` | VC가 아는 차량 상태(JSON) |
 | `vc.sh keepalive <초>` | VC 세션을 살려 둔다. 실측·녹화 중에 뒤에서 돌린다 |
 | `signals.sh real\|fake` | debug 빌드의 신호원을 차량 SDK / 가짜 신호원으로 바꾸고 앱을 다시 띄운다 |
-| `tap.sh "글자"` | 화면에서 글자가 같은 요소를 찾아 누른다(uiautomator) |
-| `check-crs01.sh` | CRS-01 수용 기준(AC-CRS01-1·2·2b·2c·3·4)을 VC로 차례로 확인한다. debug + `signals.sh real` |
+| `tap.sh "글자"` | 화면에서 글자·접근성 설명이 같은 유효한 요소를 누른다. APP_ID가 있으면 해당 앱만 선택 |
+| `check-crs01.sh` | CRS-01 수용 기준(AC-CRS01-1·2·2b·2c·3·4)의 공통 통합 도구 진입점. debug 앱을 확인하고 real 전환·원복을 자동 처리 |
 | `check-courses.py` | 설치된 debug 앱의 CRS-01~06 통합 회귀. 후속 조치·재개·소등·원상 복귀도 선택 검증하며 원래 VC 값·신호원 모드를 복원한다. Python 표준 라이브러리만 사용 |
 | `demo-scene.sh reset\|<장면>` | 2차 PT 시연 장면(사용자 플로우 8절)의 VC 조작과 기대하는 앱 상태 |
 
@@ -21,13 +21,13 @@
 
 - **대상 앱**: `install.sh`, `signals.sh`, `check-crs01.sh`는 `APP_ID`로 대상을 지정한다(기본 `com.firstride`). APK의 applicationId와 같은 값을 쓴다. 패키지에 suffix가 붙어도 Activity의 코드 네임스페이스는 `com.firstride`다. `ACTIVITY`는 전체 이름이나 `.measure.MeasureActivity`를 받는다.
 - **기기 선택**: 먼저 `adb devices`로 확인하고 `ANDROID_SERIAL`을 지정한다. `ADB`는 실행 파일 경로이며 인수를 넣지 않는다.
+- **Android 사용자**: 설치·신호원 변경은 현재 사용자를 확인한 뒤 시작한다. 사용자 확인 실패 때는 설치·파일 변경 전에 중단하며 실행·중지도 해당 사용자에 한정한다.
 - **Git Bash 예시**(기기 번호는 `adb devices`로 확인한 값):
   ```bash
   export ADB='D:/Android/Sdk/platform-tools/adb.exe'
   export ANDROID_SERIAL='<확인한 기기 번호>'
   export APP_ID=com.firstride.qa39
   tools/install.sh debug
-  tools/signals.sh real
   tools/check-crs01.sh
   ```
 - **도구 회귀 테스트**: `python3 -m unittest discover -s tools/tests`. 가짜 adb와 로컬 HTTP 서버를 사용하며 차량에는 연결하지 않는다. Windows에서는 `BASH_EXE='C:/Program Files/Git/bin/bash.exe'`를 환경 변수로 지정한다.
@@ -67,6 +67,8 @@ python tools/check-courses.py --course CRS-02 --recovery
 기어 P에서 실행한다. 코스는 실제 SDK 신호로 판정하며 debug 진행 기록이 완료로 바뀔 수 있다. 앱·설정 데이터를 삭제하지 않고, 종료·실패·Ctrl+C에서 원래 공조·등·와이퍼·창문·잠금 값과 real/fake 표식을 복원한다. VC의 all 제어로 복원할 수 없는 혼합 잠금 상태에서는 변경 전에 중단한다. 복원 실패도 비정상 종료하며 다른 도메인과 신호원 복원은 계속 시도한다.
 
 CRS-01은 부분 충족·교정·이미 목표, CRS-02는 상대 풍량·폴링 풍향, CRS-03은 등 켜기/끄기, CRS-04는 HIGH/AUTO 교정, CRS-05는 반대 방향 교정, CRS-06은 상대 창문·창문/도어 잠금을 확인한다. 방향지시등의 사각지대 카메라 포커스는 Off 복귀 후 앱 UI를 다시 선택해 처리한다. 모든 선택 코스와 복원이 끝나야 최종 성공 문구·종료 코드 0이 나온다. 상세 CRS-01 수용 기준은 기존 `check-crs01.sh`도 유지한다.
+
+`check-crs01.sh`는 같은 Python 실행기로 CRS-01만 선택한다. 초기 내기 순환에서 제상을 켜면 교정으로 가는 2c 기준도 포함한다. 기존 APP_ID 기본값(com.firstride)과 START_TEXT/INTRO_START 환경 변수는 유지하며, debug 확인에 실패하면 차량 값을 바꾸기 전에 멈춘다. 실행 Activity는 항상 MainActivity이며 이전 전역 로그·기본 사용자 호출·고정 대기를 사용하지 않는다. 성공 출력은 공통 실행기의 PASS/최종 성공 문구로 통일한다. `tap.sh`는 APP_ID를 생략하면 기존처럼 전체 화면에서 찾으므로 앱 QA 때는 APP_ID를 지정한다.
 
 `--follow-ups`는 CRS-01을 선택한 경우에만 쓴다. 에어컨 복구 중 제상 유지 조건이 바뀌면 완료하지 않는지, 실제 지원 최댓값의 풍량·온도 조치, 해결/미해결 응답, 이미 최대인 조치 제외, 백그라운드·D→P 중단 후 새 점검을 확인한다. 후속 조치 전후 저장된 진행 파일의 SHA-256이 같아야 통과한다. 이 옵션은 운전석 온도·기어도 원래 값으로 복원한다. VC 2.1.0에는 최대 제상 쓰기 항목이 없어 해당 조치의 완료 검증은 `SKIP`을 출력하고 건너뛰기 경로를 확인한다. `ALL SELECTED COURSES PASSED`가 이 미검증 항목까지 보장하지는 않는다.
 

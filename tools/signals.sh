@@ -5,13 +5,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source tools/app-target.sh
-user=$(tools/adb.sh shell am get-current-user | tr -d '\r')
+case "${1:-}" in real|fake) ;; *) sed -n '2,4p' "$0"; exit 1 ;; esac
+user=$(current_android_user)
 case "${1:-}" in
   real) tools/adb.sh shell run-as "$app_id" --user "$user" mkdir -p files
         tools/adb.sh shell run-as "$app_id" --user "$user" touch files/real_signals ;;
   fake) tools/adb.sh shell run-as "$app_id" --user "$user" rm -f files/real_signals ;;
-  *) sed -n '2,4p' "$0"; exit 1 ;;
 esac
-tools/adb.sh shell am force-stop "$app_id"
-tools/adb.sh shell am start -n "$component" >/dev/null
+tools/adb.sh shell am force-stop --user "$user" "$app_id"
+tools/adb.sh shell am start --user "$user" -n "$component" >/dev/null
 echo "signals=$1 (app $app_id, user $user)"
