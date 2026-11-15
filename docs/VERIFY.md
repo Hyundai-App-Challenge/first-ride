@@ -415,3 +415,17 @@ Pleos Connect v2.1.0 / emulator-5554 / user10 / com.firstride.qa39.
 - 미검증: 사용자 직접 사용성 평가, 실차, 전체 실내와 다른 네 코스의 사진 교체, 최대 제상 쓰기, 모든 실차 공조 자동 연동. 원본 사진의 숫자·LED는 정적이다.
 
 최종 로컬 실행: 도구 단위 테스트 58개 PASS, Kotlin engine190/platform63/app29=282개 실패0, debug APK 빌드·release Kotlin 컴파일 성공, JS 문법 검사 성공. 최종 desktop/mobile headless 회귀도 모두 PASS. 잘못된 전체 모델 폴더에 부분 팩을 둔 첫 검증은 MISSING_TEXT로 실패했으며, 전체 모델 계약을 유지하도록 panels/ 팩으로 분리한 뒤 통과했다.
+
+
+# 음성 진행(STT) 앱 연결
+
+검증일: 2026-11-15.
+
+- `AppViewModel`의 `stt = null`을 걷고 `AppContainer.stt`(`PleosStt`, ON_DEVICE)를 단계 진행의 `VoiceCoordinator`에 넣었다. 후속 조치 안내(FR-16)는 지금처럼 듣지 않는다.
+- `pleos.car.permission.STT_SERVICE`를 debug 전용 매니페스트에서 main으로 옮겼다(AC-01-5). release 병합 매니페스트의 퍼미션: CAR_CLIMATE·CAR_LIGHTS·CAR_WINDOWS·CAR_DOORS·TTS_SERVICE·STT_SERVICE. INTERNET·RECORD_AUDIO·제어 퍼미션 없음.
+- `gradlew :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease` 통과.
+- Pleos Connect v2.1.0 / emulator-5554 / release `com.firstride` / real 신호(VC): 설치 시 STT_SERVICE granted=true. CRS-02 1단계에서 TTS 안내 뒤 "듣는 중이에요. "다음", "다시", "어디야"라고 말해 보세요."가 표시되고, SDK 로그에 initialize → setLocale ko_KR → request → ReadyToStartRecognition을 확인했다.
+- 에뮬레이터에 들어오는 소리가 없어 약 15초 뒤 듣기 시간 제한(Error)으로 정리(removeListener → stop → release)되고, 그 코스 동안 "음성 진행 꺼짐 · 터치로 진행"으로 바뀌었다. 터치 진행은 그대로 된다(AC-06-6).
+- 에뮬레이터 마이크: 기본 실행은 마이크 입력을 0으로 채운다. `emulator -avd Pleos_Connect_v2.1.0 -no-snapshot-load -allow-host-audio`로 켜면 듣기마다 `AudioRecorderImpl start`(16kHz)와 "Built-In Mic" 경로가 열리고 상태 표시줄에 마이크 표시가 뜬다. 에뮬레이터는 **켜질 때의 Windows 기본 녹음 장치**를 잡고 놓지 않으므로, 마이크를 바꾸면 에뮬레이터를 다시 켜야 한다.
+- 듣기는 "다시 듣기"·"어디 있어요"로 다시 시작된다(안내를 읽은 뒤 다시 듣는다).
+- 미검증(T9 남은 것): 실제 발화로 세 어휘 인식(이번 로그에서 인식된 텍스트 0건), 무음일 때 SDK가 스스로 끝내는가, 이어 듣기. 말이 없는 15초 시간 제한도 Error로 보아 그 코스 동안 음성 진행이 꺼진다 — 무음과 오류를 나눌지 정해야 한다.
