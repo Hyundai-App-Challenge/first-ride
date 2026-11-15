@@ -28,6 +28,9 @@ secrets.properties
 # Kotlin
 .kotlin/
 
+# Python
+__pycache__/
+
 # 로그, 임시 파일
 *.log
 *.tmp

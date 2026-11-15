@@ -53,13 +53,13 @@ class VoiceCoordinator(
 ) {
     private val requests = Channel<String>(Channel.CONFLATED)
     private val _available = MutableStateFlow(true)
-    private val _sttAvailable = MutableStateFlow(true)
+    private val _sttAvailable = MutableStateFlow(stt != null && listenEnabled)
     private val _listening = MutableStateFlow(false)
 
     /** 마지막 재생이 오류로 끝났으면 false. 화면의 "음성 꺼짐" 표시에 쓴다. 성공하면 다시 true. */
     val available: StateFlow<Boolean> = _available
 
-    /** 듣기가 오류로 끝났으면 false(마이크 거부 등). 듣기를 멈춘다. */
+    /** 어댑터가 없거나 듣기가 비활성·오류이면 false(마이크 거부 등). */
     val sttAvailable: StateFlow<Boolean> = _sttAvailable
 
     /** 듣는 동안 true. 화면의 "듣는 중" 표시에 쓴다(POL-V-13). */

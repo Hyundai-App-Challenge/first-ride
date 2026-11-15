@@ -1,11 +1,15 @@
 package com.firstride.engine.judge
 
+import com.firstride.engine.course.ConditionDef
+import com.firstride.engine.course.Kind
 import com.firstride.engine.course.StepText
+import com.firstride.engine.course.Target
 import com.firstride.engine.signal.FailReason
 import com.firstride.engine.signal.Reading
 import com.firstride.engine.signal.SignalId
 import com.firstride.engine.signal.SignalValue
 import com.firstride.engine.signal.SignalValue.Token
+import com.firstride.engine.signal.Signals
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -67,11 +71,48 @@ class StepViewTest {
         )
     }
 
-    @Test fun `POL-J-11 이미 목표 상태는 껐다 켜기 안내이고 조건이 이미 켜져 있음으로 보인다`() {
+    @Test fun `POL-J-11 이미 목표 상태는 재조작과 해당 단계 목표를 화면과 음성에 안내한다`() {
         val v = view(state("ON", "ON", "FRESH"))
         assertEquals(Phase.ALREADY_AT_TARGET, v.phase)
-        assertEquals("이미 켜져 있어요. 한 번 껐다가 다시 켜 보세요.", v.message)
+        assertEquals("이미 목표 상태예요. 다른 상태로 바꾼 뒤 다시 해 보세요. ${text.instruction}", v.message)
+        assertEquals(v.message, v.spoken)
         assertEquals(ConditionStatus.TOGGLE_NEEDED, v.conditions.first().status)
+    }
+
+    @Test fun `POL-J-11 OFF 목표는 끄기 안내이며 목표 밖으로 갔다 돌아와야 완료한다`() {
+        val wiper = Signals.WIPER_STATE
+        val off = step.copy(
+            action = listOf(ConditionDef(wiper, Target.Equals(Token("OFF")), "와이퍼", Kind.ACTION)),
+            hold = emptyList(),
+            misoperations = emptyList(),
+        )
+        val offText = text.copy(instruction = "레버를 OFF 표시에 맞춰 와이퍼를 꺼 주세요.")
+        var s = reduce(initialState(off), StepEvent.Prechecked(mapOf(wiper to Reading.Value(Token("OFF")))))
+        val v = stepView(s, off, offText)
+        assertEquals(Phase.ALREADY_AT_TARGET, v.phase)
+        assertEquals("이미 목표 상태예요. 다른 상태로 바꾼 뒤 다시 해 보세요. ${offText.instruction}", v.message)
+        assertEquals(v.message, v.spoken)
+        assertEquals(ConditionStatus.TOGGLE_NEEDED, v.conditions.single().status)
+        s = reduce(s, StepEvent.Changed(wiper, Reading.Value(Token("LOW"))))
+        assertEquals(Phase.WAITING, s.phase)
+        assertEquals(offText.instruction, stepView(s, off, offText).message)
+        s = reduce(s, StepEvent.Changed(wiper, Reading.Value(Token("OFF"))))
+        assertEquals(Phase.DONE, s.phase)
+    }
+
+    @Test fun `LOW처럼 켜기 끄기가 아닌 목표도 코스의 조작 안내를 그대로 쓴다`() {
+        val wiper = Signals.WIPER_STATE
+        val low = step.copy(
+            action = listOf(ConditionDef(wiper, Target.Equals(Token("LOW")), "와이퍼", Kind.ACTION)),
+            hold = emptyList(),
+            misoperations = emptyList(),
+        )
+        val lowText = text.copy(instruction = "레버를 LOW 표시에 맞춰 주세요.")
+        val s = reduce(initialState(low), StepEvent.Prechecked(mapOf(wiper to Reading.Value(Token("LOW")))))
+        val v = stepView(s, low, lowText)
+        assertEquals(Phase.ALREADY_AT_TARGET, v.phase)
+        assertEquals("이미 목표 상태예요. 다른 상태로 바꾼 뒤 다시 해 보세요. ${lowText.instruction}", v.message)
+        assertEquals(v.message, v.spoken)
     }
 
     @Test fun `AC-02-6 교정은 정의의 교정 문구와 오조작 위치 안내를 쓴다`() {
@@ -114,7 +155,8 @@ class StepViewTest {
 
     @Test fun `차종별 문구를 찾지 못해도 상태 문구는 나온다`() {
         val v = stepView(state("ON", "ON", "FRESH"), step, null)
-        assertEquals("이미 켜져 있어요. 한 번 껐다가 다시 켜 보세요.", v.message)
+        assertEquals("이미 목표 상태예요. 다른 상태로 바꾼 뒤 다시 해 보세요.", v.message)
+        assertEquals(v.message, v.spoken)
         assertNull(v.locatorAsset)
         assertEquals("", stepView(state("OFF", "ON", "FRESH"), step, null).message)
     }

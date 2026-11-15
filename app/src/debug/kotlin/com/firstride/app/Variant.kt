@@ -41,7 +41,7 @@ internal object Variant {
 }
 
 /** 개발자 패널을 쓰기 전에도 모든 신호가 읽히도록 보통의 시작 값을 둔다. 값이 없으면 확인 불가가 된다. */
-private fun seed(f: FakeSignalSource) {
+internal fun seed(f: FakeSignalSource) {
     Signals.tokens.forEach { (id, values) ->
         val v = when (id) {
             Signals.HVAC_RECIRCULATION -> "FRESH"

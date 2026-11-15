@@ -14,6 +14,7 @@ import com.firstride.app.ui.DrivingBlockScreen
 import com.firstride.app.ui.FollowUpScreen
 import com.firstride.app.ui.HomeScreen
 import com.firstride.app.ui.LightsCheckScreen
+import com.firstride.app.ui.ResumePrompt
 import com.firstride.app.ui.SettingsScreen
 import com.firstride.app.ui.StartScreen
 import com.firstride.app.ui.StepScreen
@@ -31,6 +32,7 @@ fun AppNavigation(vm: AppViewModel, texts: Map<String, ModelCourseText>, loadIma
     val catalog by vm.catalog.collectAsStateWithLifecycle()
     val drive by vm.driveState.collectAsStateWithLifecycle()
     val runner by vm.runner.collectAsStateWithLifecycle()
+    val interruption by vm.interruption.collectAsStateWithLifecycle()
     val lastAttempt by vm.lastAttempt.collectAsStateWithLifecycle()
     val voiceStatus by vm.voiceStatus.collectAsStateWithLifecycle()
     val voiceEnabled by vm.voiceEnabled.collectAsStateWithLifecycle()
@@ -39,6 +41,17 @@ fun AppNavigation(vm: AppViewModel, texts: Map<String, ModelCourseText>, loadIma
     // 주행 제한은 화면 전환보다 위에 있다(POL-D-2).
     if (drive == DriveState.RESTRICTED) {
         DrivingBlockScreen()
+        return
+    }
+    interruption?.let { cut ->
+        val course = visible.firstOrNull { it.id == cut.courseId }
+        ResumePrompt(
+            courseName = course?.name.orEmpty(),
+            stepNumber = cut.stepIndex + 1,
+            total = course?.steps?.size ?: 0,
+            onResume = vm::resumeInterruptedCourse,
+            onHome = vm::dismissInterruption,
+        )
         return
     }
     when (val s = screen) {
@@ -52,6 +65,8 @@ fun AppNavigation(vm: AppViewModel, texts: Map<String, ModelCourseText>, loadIma
             onSettings = { vm.navigate(Screen.Settings) },
             signals = vm.container.signals,
             onLightsCheck = { vm.navigate(Screen.LightsCheck) },
+            texts = texts,
+            loadImage = loadImage,
         )
         is Screen.CourseIntro -> WithCourse(visible, s.courseId, onMissing = { vm.navigate(Screen.Home) }) { course ->
             CourseIntroScreen(

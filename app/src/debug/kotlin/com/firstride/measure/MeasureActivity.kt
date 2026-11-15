@@ -29,7 +29,9 @@ import androidx.lifecycle.lifecycleScope
 import com.firstride.engine.signal.Signals
 import com.firstride.platform.drive.CarDrivingGate
 import com.firstride.platform.vehicle.VehicleConnection
+import com.firstride.platform.voice.PleosStt
 import com.firstride.platform.voice.PleosTts
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -105,6 +107,32 @@ class MeasureActivity : ComponentActivity() {
             job3.cancel()
             val t4 = SystemClock.elapsedRealtime()
             log("tts speak#4 -> ${tts.speak("다음 단계예요.")} after ${SystemClock.elapsedRealtime() - t4}ms")
+            // 초기화·재생 중 새 문장이 와도 마지막 문장은 정상 완료해야 한다.
+            val rapid1 = launch { log("tts rapid#1 -> ${tts.speak("첫 번째 안내를 길게 읽고 있어요. 새 안내가 오면 이 안내는 멈춰야 해요.")}") }
+            delay(100)
+            val rapid2 = launch { log("tts rapid#2 -> ${tts.speak("두 번째 안내를 읽고 있어요. 마지막 안내로 바뀔 거예요.")}") }
+            delay(100)
+            log("tts rapid#3 -> ${tts.speak("마지막 안내예요.")}")
+            rapid1.join()
+            rapid2.join()
+        }
+        // T9(일부): STT 초기화, 한 번 듣기의 결과와 걸린 시간, 듣는 중 취소. am start에 --ez stt true
+        if (intent.getBooleanExtra("stt", false)) lifecycleScope.launch {
+            val stt = PleosStt(this@MeasureActivity)
+            try {
+                repeat(2) { i ->
+                    val t = SystemClock.elapsedRealtime()
+                    log("stt listen#${i + 1} -> ${stt.listenOnce().measurementLabel()} after ${SystemClock.elapsedRealtime() - t}ms")
+                }
+                val job = launch { log("stt listen#3 -> ${stt.listenOnce().measurementLabel()}") }
+                delay(1500)
+                log("stt cancel listen#3 at +1500ms")
+                job.cancelAndJoin()
+            } finally {
+                // Activity 파괴 시 lifecycleScope가 취소돼도 SDK 리스너를 정리한다.
+                stt.release()
+                log("stt cleanup finished")
+            }
         }
         runCatching { rawProbe() }.onFailure { log("raw probe threw ${it.javaClass.name}: ${it.message}") }
     }
