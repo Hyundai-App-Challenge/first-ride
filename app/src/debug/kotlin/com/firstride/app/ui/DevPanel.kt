@@ -53,7 +53,12 @@ fun DevPanel() {
         } else {
             Surface(Modifier.width(520.dp).heightIn(max = 560.dp).padding(8.dp), tonalElevation = 8.dp, shadowElevation = 8.dp) {
                 Column(Modifier.padding(12.dp).verticalScroll(rememberScrollState())) {
-                    TextButton(onClick = { open = false }) { Text("닫기", fontSize = 14.sp) }
+                    Row {
+                        TextButton(onClick = { open = false }) { Text("닫기", fontSize = 14.sp) }
+                        TextButton(onClick = { DevSplit.on = !DevSplit.on }) {
+                            Text(if (DevSplit.on) "내비 mock 끄기" else "내비 mock 켜기", fontSize = 14.sp)
+                        }
+                    }
                     Signals.all.sortedBy { it.key }.forEach { id -> SignalRow(fake, id) }
                 }
             }

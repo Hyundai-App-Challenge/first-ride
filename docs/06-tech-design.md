@@ -351,6 +351,7 @@ fun chooseNext(
 | 규칙 | 구현 | 정책 |
 |---|---|---|
 | 기본 조합 복구가 먼저 | 코스 마지막 단계의 목표 상태가 지금 값과 다르면 `RestoreBase` | POL-F-11 |
+| 복구 중에도 기본 조합 유지 | 시작 때 미충족인 조건만 조작 조건으로, 나머지는 유지 조건으로 둔다. 유지 조건이 바뀌거나 읽히지 않으면 완료하지 않는다 | POL-F-11 |
 | 이미 된 조치는 내지 않는다 | 목표가 지금 값과 맞으면 건너뛴다 | POL-F-4 |
 | 미지원 조치는 내지 않는다 | `support`가 `SUPPORTED`가 아니면 건너뛴다 | |
 | 고를 때마다 새로 읽는다 | `FollowUpRunner`가 `chooseNext`를 부르기 전에 매번 `read`한다 | POL-F-5 |
@@ -360,6 +361,24 @@ fun chooseNext(
 `chooseNext`가 고른 조치는 시작 시점에 미충족임이 보장되므로 `StepRunner`에서 `ALREADY_AT_TARGET`이 나오지 않는다. 읽은 직후 사용자가 값을 바꿔 그 사이에 충족되면 엔진의 기존 규칙대로 `ALREADY_AT_TARGET`이 되고, 건너뛰면 다음 `chooseNext`에서 "이미 되어 있음"으로 빠진다.
 
 `FollowUpRunner`는 진행 기록 저장소를 받지 않는다. 코스 결과와 배지를 바꿀 수단이 없다(POL-F-8).
+
+복구 화면은 기존 마지막 단계의 문구·위치 자산을 재사용하되, 복구 조작의 조건별 그림을 먼저 고른다. 원래 조작 조건의 기본 그림도 위치 맵에 남겨 복구 중 유지 조건이 어긋나면 남은 조건의 그림으로 전환한다. 명시된 조건별 그림이 우선이며 없는 자산은 만들지 않는다.
+
+### 5-9. 원상 복귀 안내 (FR-14)
+
+목록 이름은 `coveredSignals`가 신호별 첫 조건 라벨을 사용한다. 같은 신호를 여러 방향으로 다루는 코스는 라벨을 조작부 이름으로 통일한다(예: "방향지시등"). 왼쪽·오른쪽 목표는 단계 안내와 완료 문구로 구분해, 복귀 목록이 현재 점등 방향을 잘못 단정하지 않게 한다.
+
+`snapshotBefore`는 코스가 다루는 신호를 동시에 조회하고, 각 조회를 `JudgeConfig.precheckTimeout`(기본 3초)으로 제한한다. 미응답·실패 값은 기준에 넣지 않아 다른 신호의 확인을 막거나 복구됐다고 단정하지 않는다.
+
+`CourseRunner.run`이 같은 실습 범위에서 이 조회를 마친 뒤 첫 단계를 시작한다. 앱은 별도의 조회 코루틴을 띄우지 않고 실행기의 `initialValues`를 원상 복귀 기준으로 사용한다. 주행·백그라운드 전환으로 준비를 취소하면 읽기도 함께 취소한다. 준비 완료 전에 취소되면 기준 전체를 미확인으로 두며 재개 시 새 값으로 덮지 않는다. 정상 준비 뒤 재개는 원래 기준을 유지하고, 완료 후 새 시도는 기준도 새로 읽는다. 값은 메모리에만 둔다.
+
+`observeRestore`도 신호마다 첫 응답만 같은 시간으로 제한한다. 기한 안에 값이 없거나 값 없이 끝나면 `unverified`로 표시한다. 관찰은 유지하므로 늦은 실제 값과 사용자의 원상 복귀는 계속 반영하며, 최초 응답 뒤 값이 그대로인 것은 시간 초과가 아니다. 화면 수집 취소 시 채널과 원본 구독도 취소한다. 두 함수의 기존 호출은 기본 설정을 그대로 사용한다. SignalSource 포트·코스 JSON·영속 형식은 바꾸지 않는다.
+
+### 5-10. 소등 확인 관찰 (FR-10)
+
+`supportedLights`는 지원 여부를 동시에 확인하고 기존 등 순서를 유지한다. `observeLights`는 지원되는 등만 관찰하며, 최초 응답이 기본 3초 안에 없으면 해당 등을 `UNKNOWN`으로 낸다. 일부 미응답이 다른 등 표시를 막지 않고, 전부 미응답이면 `NONE_READABLE`이다. 이후 실제 값·변경은 계속 반영한다. 처음부터 정상 응답한 값이 오래 유지되는 것은 실패가 아니다. 지원하는 등이 없으면 구독 없이 빈 결과를 반환한다.
+
+최초 응답 제한은 원상 복귀 안내와 같은 내부 함수 `observeWithInitialTimeout`을 사용한다. SignalSource 인터페이스는 유지하며 화면·실습 수집이 취소되면 원본 관찰과 첫 값 대기도 함께 정리한다.
 
 ## 6. 코스 정의
 
@@ -412,8 +431,8 @@ app/src/main/assets/
   "courseId": "CRS-01",
   "steps": {
     "CRS-01-S1": {
-      "instruction": "앞유리 김서림 제거 버튼을 누르세요.",
-      "locatorText": "공조 조작부 왼쪽 위, 부채꼴 모양 버튼이에요.",
+      "instruction": "부채꼴 모양의 앞유리 김서림 제거 버튼을 누르세요.",
+      "locatorText": "차량의 공조 조작부를 확인해 주세요.",
       "locatorAsset": "assets/hvac_front_defrost.webp",
       "conditionLocators": { "hvac.ac": "assets/hvac_ac.webp" },
       "misoperationLocators": { "recirc": "assets/hvac_recirculation.webp" }
@@ -470,7 +489,11 @@ interface SttPort { suspend fun listenOnce(): ListenResult         /* 최종 텍
 ```
 
 - `speak`는 재생이 끝날 때까지 기다리는 `suspend` 함수다. SDK의 `speak()` 호출 뒤 `EventListener.onDone()`/`onStop()`/`onError()`를 기다려 결과로 돌려준다.
-- `listenOnce`는 SDK의 `request()` 호출 뒤 `ResultListener.onUpdated(stt, completed = true)`의 텍스트를 돌려준다. 중간 결과(`completed = false`)는 쓰지 않는다. `onEndedRecognition()`이 텍스트 없이 오면 무음이다.
+- TTS는 `TtsPlayback`이 문장별 결과를 소유하되 SDK 연결을 재사용한다. SDK의 play/stop은 내부에서 비동기로 실행되므로 재생 시작 전 취소는 START 뒤 STOP을 보내고, 다음 문장 전에는 실제 STOP 응답을 기다린다. STOP을 보낸 뒤의 DONE만으로는 중지를 확인하지 않는다. 5초 안에 확인이 없으면 새 재생을 막고, 늦은 STOP 뒤 복구할 수 있다. 시간 경과로 이벤트를 추측하지 않는다. 정상 DONE 뒤에는 stop을 추가하지 않으며 연결 해제도 초기화·중지 확인 뒤에 한다. 초기화는 5초, 재생은 기존 T8의 3초+글자당150ms 제한이다.
+- `listenOnce`는 SDK의 `request()` 호출 뒤 `ResultListener.onUpdated(stt, completed = true)`의 텍스트를 돌려준다. 중간 결과(`completed = false`)는 쓰지 않는다. `onEndedRecognition()`만으로는 완료하지 않는다. 실측 T9에서 종료 뒤 약 3~5ms 후 최종 텍스트가 왔다. 빈 최종 결과 또는 명시적 stop은 무음이며, 최종 결과가 없으면 15초 제한 뒤 오류다.
+- STT SDK는 요청 ID를 주지 않으므로 `OneShotStt`가 요청마다 SDK 인스턴스와 결과를 함께 소유한다. 초기화 제한은 5초이며 정상·실패·취소·시간 초과 모두 리스너를 제거하고 stop/release한 후 다음 요청을 시작한다. 이미 닫힌 인식기의 콜백은 다음 요청을 완료할 수 없다. 임의의 유예 시간에 의존하지 않는다.
+- STT 어댑터가 없거나 듣기가 비활성이면 `sttAvailable`은 처음부터 false다. 현재 앱의 STT는 실제 발화 검증 전까지 미연결이며, 화면에 음성 진행 꺼짐·터치 진행을 표시한다. TTS 안내는 독립적으로 유지한다(AC-06-6).
+- SDK 3.3.1의 [공식 이벤트 설명](https://document.pleos.ai/docs/pleos-only/connect-sdk-pleos/SpeechToText/result-listeners)은 최종 결과를 `completed=true`로 정의하며, 해제 전에 등록한 리스너를 제거하도록 안내한다. 실제 마이크의 세 어휘 정확도와 연속 발화는 T9 검증이 추가로 필요하다.
 
 ### 7-2. 흐름
 
@@ -553,6 +576,16 @@ flowchart TD
 | 그만하기 | ○ | 없음 | 홈 | POL-R-6 |
 | 앱 종료 후 재실행 | — | 완료 기록과 배지만 | 홈. 이어서 하기를 묻지 않음 | POL-R-13 |
 
+재개할 때는 같은 `CourseRunner`의 단계 위치에서 새 `StepRunner`를 만들어 신호를 다시 조회한다. 단계 안의 값·충족·타이머는 보존하지 않는다. 이전 단계의 건너뜀 여부만 시도 결과 집계로 메모리에 남겨, 재개 뒤 `HAS_SKIPPED`를 `COMPLETED`로 잘못 기록하지 않는다(POL-R-5). 시작 전 원상 복귀 값도 같은 시도의 것을 유지한다. 30분 유효 시간은 앱·정차 복귀와 재개 버튼에서 확인한다.
+
+이전 실습 범위의 자식 음성·구독 정리가 끝난 뒤 다음 실습 범위를 시작한다. 빠른 재개에서도 이전 `stop`이 새 안내를 끊지 않도록 AppViewModel의 실습 시작을 직렬화한다.
+
+소등 확인 화면은 Activity가 `STARTED`인 동안만 지원 여부 조회·신호 관찰·요약 재생을 실행한다. 백그라운드에서는 구독과 재생을 취소하고 표시 값을 비워, 복귀 시 오래된 요약 대신 현재 상태를 새로 읽는다. 요약 재생은 음성 설정이 켜져 있을 때만 한다(POL-V-6, POL-E-6).
+
+완료 화면의 원상 복귀 관찰도 `STARTED` 동안만 실행한다. 화면이 가려지면 구독과 표시 보고서를 함께 비우고, 복귀 후 새 구독의 값을 표시한다. 최초 실습의 기준 값은 `CourseRunner`에 남겨 재개 때 덮지 않는다. `tools/check-courses.py --recovery`로 실습 재개·완료 목록·소등 확인의 백그라운드와 주행 복귀를 함께 검증한다.
+
+시작 확인도 Activity 화면 복귀에서만 실행하며 `onStop`에서 취소한다. 숨은 앱의 기어 P 복귀는 화면 복귀로 취급하지 않는다. 홈의 진행 기록·소등 지원 조회는 `STARTED` 범위에서만 실행한다. 같은 홈 구성에서 완료한 조회 결과는 유지하고, 도중에 취소한 조회만 화면 복귀 후 다시 실행한다. 연결 오류 재시도는 기존대로 사용자 버튼으로만 한다(POL-E-3).
+
 창 크기 변경에서 Activity가 다시 만들어지지 않도록 매니페스트의 `configChanges`에 화면 크기·방향 변경을 선언하고 Compose가 레이아웃만 다시 잡게 한다 **[실측 T14: 세로형↔가로형 전환 시 Activity 생명주기]**.
 
 ### 8-3. 주의 분산 최적화(DO) 선언
@@ -619,6 +652,7 @@ GitHub Actions에서 `./gradlew :engine:test`를 돌린다. 에뮬레이터가 �
 
 - 제어 퍼미션(`CONTROL_CAR_*`)과 인터넷 퍼미션은 선언하지 않는다(POL-S-9, POL-S-4).
 - 빌드에 들어가지 않는 코스의 퍼미션은 뺀다(POL-S-10). 11-15 제출본에 CRS-06이 없으면 `CAR_DOORS`를 선언하지 않는다.
+- 현재 공통 자산에는 CRS-01~06이 포함되므로 차량 조회 권한 네 종류와 TTS를 main에 선언한다. STT는 실사용 정확도 게이트 전까지 debug 실측용으로만 선언하며, 실측 Activity도 debug에만 둔다.
 - 문서는 "세부 API마다 요구 퍼미션이 다를 수 있다"고 적었다. 메서드별 `@RequiresPermission`을 구현 때 확인한다.
 - STT에 Android의 마이크 퍼미션(`RECORD_AUDIO`)이 따로 필요한지는 문서에 없다 **[실측 T9]**.
 

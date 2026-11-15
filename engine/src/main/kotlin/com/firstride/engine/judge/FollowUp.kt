@@ -53,13 +53,14 @@ fun chooseNext(
     val base = course.steps.lastOrNull()
     val restoreId = restoreStepId(course)
     if (base != null && restoreId != null && restoreId !in alreadyOffered) {
-        val unmet = (base.action + base.hold).filter { metNow(it, readings[it.signal], ranges[it.signal]) == false }
+        val conditions = base.action + base.hold
+        val unmet = conditions.filter { metNow(it, readings[it.signal], ranges[it.signal]) == false }
         if (unmet.isNotEmpty()) {
             return FollowUpNext.RestoreBase(
                 StepDefinition(
                     id = restoreId,
                     action = unmet.map { it.copy(kind = Kind.ACTION) },
-                    hold = emptyList(),
+                    hold = conditions.filterNot { it in unmet }.map { it.copy(kind = Kind.HOLD) },
                     misoperations = base.misoperations,
                     doneText = base.doneText,
                 ),

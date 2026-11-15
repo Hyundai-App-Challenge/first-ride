@@ -93,7 +93,7 @@ class ExtraCoursesTest {
         assertEquals(Phase.WAITING, r.phase())
         src.change(r, this, Signals.WIPER_STATE, Token("HIGH"))
         assertEquals(Phase.CORRECTION, r.phase())
-        assertTrue("Low" in r.message("CRS-04", 0))
+        assertTrue("LOW" in r.message("CRS-04", 0))
         src.change(r, this, Signals.WIPER_STATE, Token("AUTO"))
         assertEquals(Phase.CORRECTION, r.phase())
         src.change(r, this, Signals.WIPER_STATE, Token("LOW"))

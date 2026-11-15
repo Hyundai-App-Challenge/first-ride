@@ -13,12 +13,12 @@
         {
           "id": "high",
           "when": { "signal": "wiper.state", "equals": "HIGH" },
-          "correction": "한 단계 낮은 Low로 맞춰 보세요."
+          "correction": "와이퍼 레버를 LOW 표시에 맞춰 보세요."
         },
         {
           "id": "auto",
           "when": { "signal": "wiper.state", "equals": "AUTO" },
-          "correction": "Auto 말고 한 단계 낮은 Low로 맞춰 보세요."
+          "correction": "AUTO 대신 LOW 표시에 맞춰 보세요."
         }
       ],
       "doneText": "좋아요. 와이퍼가 켜졌어요."

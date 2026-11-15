@@ -3,14 +3,8 @@ package com.firstride.app.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,19 +14,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.firstride.R
 import com.firstride.app.AppViewModel
 import com.firstride.app.Screen
 import com.firstride.engine.check.LampState
 import com.firstride.engine.check.LightsCheck
 import com.firstride.engine.check.LightsOutcome
-import com.firstride.engine.check.checkLights
+import com.firstride.engine.check.observeLights
 import com.firstride.engine.check.supportedLights
+import com.firstride.engine.judge.Phase
 import com.firstride.engine.signal.SignalId
 import com.firstride.engine.signal.Signals
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.awaitCancellation
 
 /**
  * SCR-06 소등 확인(FR-10). 하향등·미등·실내등을 읽어 보여 주고, 화면이 열려 있는 동안 구독해 바뀌면 갱신한다(AC-10-4).
@@ -42,16 +41,22 @@ import kotlinx.coroutines.flow.combine
 fun LightsCheckScreen(vm: AppViewModel) {
     val signals = vm.container.signals
     val tts = vm.container.tts
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val voiceEnabled by vm.voiceEnabled.collectAsStateWithLifecycle()
 
-    // null이면 아직 읽는 중. 지원되는 등만 구독한다(AC-10-6). 취소되면 구독이 해제된다.
-    val check by produceState<LightsCheck?>(null, signals) {
-        val lamps = supportedLights(signals)
-        if (lamps.isEmpty()) {
-            value = checkLights(emptyMap())
-            return@produceState
+    // 백그라운드에서는 구독을 해제하고, 복귀 때 현재 값을 새로 확인한다(POL-E-6).
+    val check by produceState<LightsCheck?>(null, signals, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            try {
+                val lamps = supportedLights(signals)
+                observeLights(lamps, signals).collect { value = it }
+                // 관찰이 끝나도 확인 불가/미지원 결과는 STOP까지 표시한다.
+                awaitCancellation()
+            } finally {
+                // 복귀 전에 오래된 요약을 다시 읽지 않는다.
+                value = null
+            }
         }
-        combine(lamps.map { signals.observe(it) }) { readings -> checkLights(lamps.zip(readings.toList()).toMap()) }
-            .collect { value = it }
     }
 
     val loaded = check
@@ -64,49 +69,55 @@ fun LightsCheckScreen(vm: AppViewModel) {
         }
     }
 
-    // 요약이 바뀔 때만 읽는다. 바뀌면 앞의 것은 끊긴다. 음성이 실패해도 화면은 그대로다.
-    LaunchedEffect(summary) { if (summary != null) tts.speak(summary) }
+    // 설정과 생명주기를 함께 따른다. 요약 변경·백그라운드 전환은 이전 재생을 취소한다.
+    LaunchedEffect(summary, voiceEnabled, lifecycle) {
+        if (summary != null && voiceEnabled) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { tts.speak(summary) }
+        }
+    }
     DisposableEffect(Unit) { onDispose { tts.stop() } }
 
-    Column(Modifier.fillMaxSize().padding(32.dp).verticalScroll(rememberScrollState())) {
-        Text(stringResource(R.string.lights_title), style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(24.dp))
-        if (loaded == null || summary == null) {
-            CircularProgressIndicator()
-            Text(stringResource(R.string.lights_loading), style = MaterialTheme.typography.bodyLarge)
-        } else {
-            Text(summary, style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(16.dp))
-            loaded.lamps.forEach { lamp ->
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(lampName(lamp.signal), style = MaterialTheme.typography.bodyLarge)
-                    // 색이 아니라 문구로 구분한다(POL-U-4).
-                    Text(
-                        stringResource(
-                            when (lamp.state) {
-                                LampState.ON -> R.string.lamp_on
-                                LampState.OFF -> R.string.lamp_off
-                                LampState.UNKNOWN -> R.string.lamp_unknown
-                            },
-                        ),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
+    val cs = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxSize()) {
+        TopBar(title = stringResource(R.string.lights_title))
+        ScreenBody(bottom = { SecondaryButton(stringResource(R.string.lights_close), { vm.navigate(Screen.Home) }, Modifier.fillMaxWidth()) }) {
+            if (loaded == null || summary == null) {
+                Spinner()
+                Text(stringResource(R.string.lights_loading), style = MaterialTheme.typography.bodyLarge, color = cs.onSurface)
+            } else {
+                // 켜진 등이 있으면 주의 색 상자로 알린다. 문구가 내용을 말하고 색은 거든다(POL-U-4).
+                if (loaded.outcome == LightsOutcome.SOME_ON) {
+                    StateBanner(Phase.CORRECTION, summary, body = stringResource(R.string.lights_how_to_off), showHead = false)
+                } else {
+                    Text(summary, style = MaterialTheme.typography.titleLarge, color = cs.onSurface)
+                }
+                Column {
+                    loaded.lamps.forEach { lamp ->
+                        ListRow(lampName(lamp.signal), trailing = { LampStateText(lamp.state) })
+                    }
                 }
             }
-            if (loaded.outcome == LightsOutcome.SOME_ON) {
-                Spacer(Modifier.height(16.dp))
-                Text(stringResource(R.string.lights_how_to_off), style = MaterialTheme.typography.bodyLarge)
-            }
+            // 이 앱이 읽을 수 없는 등이 있다는 안내는 항상 보인다(AC-10-3).
+            NoticeBox(stringResource(R.string.lights_unreadable_notice))
         }
-        // 이 앱이 읽을 수 없는 등이 있다는 안내는 항상 보인다(AC-10-3).
-        Spacer(Modifier.height(24.dp))
-        Text(stringResource(R.string.lights_unreadable_notice), style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.height(24.dp))
-        BigButton(stringResource(R.string.lights_close), { vm.navigate(Screen.Home) }, Modifier.fillMaxWidth(), primary = true)
+    }
+}
+
+/** 등 하나의 상태. 기호와 문구로 구분하고 색은 기호에만 쓴다(POL-U-4, DESIGN.md 3절). */
+@Composable
+private fun LampStateText(state: LampState) {
+    val (text, mark) = when (state) {
+        LampState.ON -> R.string.lamp_on to Mark.ATTENTION
+        LampState.OFF -> R.string.lamp_off to Mark.CONFIRMED
+        LampState.UNKNOWN -> R.string.lamp_unknown to Mark.UNKNOWN
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Space.sm)) {
+        StatusMark(mark, 32.dp)
+        Text(
+            stringResource(text),
+            style = MaterialTheme.typography.labelMedium,
+            color = if (state == LampState.ON) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

@@ -68,6 +68,29 @@ class FollowUpTest {
         val next = assertIs<FollowUpNext.RestoreBase>(choose(s))
         assertEquals(listOf(ac), next.step.action.map { it.signal })
         assertEquals("에어컨", next.step.action.single().label)
+        assertEquals(setOf(defrost, recirc), next.step.hold.map { it.signal }.toSet())
+        assertTrue(next.step.hold.all { it.kind == Kind.HOLD })
+    }
+
+    @Test fun `POL-F-11 복구 중 원래 맞았던 제상이 꺼지면 에어컨만 맞춰도 완료가 아니다`() = runTest {
+        val s = fogSource().apply { set(ac, Token("OFF")) }
+        val r = FollowUpRunner(fogCourse(), s)
+        backgroundScope.launch { r.run() }; runCurrent()
+        s.set(defrost, Token("OFF")); runCurrent()
+        s.set(ac, Token("ON")); runCurrent(); advanceTimeBy(2_000); runCurrent()
+        val restoring = assertIs<FollowUpState.Doing>(r.state.value)
+        assertEquals(restoreStepId(fogCourse()), restoring.step.id)
+        assertEquals(Phase.PARTIAL, restoring.progress.runner.state.value.phase)
+        s.set(defrost, Token("ON")); runCurrent(); advanceTimeBy(2_000); runCurrent()
+        assertEquals("F1", assertIs<FollowUpState.Doing>(r.state.value).step.id)
+    }
+
+    @Test fun `AC-16-12 복구 중 나머지 기본 신호가 미확인이면 완료로 단정하지 않는다`() = runTest {
+        val s = fogSource().apply { set(ac, Token("OFF")); fail(defrost, FailReason.CONNECTION) }
+        val r = FollowUpRunner(fogCourse(), s)
+        backgroundScope.launch { r.run() }; runCurrent()
+        val restoring = assertIs<FollowUpState.Doing>(r.state.value)
+        assertEquals(Phase.UNVERIFIABLE, restoring.progress.runner.state.value.phase)
     }
 
     @Test fun `AC-16-2 복구 단계는 에어컨을 켜면 끝나고 다음은 후속 조치다`() = runTest {
