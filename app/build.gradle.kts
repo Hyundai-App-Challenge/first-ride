@@ -14,8 +14,8 @@ val signingFile = file(
 )
 val signing = signingFile.takeIf { it.isFile }?.let { f -> Properties().apply { f.inputStream().use { load(it) } } }
 
-// 제출 규정의 APK 이름(팀명_앱이름_release.apk). 앱 이름(D1)이 정해지기 전의 임시값이다.
-val apkName = "first-ride_release.apk"
+// 제출 규정의 APK 이름(팀명_앱이름_release.apk). 팀 처음타니, 앱 이름 FirstRide(D1, 11-15).
+val apkName = "처음타니_FirstRide_release.apk"
 
 android {
     namespace = "com.firstride"
