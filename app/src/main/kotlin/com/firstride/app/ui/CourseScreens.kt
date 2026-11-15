@@ -14,15 +14,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.firstride.R
 import com.firstride.engine.course.CourseDefinition
 import com.firstride.engine.judge.RestoreReport
 import com.firstride.engine.progress.CourseResult
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
@@ -72,7 +76,18 @@ fun CourseDoneScreen(
     restore: Flow<RestoreReport?> = emptyFlow(),
     onFollowUp: () -> Unit = {},
 ) {
-    val report by restore.collectAsStateWithLifecycle(null)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val report by produceState<RestoreReport?>(null, restore, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            try {
+                restore.collect { value = it }
+                awaitCancellation()
+            } finally {
+                // 복귀 때 이전 차량 상태를 새 확인 결과처럼 표시하지 않는다.
+                value = null
+            }
+        }
+    }
     Column(
         Modifier.fillMaxSize().padding(32.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,

@@ -12,7 +12,7 @@
 | `signals.sh real\|fake` | debug 빌드의 신호원을 차량 SDK / 가짜 신호원으로 바꾸고 앱을 다시 띄운다 |
 | `tap.sh "글자"` | 화면에서 글자가 같은 요소를 찾아 누른다(uiautomator) |
 | `check-crs01.sh` | CRS-01 수용 기준(AC-CRS01-1·2·2b·2c·3·4)을 VC로 차례로 확인한다. debug + `signals.sh real` |
-| `check-courses.py` | 설치된 debug 앱의 CRS-01~06 기본 통합 회귀. 대상을 명시하고 원래 VC 값·신호원 모드를 복원한다. Python 표준 라이브러리만 사용 |
+| `check-courses.py` | 설치된 debug 앱의 CRS-01~06 통합 회귀. 후속 조치·재개·소등·원상 복귀도 선택 검증하며 원래 VC 값·신호원 모드를 복원한다. Python 표준 라이브러리만 사용 |
 | `demo-scene.sh reset\|<장면>` | 2차 PT 시연 장면(사용자 플로우 8절)의 VC 조작과 기대하는 앱 상태 |
 
 ## 알아 둘 것
@@ -56,6 +56,10 @@ python tools/check-courses.py --course CRS-05 --course CRS-06
 python tools/check-courses.py --follow-ups
 # CRS-01과 후속 조치만 확인:
 python tools/check-courses.py --course CRS-01 --follow-ups
+# 재개·소등·원상 복귀까지 모두 확인:
+python tools/check-courses.py --follow-ups --recovery
+# 재개·소등·원상 복귀 묶음만 재검증:
+python tools/check-courses.py --course CRS-02 --recovery
 ```
 
 기어 P에서 실행한다. 코스는 실제 SDK 신호로 판정하며 debug 진행 기록이 완료로 바뀔 수 있다. 앱·설정 데이터를 삭제하지 않고, 종료·실패·Ctrl+C에서 원래 공조·등·와이퍼·창문·잠금 값과 real/fake 표식을 복원한다. VC의 all 제어로 복원할 수 없는 혼합 잠금 상태에서는 변경 전에 중단한다. 복원 실패도 비정상 종료하며 다른 도메인과 신호원 복원은 계속 시도한다.
@@ -63,5 +67,7 @@ python tools/check-courses.py --course CRS-01 --follow-ups
 CRS-01은 부분 충족·교정·이미 목표, CRS-02는 상대 풍량·폴링 풍향, CRS-03은 등 켜기/끄기, CRS-04는 HIGH/AUTO 교정, CRS-05는 반대 방향 교정, CRS-06은 상대 창문·창문/도어 잠금을 확인한다. 방향지시등의 사각지대 카메라 포커스는 Off 복귀 후 앱 UI를 다시 선택해 처리한다. 모든 선택 코스와 복원이 끝나야 최종 성공 문구·종료 코드 0이 나온다. 상세 CRS-01 수용 기준은 기존 `check-crs01.sh`도 유지한다.
 
 `--follow-ups`는 CRS-01을 선택한 경우에만 쓴다. 에어컨 복구 중 제상 유지 조건이 바뀌면 완료하지 않는지, 실제 지원 최댓값의 풍량·온도 조치, 해결/미해결 응답, 이미 최대인 조치 제외, 백그라운드·D→P 중단 후 새 점검을 확인한다. 후속 조치 전후 저장된 진행 파일의 SHA-256이 같아야 통과한다. 이 옵션은 운전석 온도·기어도 원래 값으로 복원한다. VC 2.1.0에는 최대 제상 쓰기 항목이 없어 해당 조치의 완료 검증은 `SKIP`을 출력하고 건너뛰기 경로를 확인한다. `ALL SELECTED COURSES PASSED`가 이 미검증 항목까지 보장하지는 않는다.
+
+`--recovery`는 CRS-02 선택이 필요하다. 정상 코스 검증 뒤 다단계 실습의 백그라운드·D→P 중단, 사용자 선택 뒤 현재 단계 재판정, 이미 목표 상태에서 재조작, 최초 원상 복귀 기준, 건너뜀 유지·중단 후 홈 선택을 확인한다. 완료 화면과 소등 확인도 숨었을 때 구독0, 복귀 후 최신 값, 직접 원복할 때 목록 갱신을 검증한다. 기존 완료 기록을 건너뜀 재시도로 낮추지 않는지와 소등 확인의 기록 불변을 SHA-256으로 확인한다. 종료·실패 시 실내등도 원래 값으로 복원한다. 음성 설정과 학습 기록은 초기화하지 않는다.
 
 이 검증은 Pleos Connect v2.1.0의 VC 필드와 reference 코스를 기준으로 한다. 실차·다른 모델의 조작부 배치·사람의 STT 정확도를 대신하지 않는다. WSL의 Python은 Windows adb 포트에 직접 닿지 않을 수 있으므로 이 도구는 Windows Python 또는 같은 네트워크의 Linux/macOS Python으로 실행한다.

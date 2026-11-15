@@ -323,3 +323,22 @@ Pleos Connect v2.1.0 / emulator-5554 / user10 / com.firstride.qa39.
 실제 환경은 Pleos Connect v2.1.0 / emulator-5554 / user10 / com.firstride.qa39다. VC 공개 catalog에는 최대 제상 쓰기 항목이 없어 F1 완료는 SKIP으로 명시하고 건너뛰기만 확인했다. 최대 제상 완료·실차 배치·차종별 취급설명서에 따른 후속 조치 내용 확정은 미검증이다. 통합 성공 문구가 이 항목을 보장하지 않는다.
 
 최종 `python3 tools/check-courses.py --follow-ups`도 CRS-01~06과 후속 조치를 모두 통과하고 종료 코드 0이었다. 실행 후 원래 13개 VC 값은 이전 스냅샷과 독립 비교해 동일했고 운전석22℃·기어P도 확인했다. QA fake·글자 크기1.0·음성 설정true·기존 release의 설치/갱신 시각을 유지했다. 로컬 로그 `.w67-all-sdk.tmp`, `.w67-images-output.tmp`, 보존 검사 `.w67-preserve.tmp`는 커밋하지 않는다.
+
+# W-71 실습 재개·소등·원상 복귀 통합 검증
+
+검증일: 2026-11-15. 완료 화면의 원상 복귀 보고서는 STARTED 관찰이 끝날 때 함께 비우도록 바꿨다. 재개·소등·원상 복귀를 `--recovery` 한 옵션으로 묶고 기존 후속 조치 옵션과 함께 실행할 수 있게 했다. 테마·그림·고정 포트·reduce는 유지한다.
+
+| 성공 기준 | 실행·관찰 | 결과 |
+|---|---|---|
+| 중단 중 자동 완료 금지 | 실제 CRS-02 S2에서 백그라운드 전환 후 풍량3→4, S3에서 D 중 풍향DEFROST 변경 | 구독0·진행 파일 SHA-256 동일. P/화면 복귀 후 사용자에게 재개 선택을 받음 |
+| 재개 시 현재 단계 새 판정 | S2 명시 재개 후 풍량4를 새 기준으로5에 변경, S3은 ALREADY→목표 밖→DEFROST | 현재 단계에서 다시 판정한 뒤 완료. 중단 중 바뀐 상태만으로 완료하지 않음 |
+| 최초 원상 복귀 기준 유지 | 완료 목록에서 뒷유리 열선·풍량·앞유리 쪽 바람 확인 후 처음 rearOff/fan3/direction1으로 직접 원복 | 세 항목이 차례로 사라짐. 재개 때 풍량 기준을4로 덮지 않음 |
+| 완료 화면 수명과 최신 값 | 완료 화면을 Settings/D로 가린 뒤 VC 값을 변경하고 복귀 | 숨은 구독0, 새 열선/풍량 변경 목록 표시·원복 시 제거 |
+| 건너뜀·홈 선택·기존 기록 유지 | S1 건너뜀 뒤 중단/홈 선택, 별도 재시도의 건너뜀 뒤 중단/명시 재개/완료 | 홈 선택 때 기록 불변·구독0. 재개 완료 화면은 건너뜀 있음, 기존 COMPLETED 기록 SHA-256 유지 |
+| 소등 확인 실제 갱신·복귀 | 외부등Off→LowBeam→실내등On, BG 중 모두Off, D 중 실내등On/P, 닫기 | 세 등 상태와 요약 갱신. 숨음/닫기 구독0·기록 SHA-256 동일 |
+| 복원·옵션·UI 판정 경계 | python3 -m unittest discover -s tools/tests | 36개 통과(신규6개). 실내등/기어/원래real 복원, 복원 실패 후 다른 도메인 지속, 옵션 조합, 빈 UI dump의 거짓 성공 배제 포함 |
+| Kotlin·debug/release 컴파일 | gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug :app:compileReleaseKotlin | 성공. 기존 engine189/platform63/app16=268개 실패0 결과는 변경 없는 작업에서 재사용 |
+
+실제 Pleos Connect v2.1.0 / emulator-5554 / user10 / com.firstride.qa39에서 선택 CRS-02+recovery를 통과했다. 종료 후 VC의 변경 대상16개와 real/fake 모드를 실행 전 스냅샷과 독립 비교해 동일함을 확인했다. 이 흐름은 상태 일치와 구독·기록 경계를 확인하며 UI 반응 1초 상한을 별도 실측한 것은 아니다. 실차 조작부 배치·사람 STT·최대 제상 완료는 계속 미검증이다.
+
+최종 CLI `python3 tools/check-courses.py --follow-ups --recovery`도 6코스·후속 조치·재개·소등·원상 복귀 모두 통과, 종료 코드0이었다. 별도의 실행 전후16개 VC 필드·신호원 비교와 기존 release 설치 시각·font1.0·voiceTrue·QA fake 보존 검사도 통과했다. 최대 제상 완료의 명시적 SKIP은 W67과 같다. 로컬 실행 로그는 `.w71-all-sdk.tmp`이며 커밋하지 않는다.

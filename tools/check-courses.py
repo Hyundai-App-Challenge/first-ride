@@ -132,6 +132,17 @@ class Device:
     def wait_text(self, text):
         wait_for(lambda: any(n.get("text") == text for n in self.nodes()), "app text " + text)
 
+    def wait_absent(self, text):
+        # 빈 dump/다른 화면을 텍스트가 사라진 성공으로 보지 않는다.
+        def absent():
+            nodes = self.nodes()
+            return bool(nodes) and all(n.get("text") != text for n in nodes)
+        wait_for(absent, "app text removed " + text)
+
+    def background(self):
+        self.call("shell", "am", "start", "--user", self.user, "-a", "android.settings.SETTINGS")
+        wait_for(lambda: self.subscriptions() == 0, "background subscriptions 0")
+
     def subscriptions(self):
         trace = self.call("logcat", "-d", "--pid=" + self.process_id(), "-s", "FR-SIGNALS:D").stdout
         counts = re.findall(r"active=(\d+)", trace)
@@ -187,7 +198,7 @@ class VirtualConsole:
         self.heartbeat.join(timeout=6)
 
 
-def restore_commands(state, follow_ups=False):
+def restore_commands(state, follow_ups=False, recovery=False):
     hvac, body, lights = state["hvac"], state["body"], state["lights"]
     locks = state["window_lock"]["locked"]
     if state["gear"]["actual"]["value"] != "Park":
@@ -205,9 +216,11 @@ def restore_commands(state, follow_ups=False):
                   "doors_locked": body["door_locks"]["all"]}),
         ("window-lock", {"area": "all", "locked": locks["all"]}),
     ]
-    if follow_ups:
+    if follow_ups or recovery:
         commands[1][1]["driver_temp"] = hvac["driver"]["temp_c"]
         commands.insert(0, ("gear", {"gear": state["gear"]["actual"]["value"]}))
+    if recovery:
+        next(fields for endpoint, fields in commands if endpoint == "body")["cabin_light"] = body["cabin_light"]["on"]
     return commands
 
 
@@ -363,9 +376,96 @@ class CourseSuite:
             raise RuntimeError("Follow-ups changed saved progress")
         print("PASS CRS-01 follow-ups: restore, hold, fan, temperature, answers, interruption, progress unchanged", flush=True)
 
-    def run(self, courses, follow_ups=False):
+    def recovery(self):
+        d, v = self.device, self.vc
+        v.set("hvac", power=True, rear_defroster=False, fan_speed=3, driver_direction=1)
+        before = d.progress_hash()
+        self.start("CRS-02"); d.phase("1/3 WAITING")
+        self.change("hvac", "2/3 WAITING", rear_defroster=True)
+        d.background()
+        v.set("hvac", fan_speed=4)
+        if d.progress_hash() != before:
+            raise RuntimeError("Background interruption changed saved progress")
+        d.wait_text("실습을 이어서 할까요?")
+        d.call("logcat", "-c"); d.tap("이어서 하기"); d.phase("2/3 WAITING")
+        self.change("hvac", "3/3 WAITING", fan_speed=5)
+        self.change("gear", "drive RESTRICTED", gear="Drive")
+        wait_for(lambda: d.subscriptions() == 0, "driving subscriptions 0")
+        v.set("hvac", driver_direction=4)
+        if d.progress_hash() != before:
+            raise RuntimeError("Driving interruption changed saved progress")
+        self.change("gear", "drive PARKED", gear="Park")
+        d.wait_text("실습을 이어서 할까요?")
+        d.call("logcat", "-c"); d.tap("이어서 하기"); d.phase("3/3 ALREADY_AT_TARGET")
+        self.change("hvac", "3/3 WAITING", driver_direction=1)
+        self.change("hvac", "screen CourseDone", driver_direction=4)
+
+        # 재개 시점을 시작 전 값으로 덮지 않는다. 최초 풍량3까지 직접 되돌려야 목록에서 빠진다.
+        labels = ("뒷유리 열선", "풍량", "앞유리 쪽 바람")
+        for label in labels:
+            d.wait_text("· " + label)
+        for field, value, label in (("rear_defroster", False, labels[0]), ("fan_speed", 3, labels[1]),
+                                    ("driver_direction", 1, labels[2])):
+            v.set("hvac", **{field: value}); d.wait_absent("· " + label)
+        d.wait_absent("실습하느라 바뀐 것이 남아 있어요")
+        d.background(); v.set("hvac", rear_defroster=True)
+        d.wait_text("· 뒷유리 열선")
+        v.set("hvac", rear_defroster=False); d.wait_absent("· 뒷유리 열선")
+        self.change("gear", "drive RESTRICTED", gear="Drive")
+        wait_for(lambda: d.subscriptions() == 0, "hidden restore subscriptions 0")
+        v.set("hvac", fan_speed=4)
+        self.change("gear", "drive PARKED", gear="Park")
+        d.wait_text("· 풍량")
+        v.set("hvac", fan_speed=3); d.wait_absent("· 풍량"); d.tap("홈으로")
+        d.wait_text("설정")
+
+        completed = d.progress_hash()
+        self.start("CRS-02"); d.phase("1/3 WAITING")
+        d.tap("건너뛰기"); d.phase("2/3 WAITING")
+        d.background(); d.wait_text("실습을 이어서 할까요?"); d.tap("홈으로")
+        d.wait_text("설정")
+        wait_for(lambda: d.subscriptions() == 0, "dismissed interruption subscriptions 0")
+        if d.progress_hash() != completed:
+            raise RuntimeError("Dismissed interrupted course changed saved progress")
+        self.start("CRS-02"); d.phase("1/3 WAITING")
+        d.tap("건너뛰기"); d.phase("2/3 WAITING")
+        d.background(); d.wait_text("실습을 이어서 할까요?")
+        d.call("logcat", "-c"); d.tap("이어서 하기"); d.phase("2/3 WAITING")
+        self.change("hvac", "3/3 WAITING", fan_speed=4)
+        self.change("hvac", "screen CourseDone", driver_direction=4)
+        d.wait_text("건너뛴 단계가 있어요"); d.tap("홈으로"); d.wait_text("설정")
+        if d.progress_hash() != completed:
+            raise RuntimeError("Skipped retry downgraded an already-completed course")
+        print("PASS recovery: resume choice, fresh targets, original baseline, skip preservation, restore lifecycle", flush=True)
+        self.lights_check()
+
+    def lights_check(self):
+        d, v = self.device, self.vc
+        before = d.progress_hash()
+        v.set("lights", feature="headlamp_mode", value="Off")
+        v.set("body", cabin_light=False)
+        d.tap("소등 확인"); d.wait_text("확인한 등은 모두 꺼져 있어요.")
+        v.set("lights", feature="headlamp_mode", value="LowBeam")
+        d.wait_text("하향등, 미등이 켜져 있어요.")
+        v.set("body", cabin_light=True)
+        d.wait_text("하향등, 미등, 실내등이 켜져 있어요.")
+        d.background()
+        v.set("lights", feature="headlamp_mode", value="Off"); v.set("body", cabin_light=False)
+        d.wait_text("확인한 등은 모두 꺼져 있어요.")
+        self.change("gear", "drive RESTRICTED", gear="Drive")
+        wait_for(lambda: d.subscriptions() == 0, "driving lights subscriptions 0")
+        v.set("body", cabin_light=True)
+        self.change("gear", "drive PARKED", gear="Park")
+        d.wait_text("실내등이 켜져 있어요.")
+        d.tap("닫기"); d.wait_text("설정")
+        wait_for(lambda: d.subscriptions() == 0, "closed lights subscriptions 0")
+        if d.progress_hash() != before:
+            raise RuntimeError("Lights check changed saved progress")
+        print("PASS lights: actual lamp updates, background/driving refresh, close, progress unchanged", flush=True)
+
+    def run(self, courses, follow_ups=False, recovery=False):
         original_mode = self.device.real_mode()
-        restore = restore_commands(self.vc.state(), follow_ups)
+        restore = restore_commands(self.vc.state(), follow_ups, recovery)
         failure, cleanup_errors = None, []
         try:
             self.device.set_mode(True)
@@ -377,6 +477,8 @@ class CourseSuite:
                 except Exception as exc:
                     raise RuntimeError(f"{course_id}: {exc}") from exc
                 print("PASS " + course_id, flush=True)
+            if recovery:
+                self.recovery()
         except (Exception, KeyboardInterrupt) as exc:
             failure = exc
         finally:
@@ -405,6 +507,7 @@ def main(argv=None):
     parser.add_argument("--serial", default=os.environ.get("ANDROID_SERIAL"))
     parser.add_argument("--course", action="append", choices=COURSES, help="repeat to select courses; default all six")
     parser.add_argument("--follow-ups", action="store_true", help="also check CRS-01 follow-ups and interruptions")
+    parser.add_argument("--recovery", action="store_true", help="also check CRS-02 resume, restoration and lights lifecycle")
     args = parser.parse_args(argv)
     if not args.app_id:
         parser.error("Set APP_ID or --app-id explicitly")
@@ -412,6 +515,8 @@ def main(argv=None):
         parser.error("Invalid Android applicationId")
     if args.follow_ups and "CRS-01" not in (args.course or COURSES):
         parser.error("--follow-ups requires CRS-01 in the selected courses")
+    if args.recovery and "CRS-02" not in (args.course or COURSES):
+        parser.error("--recovery requires CRS-02 in the selected courses")
     adb = os.environ.get("ADB") or shutil.which("adb")
     if not adb:
         parser.error("Set ADB to the adb executable")
@@ -422,7 +527,7 @@ def main(argv=None):
         port = int(os.environ.get("VC_PORT", "8088"))
         device.call("forward", f"tcp:{port}", f"tcp:{port}")
         with VirtualConsole(port) as vc:
-            CourseSuite(device, vc).run(args.course or COURSES, follow_ups=args.follow_ups)
+            CourseSuite(device, vc).run(args.course or COURSES, follow_ups=args.follow_ups, recovery=args.recovery)
         print("ALL SELECTED COURSES PASSED; ORIGINAL STATE RESTORED")
         return 0
     except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:

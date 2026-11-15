@@ -79,6 +79,46 @@ class StateRecoveryTest(unittest.TestCase):
         vc.values = dict(vc.original)
         return vc
 
+    def recovery_vc(self):
+        vc = self.follow_up_vc()
+        vc.snapshot["body"]["cabin_light"] = {"on": True}
+        vc.original["cabin_light"] = True
+        vc.values = dict(vc.original)
+        return vc
+
+    def test_recovery_failure_restores_cabin_gear_and_original_real_mode(self):
+        device, vc = FakeDevice(real=True), self.recovery_vc()
+        suite = QA.CourseSuite(device, vc)
+        def fail():
+            vc.values = {key: "changed" for key in vc.values}
+            raise RuntimeError("resume check failed")
+        with patch.object(suite, "course"), patch.object(suite, "recovery", side_effect=fail), redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(RuntimeError, "resume check failed"):
+                suite.run(["CRS-02"], recovery=True)
+        self.assertEqual(vc.values, vc.original)
+        self.assertTrue(device.mode)
+
+    def test_recovery_and_follow_ups_preserve_selection_and_run_once(self):
+        device, vc = FakeDevice(), self.recovery_vc()
+        suite = QA.CourseSuite(device, vc)
+        order = []
+        with patch.object(suite, "course", side_effect=lambda course: order.append(course)), \
+                patch.object(suite, "follow_ups", side_effect=lambda: order.append("follow")), \
+                patch.object(suite, "recovery", side_effect=lambda: order.append("recovery")), redirect_stdout(io.StringIO()):
+            suite.run(["CRS-02", "CRS-01"], follow_ups=True, recovery=True)
+        self.assertEqual(order, ["CRS-02", "CRS-01", "follow", "recovery"])
+        self.assertEqual(vc.values, vc.original)
+
+    def test_cabin_restore_failure_is_reported_and_source_is_still_restored(self):
+        device, vc = FakeDevice(), self.recovery_vc()
+        vc.fail_endpoint = "body"
+        suite = QA.CourseSuite(device, vc)
+        with patch.object(suite, "course"), patch.object(suite, "recovery"), redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(RuntimeError, "restore failed: body"):
+                suite.run(["CRS-02"], recovery=True)
+        self.assertIn("window-lock", vc.calls)
+        self.assertFalse(device.mode)
+
     def test_follow_up_failure_also_restores_temperature_and_gear(self):
         device, vc = FakeDevice(), self.follow_up_vc()
         suite = QA.CourseSuite(device, vc)
@@ -163,6 +203,29 @@ class StateRecoveryTest(unittest.TestCase):
 
 
 class TargetTest(unittest.TestCase):
+    def test_recovery_without_crs02_fails_before_device_access(self):
+        with patch.dict(os.environ, {"ADB": "adb"}, clear=True), patch.object(QA.subprocess, "run") as run, redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as result:
+                QA.main(["--app-id", "com.firstride.qa39", "--course", "CRS-01", "--recovery"])
+            self.assertEqual(result.exception.code, 2)
+            run.assert_not_called()
+
+    def test_empty_ui_dump_does_not_count_as_removed_text(self):
+        device = QA.Device("adb", "one", "com.firstride.qa39")
+        node = {"text": "still here"}
+        with patch.object(device, "nodes", side_effect=[[], [node], [{"text": "done"}]]), \
+                patch.object(QA.time, "sleep"):
+            device.wait_absent("still here")
+
+    def test_background_waits_for_target_subscriptions_without_foregrounding(self):
+        device = QA.Device("adb", "one", "com.firstride.qa39")
+        device.user = "10"
+        with patch.object(device, "call") as run, patch.object(device, "subscriptions", side_effect=[3, 0]), \
+                patch.object(device, "foreground") as foreground, patch.object(QA.time, "sleep"):
+            device.background()
+            self.assertEqual(run.call_args.args, ("shell", "am", "start", "--user", "10", "-a", "android.settings.SETTINGS"))
+            foreground.assert_not_called()
+
     def test_follow_up_flag_without_crs01_never_touches_device(self):
         with patch.dict(os.environ, {"ADB": "adb"}, clear=True), patch.object(QA.subprocess, "run") as run, redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit) as result:
