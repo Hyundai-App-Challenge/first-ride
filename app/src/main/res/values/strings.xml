@@ -22,6 +22,9 @@
     <!-- SCR-02 홈 -->
     <string name="home_title">어떤 걸 익혀 볼까요?</string>
     <string name="home_start_here">여기서 시작</string>
+    <string name="home_progress_title">익힌 조작</string>
+    <string name="home_next_title">다음에 익힐 코스</string>
+    <string name="home_all_done">모든 코스를 익혔어요.</string>
     <string name="course_status_not_started">시작 전</string>
     <string name="course_status_has_skipped">건너뜀 있음</string>
     <string name="course_status_completed">✓ 완료</string>
