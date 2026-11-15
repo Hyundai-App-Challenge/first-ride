@@ -45,6 +45,8 @@
 
 ## 여섯 코스 통합 검증
 
+아이오닉5 운전석 사진에서 공조·조명·와이퍼·창문을 조작하려면 [사진 실습 실행 안내](interior-simulator/README.md)를 따른다. 앱 6개 코스와 같은 사진·그림을 쓰는 별도 로컬 화면은 8090, 공식 VC의 신호 연결은 기존 8088이다.
+
 먼저 debug APK를 빌드·설치하고 `adb devices`로 기기를 확인한다. `check-courses.py`는 앱을 설치하거나 데이터를 지우지 않는다. `APP_ID`와 `ADB`를 지정하며, 연결 기기가 여럿이면 `ANDROID_SERIAL`도 필수다. `run-as`가 허용되지 않는 release 앱은 VC 변경 전에 중단한다. `ACTIVITY` 환경 변수와 관계없이 앱의 MainActivity를 선택한다. 실행·중지는 확인한 Android 사용자에 한정하고, 판정 로그도 그 사용자의 대상 앱 프로세스만 읽는다.
 
 ```powershell

@@ -1,0 +1,20 @@
+{
+  "courseId": "CRS-03",
+  "steps": {
+    "CRS-03-S1": {
+      "instruction": "운전대 왼쪽 레버 끝의 돌림 스위치를 미등 표시에 맞춰 주세요.",
+      "locatorText": "운전대 뒤 왼쪽 레버예요. 끝의 돌림 스위치에서 미등·전조등을 선택해요.",
+      "locatorAsset": "assets/light_switch.webp"
+    },
+    "CRS-03-S2": {
+      "instruction": "같은 돌림 스위치를 전조등 표시에 맞춰 주세요.",
+      "locatorText": "운전대 뒤 왼쪽 레버예요. 끝의 돌림 스위치에서 미등·전조등을 선택해요.",
+      "locatorAsset": "assets/light_switch.webp"
+    },
+    "CRS-03-S3": {
+      "instruction": "같은 돌림 스위치를 미등 표시에 맞춰 전조등을 꺼 주세요.",
+      "locatorText": "운전대 뒤 왼쪽 레버예요. 끝의 돌림 스위치에서 미등·전조등을 선택해요.",
+      "locatorAsset": "assets/light_switch.webp"
+    }
+  }
+}
