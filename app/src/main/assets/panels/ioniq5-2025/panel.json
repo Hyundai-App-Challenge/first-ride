@@ -1,7 +1,7 @@
 {
   "id": "ioniq5-2025-climate",
-  "name": "아이오닉5 · 공조 조작부",
-  "description": "2025년형 일반 공조 패널 기준의 사진 실습",
+  "name": "아이오닉5 · 운전석 실습",
+  "description": "공식 사진과 2025년형 설명서에 기반한 실내 조작 실습",
   "photo": "assets/climate.jpg",
   "photoWidth": 1800,
   "photoHeight": 1200,
@@ -9,17 +9,25 @@
   "source": "https://www.hyundai.com/uk/en/models/ioniq5/features.html",
   "manual": "https://ownersmanual.hyundai.com/full_webhelp/NE1/2025/ko_KR/id042e6950a36.html",
   "controls": [
-    {"id":"power", "label":"공조 끄기", "rect":[0.318,0.467,0.038,0.038], "field":"power", "kind":"set", "value":false, "state":["power_on"]},
-    {"id":"power-on", "label":"공조 켜기 (AUTO)", "rect":[0.324,0.402,0.039,0.035], "field":"power", "kind":"set", "value":true, "state":["power_on"]},
-    {"id":"front", "label":"앞유리 제상", "rect":[0.39,0.507,0.033,0.039], "field":"front_defroster", "kind":"toggle", "state":["front_defroster_on"]},
-    {"id":"rear", "label":"뒷유리 열선", "rect":[0.548,0.588,0.035,0.039], "field":"rear_defroster", "kind":"toggle", "state":["rear_defroster_on"]},
-    {"id":"ac", "label":"에어컨", "rect":[0.65,0.562,0.042,0.039], "field":"ac", "kind":"toggle", "state":["ac_on"]},
-    {"id":"recirc", "label":"내기 · 외기", "rect":[0.636,0.637,0.044,0.039], "field":"recirc", "kind":"toggle", "state":["recirc_on"]},
-    {"id":"fan-down", "label":"풍량 내리기", "rect":[0.427,0.527,0.032,0.04], "field":"fan_speed", "kind":"step", "state":["fan_speed"], "delta":-1, "min":0, "max":8},
-    {"id":"fan-up", "label":"풍량 올리기", "rect":[0.466,0.547,0.032,0.04], "field":"fan_speed", "kind":"step", "state":["fan_speed"], "delta":1, "min":0, "max":8},
-    {"id":"direction", "label":"바람 방향", "rect":[0.505,0.566,0.037,0.04], "field":"driver_direction", "kind":"choice", "state":["driver","fan_direction"], "choices":[{"value":1,"label":"얼굴"},{"value":2,"label":"발"},{"value":4,"label":"앞유리"}]},
-    {"id":"temp-up", "label":"운전석 온도 올리기", "rect":[0.361,0.424,0.03,0.033], "field":"driver_temp", "kind":"step", "state":["driver","temp_c"], "delta":0.5, "min":16, "max":30},
-    {"id":"temp-down", "label":"운전석 온도 내리기", "rect":[0.356,0.488,0.03,0.033], "field":"driver_temp", "kind":"step", "state":["driver","temp_c"], "delta":-0.5, "min":16, "max":30}
+    {"id":"power","label":"공조 끄기","rect":[0.318,0.467,0.038,0.038],"field":"power","kind":"set","value":false,"state":["power_on"],"view":"climate"},
+    {"id":"power-on","label":"공조 켜기 (AUTO)","rect":[0.324,0.402,0.039,0.035],"field":"power","kind":"set","value":true,"state":["power_on"],"view":"climate"},
+    {"id":"front","label":"앞유리 제상","rect":[0.39,0.507,0.033,0.039],"field":"front_defroster","kind":"toggle","state":["front_defroster_on"],"view":"climate"},
+    {"id":"rear","label":"뒷유리 열선","rect":[0.548,0.588,0.035,0.039],"field":"rear_defroster","kind":"toggle","state":["rear_defroster_on"],"view":"climate"},
+    {"id":"ac","label":"에어컨","rect":[0.65,0.562,0.042,0.039],"field":"ac","kind":"toggle","state":["ac_on"],"view":"climate"},
+    {"id":"recirc","label":"내기 · 외기","rect":[0.636,0.637,0.044,0.039],"field":"recirc","kind":"toggle","state":["recirc_on"],"view":"climate"},
+    {"id":"fan-down","label":"풍량 내리기","rect":[0.427,0.527,0.032,0.04],"field":"fan_speed","kind":"step","state":["fan_speed"],"delta":-1,"min":0,"max":8,"view":"climate"},
+    {"id":"fan-up","label":"풍량 올리기","rect":[0.466,0.547,0.032,0.04],"field":"fan_speed","kind":"step","state":["fan_speed"],"delta":1,"min":0,"max":8,"view":"climate"},
+    {"id":"direction","label":"바람 방향","rect":[0.505,0.566,0.037,0.04],"field":"driver_direction","kind":"choice","state":["driver","fan_direction"],"choices":[{"value":1,"label":"얼굴"},{"value":2,"label":"발"},{"value":4,"label":"앞유리"}],"view":"climate"},
+    {"id":"temp-up","label":"운전석 온도 올리기","rect":[0.361,0.424,0.03,0.033],"field":"driver_temp","kind":"step","state":["driver","temp_c"],"delta":0.5,"min":16,"max":30,"view":"climate"},
+    {"id":"temp-down","label":"운전석 온도 내리기","rect":[0.356,0.488,0.03,0.033],"field":"driver_temp","kind":"step","state":["driver","temp_c"],"delta":-0.5,"min":16,"max":30,"view":"climate"},
+    {"id":"headlights","view":"lights","label":"조명 돌림 스위치","rect":[0.31,0.35,0.17,0.28],"domain":"lights","endpoint":"lights","params":{"feature":"headlamp_mode"},"field":"value","state":["headlamp_mode"],"kind":"choice","choices":[{"value":"Off","label":"OFF"},{"value":"Auto","label":"AUTO"},{"value":"Position","label":"미등"},{"value":"LowBeam","label":"전조등"}],"interaction":"dial"},
+    {"id":"turn","view":"lights","label":"방향지시등 레버","rect":[0.76,0.38,0.18,0.38],"domain":"lights","endpoint":"turn-signal","field":"mode","state":["turn_signal_mode"],"kind":"choice","choices":[{"value":"BlinkLeft","label":"왼쪽"},{"value":"Off","label":"중립"},{"value":"BlinkRight","label":"오른쪽"}],"interaction":"lever"},
+    {"id":"wiper","view":"wipers","label":"앞유리 와이퍼 레버","rect":[0.47,0.01,0.18,0.83],"domain":"body","endpoint":"body","field":"front_wiper","state":["wipers","front","mode"],"kind":"choice","choices":[{"value":"Off","label":"OFF"},{"value":"Auto","label":"AUTO"},{"value":"Low","label":"LO · 보통"},{"value":"High","label":"HI · 빠르게"}],"interaction":"lever"},
+    {"id":"window-up","view":"door","label":"운전석 창문 올리기","rect":[0.705,0.26,0.058,0.055],"domain":"body","endpoint":"body","field":"window_fl","state":["windows","front_left"],"kind":"step","delta":-10,"min":0,"max":100},
+    {"id":"window-down","view":"door","label":"운전석 창문 내리기","rect":[0.745,0.32,0.058,0.055],"domain":"body","endpoint":"body","field":"window_fl","state":["windows","front_left"],"kind":"step","delta":10,"min":0,"max":100},
+    {"id":"window-lock","view":"door","label":"뒷좌석 창문 잠금","rect":[0.46,0.52,0.08,0.09],"domain":"window_lock","endpoint":"window-lock","params":{"area":"all"},"field":"locked","state":["locked","all"],"kind":"toggle"},
+    {"id":"door-lock","view":"locks","label":"도어 잠금","rect":[0.55,0.6,0.07,0.12],"domain":"body","endpoint":"body","field":"doors_locked","state":["door_locks","all"],"kind":"set","value":true},
+    {"id":"door-unlock","view":"locks","label":"도어 잠금 해제","rect":[0.32,0.36,0.09,0.12],"domain":"body","endpoint":"body","field":"doors_locked","state":["door_locks","all"],"kind":"set","value":false}
   ],
   "locators": {
     "assets/hvac_front_defrost.webp":["front"],
@@ -29,6 +37,79 @@
     "assets/hvac_fan_speed.webp":["fan-down","fan-up"],
     "assets/hvac_fan_direction.webp":["direction"],
     "assets/hvac_temperature.webp":["temp-down","temp-up"],
-    "assets/hvac_max_defrost.webp":[]
-  }
+    "assets/hvac_max_defrost.webp":[],
+    "assets/light_switch.webp":["headlights"],
+    "assets/turn_signal_stalk.webp":["turn"],
+    "assets/wiper_stalk.webp":["wiper"],
+    "assets/window_switch_driver.webp":["window-up","window-down"],
+    "assets/window_lock_switch.webp":["window-lock"],
+    "assets/door_lock_switch.webp":["door-lock"]
+  },
+  "views": [
+    {
+      "id": "overview",
+      "name": "운전석 전체",
+      "photo": "assets/cockpit.jpg",
+      "crop": [0,0.12,1,0.62],
+      "source": "https://www.hyundai.com/uk/en/models/ioniq5/features.html",
+      "description": "운전대 뒤 레버와 공조 조작부를 선택해 보세요. 도어는 왼쪽에 있어요.",
+      "display": [0.576,0.203,0.358,0.184],
+      "links": [{"view":"lights","label":"왼쪽 레버 · 조명","rect":[0.03,0.31,0.12,0.09]},{"view":"wipers","label":"오른쪽 레버 · 와이퍼","rect":[0.43,0.43,0.1,0.09]},{"view":"climate","label":"공조 조작부","rect":[0.635,0.54,0.3,0.065]},{"view":"door","label":"왼쪽 도어로 이동","rect":[0.025,0.66,0.16,0.06]}],
+      "photoWidth": 2000,
+      "photoHeight": 1600
+    },
+    {
+      "id": "climate",
+      "name": "공조 조작부",
+      "photo": "assets/climate.jpg",
+      "crop": [0.25,0.35,0.5,0.36],
+      "source": "https://www.hyundai.com/uk/en/models/ioniq5/features.html",
+      "manual": "https://ownersmanual.hyundai.com/full_webhelp/NE1/2025/ko_KR/id042e6950a36.html",
+      "description": "사진의 버튼을 눌러 조작해요. 바람 방향 버튼은 얼굴·발·앞유리를 선택해요.",
+      "photoWidth": 1800,
+      "photoHeight": 1200
+    },
+    {
+      "id": "lights",
+      "name": "조명 · 방향지시등",
+      "photo": "assets/lights.png",
+      "crop": [0.22,0.23,0.78,0.65],
+      "source": "https://ownersmanual.hyundai.com/full_webhelp/NE1/2025/ko_KR/id23C69600V5Z.html",
+      "description": "운전대 뒤 왼쪽 레버예요. 끝의 돌림 스위치로 조명, 긴 레버로 방향지시등을 조작해요.",
+      "photoWidth": 685,
+      "photoHeight": 437
+    },
+    {
+      "id": "wipers",
+      "name": "와이퍼",
+      "photo": "assets/wipers.png",
+      "crop": [0,0,1,1],
+      "source": "https://ownersmanual.hyundai.com/full_webhelp/NE1/2025/ko_KR/id23C6B060A4Y.html",
+      "description": "운전대 뒤 오른쪽 레버예요. LO는 보통 속도, HI는 빠른 속도, OFF는 정지예요.",
+      "photoWidth": 685,
+      "photoHeight": 437
+    },
+    {
+      "id": "door",
+      "name": "창문 · 잠금",
+      "photo": "assets/door.jpg",
+      "crop": [0.35,0.02,0.65,0.75],
+      "source": "https://www.hyundai.com/uk/en/models/ioniq5/features.html",
+      "manual": "https://ownersmanual.hyundai.com/full_webhelp/NE1/2025/ko_KR/convenience_device_power_windows.html",
+      "description": "운전석 창문 스위치를 누르거나 당겨요. 아래쪽 큰 버튼은 뒷좌석 창문 잠금이에요.",
+      "links": [{"view":"locks","label":"도어 잠금 버튼 확대","rect":[0.86,0.055,0.1,0.13]}],
+      "photoWidth": 1600,
+      "photoHeight": 1067
+    },
+    {
+      "id": "locks",
+      "name": "도어 잠금",
+      "photo": "assets/locks.png",
+      "crop": [0.15,0.15,0.65,0.72],
+      "source": "https://ownersmanual.hyundai.com/full_webhelp/NE1/2025/ko_KR/id23C5F0V04ZJ.html",
+      "description": "닫힌 자물쇠는 모든 도어 잠금, 열린 자물쇠는 잠금 해제예요.",
+      "photoWidth": 685,
+      "photoHeight": 437
+    }
+  ]
 }

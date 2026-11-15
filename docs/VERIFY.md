@@ -1,3 +1,27 @@
+# 아이오닉5 운전석 사진 실습 확장 (2026-11-15)
+
+브랜치: feature/ioniq5-interior-simulator. develop 최신 b1393ba를 fetch로 확인했으며 동료의 추가 변경은 없었다. 사용자가 동작을 확인한 뒤 레버 조작 확장과 develop·main 병합을 요청했다. 아래는 공조만 제공하던 이전 기록 이후의 확장 검증이다.
+
+| 시각(KST) | 무엇을 | 명령/방법 | 실제 결과 |
+|---|---|---|---|
+| 16:31 | 계약·타입·경계·P·Origin/Host·쓰기 실패 | `BASH_EXE` 지정 후 `python -m unittest discover -s tools/tests` | 60개 PASS. 실내 연결 13개 포함. 사진 6장면·6코스 alias, 4개 상태 도메인, 고정 feature/area, 문자열 enum·숫자/boolean 혼동, 창문 경계 검증 |
+| 16:35 | 실제 JS/사진 탐색·화면·클릭 | `python tools/check-interior-ui.py --chrome <설치된 Chrome>` 및 `--mobile` | desktop1440 / 실제390 CSS px 프레임 모두 PASS. 6장면, 홈/공조/차량 전환, 상태 유지, 실제 hit target, 44px, 키보드 포커스, 폴링 중 버튼 보존, 페이지 넘침, P·연결 실패/복구 확인 |
+| 16:29~16:31 | 새 웹 API → 실제 SDK → 앱 판정 | 로컬 `.w74-live-check.tmp`에서 기존 CourseSuite의 change를 POST /api/control로 연결 | CRS-01~06 모두 PASS. 공조 부분 충족/교정·이미 목표 재조작, 미등→전조등→미등, 와이퍼 HI/AUTO 교정 후 LO/OFF 완료, 방향 오조작 교정, 창문·창문 잠금·도어 잠금 완료 |
+| 16:31 | 사용자 데이터·차량 값 복원 | 실행 직전 백업 후 19개 조작 값의 독립 GET 비교, 학습·설정 파일 원본 byte 비교 | 모두 동일. 원래 신호 모드 복원. captures/ioniq5-cockpit-backup-20261115-162938/(로컬·커밋 제외)에 원본과 실제 앱 전조등 그림 캡처 보관 |
+| 16:36 | 최종 Kotlin·APK | `gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug :app:compileReleaseKotlin --offline` | BUILD SUCCESSFUL. XML 보고서 engine190/platform63/app29=282, 실패0. 변경 없는 platform 결과는 Gradle 재사용 |
+| 16:37 | 최종 QA39 APK 설치 | `adb -s emulator-5554 install -r --user 10 app/build/outputs/apk/debug/app-debug.apk`, 홈 전환 대기 | Success. 학습·설정 바이트와 신호 모드 보존 확인. 기존 release 데이터는 건드리지 않음 |
+| 16:36 | 구문·diff | `node --check tools/interior-simulator/app.js`, `git diff --check` | PASS |
+
+최초 화면 캡처에서 오른쪽 레버 이동 표시가 추가 디스플레이 아래에 일부 가려져 위치를 조정했다. 사진 탐색 버튼까지 elementFromPoint로 가림을 검출하는 검사로 보강하고 desktop/mobile 모두 통과했다. 최종 설치 직후의 즉시 홈 assertion은 실패했고, 기존 UI 전환 대기 도구로 기다린 뒤 정상 홈을 확인했다. 앱 오류로 단정하지 않는다.
+
+후속 레버·회전 조작 검증(16:55~): `check-interior-ui.py --gestures` 및 `--gestures --mobile` 모두 PASS. Node 기본 WebSocket/Chrome 입력 프로토콜의 실제 mouse/touch/key 이벤트로 조명 120°·60° 회전, 와이퍼 위로 LO/HI·키보드 OFF, 방향지시 위=오른쪽/아래=왼쪽/중립, 모바일 touchCancel의 차량 쓰기 0건, LO 2.2초/HI 1초와 실제 transform 변화, 선택된 방향만 점멸, 창문 누르고 반복·바깥에서 놓기·장면 이동·포커스 상실 후 정지를 확인했다. 기존 사진 화면의 desktop/mobile 회귀도 PASS. 캡처는 captures/ioniq5-gesture-*.png에 보관한다.
+
+최초 실제 입력 검증은 조작 요청 중 disabled 처리로 포커스가 풀려 다음 키보드 입력을 받지 못했다. 사용자가 옮긴 포커스를 보존하면서 해당 버튼의 포커스만 복원하도록 수정 후 통과했다. 다음 회전 검사는 API 확인 직후 UI 요청 완료 전 입력을 보내 시간 초과했다. 테스트도 실제 사용자와 같이 컨트롤 활성화를 기다리도록 수정했고 전체 마우스/터치 흐름이 통과했다. 최종 도구60개·Kotlin282개·debug 빌드/release Kotlin 컴파일·JS 문법 검사도 통과했다.
+
+한계: 레버·도어 잠금 확대는 현대 공식 설명서 그림, 전체 운전석·공조·창문은 공식 사진이다. 홈/공조/차량 화면은 자체 교육용 UI이고 배경 사진의 LED·숫자는 정적이다. 조명 AUTO의 실제 조도 판단, 실차·3D·상향등/와셔액·최대 제상 쓰기·사용자 직접 사용성 평가는 미검증이다. 기존 사진 출처와 재현 절차는 tools/interior-simulator/README.md에 있다.
+
+최종 자산 기준 실제 SDK 재실행(16:56~16:58)도 CRS-01~06 모두 PASS였다. 원본19개 제어 값·학습/설정 바이트·신호 모드를 다시 복원했으며 새 백업은 captures/ioniq5-cockpit-backup-20261115-165607/에 있다. 같은 실행에서 최종 QA39 APK를 업데이트 설치했다.
+
 # W-46 QA 도구 검증
 
 검증일: 2026-11-15, Windows PowerShell / Git Bash / Pleos Connect v2.1.0.

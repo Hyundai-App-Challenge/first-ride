@@ -13,30 +13,33 @@ import androidx.compose.ui.graphics.asImageBitmap
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** 웹과 같은 사진·정규화 좌표로 공조 위치 안내를 그린다. 원본 사진은 수정하지 않는다. */
+/** 웹과 같은 장면·정규화 좌표로 조작 위치를 그린다. 원본 사진은 수정하지 않는다. */
 internal object PhotoLocators {
     const val ASSET_DIR = "panels/ioniq5-2025"
     private var panel: JSONObject? = null
-    private var photo: Bitmap? = null
+    private val photos = mutableMapOf<String, Bitmap>()
 
     @Synchronized
     fun load(assets: AssetManager, path: String): ImageBitmap? {
         val data = panel ?: JSONObject(assets.open("$ASSET_DIR/panel.json").bufferedReader().use { it.readText() }).also { panel = it }
         val locators = data.getJSONObject("locators")
         if (!locators.has(path)) return null
-        val source = photo ?: assets.open("$ASSET_DIR/${data.getString("photo")}").use {
-            requireNotNull(BitmapFactory.decodeStream(it)) { "공조 사진을 읽을 수 없습니다" }
-        }.also { photo = it }
-        val crop = data.getJSONArray("crop").rect(source.width.toFloat(), source.height.toFloat())
+        val selected = locators.getJSONArray(path).let { ids -> (0 until ids.length()).map { ids.getString(it) }.toSet() }
+        val controls = data.getJSONArray("controls").let { items -> (0 until items.length()).map { items.getJSONObject(it) } }
+        val viewId = controls.firstOrNull { it.getString("id") in selected }?.getString("view") ?: "climate"
+        val view = data.getJSONArray("views").let { items -> (0 until items.length()).map { items.getJSONObject(it) } }
+            .single { it.getString("id") == viewId }
+        val photoPath = view.getString("photo")
+        val source = photos.getOrPut(photoPath) {
+            assets.open("$ASSET_DIR/$photoPath").use { requireNotNull(BitmapFactory.decodeStream(it)) { "실내 사진을 읽을 수 없습니다" } }
+        }
+        val crop = view.getJSONArray("crop").rect(source.width.toFloat(), source.height.toFloat())
         val image = Bitmap.createBitmap(crop.width().toInt(), crop.height().toInt(), Bitmap.Config.ARGB_8888)
         val canvas = Canvas(image)
         canvas.drawBitmap(source, Rect(crop.left.toInt(), crop.top.toInt(), crop.right.toInt(), crop.bottom.toInt()),
             Rect(0, 0, image.width, image.height), null)
-        val selected = locators.getJSONArray(path).let { ids -> (0 until ids.length()).map { ids.getString(it) }.toSet() }
-        val controls = data.getJSONArray("controls")
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        for (i in 0 until controls.length()) {
-            val control = controls.getJSONObject(i)
+        for (control in controls) {
             if (control.getString("id") !in selected) continue
             val bounds = control.getJSONArray("rect").rect(source.width.toFloat(), source.height.toFloat())
             bounds.offset(-crop.left, -crop.top)

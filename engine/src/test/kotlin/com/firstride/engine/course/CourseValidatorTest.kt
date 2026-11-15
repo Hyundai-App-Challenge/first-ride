@@ -144,8 +144,8 @@ class CourseValidatorTest {
         assertEquals(emptyList(), blocking)
     }
 
-    @Test fun `아이오닉5 공조 안내가 기존 코스 계약을 충족한다`() {
-        for (id in listOf("CRS-01", "CRS-02")) {
+    @Test fun `아이오닉5 실내 안내가 기존 여섯 코스 계약을 충족한다`() {
+        for (id in (1..6).map { "CRS-0$it" }) {
             val course = CourseParser.parseCourse(File(assets, "courses/$id.json").readText())
             val text = CourseParser.parseModelText(File(assets, "panels/ioniq5-2025/$id.json").readText())
             assertEquals(emptyList(), CourseValidator.validate(course, text) { File(assets, "models/reference/$it").isFile })

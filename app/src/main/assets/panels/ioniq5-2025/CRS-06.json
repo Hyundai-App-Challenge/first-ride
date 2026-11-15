@@ -1,0 +1,21 @@
+{
+  "courseId": "CRS-06",
+  "steps": {
+    "CRS-06-S1": {
+      "instruction": "운전석 문 팔걸이의 창문 버튼을 아래로 눌러 창문을 조금 내려 주세요.",
+      "instructionAtLimit": "창문이 이미 끝까지 열려 있어요. 창문 버튼을 위로 당겨 조금 올려 주세요.",
+      "locatorText": "운전석 문 팔걸이에 있는 네모난 창문 스위치 묶음의 맨 앞 버튼이에요.",
+      "locatorAsset": "assets/window_switch_driver.webp"
+    },
+    "CRS-06-S2": {
+      "instruction": "운전석 문 팔걸이 뒤쪽의 창문 잠금 버튼을 눌러 주세요.",
+      "locatorText": "네 개의 창문 스위치 뒤, 창문에 X가 그려진 큰 버튼이에요.",
+      "locatorAsset": "assets/window_lock_switch.webp"
+    },
+    "CRS-06-S3": {
+      "instruction": "운전석 문 팔걸이에서 자물쇠가 닫힌 모양의 도어 잠금 버튼을 눌러 주세요.",
+      "locatorText": "사이드 미러를 조절하는 둥근 스위치 옆, 닫힌 자물쇠가 그려진 버튼이에요.",
+      "locatorAsset": "assets/door_lock_switch.webp"
+    }
+  }
+}

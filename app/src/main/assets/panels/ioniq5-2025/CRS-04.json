@@ -1,0 +1,19 @@
+{
+  "courseId": "CRS-04",
+  "steps": {
+    "CRS-04-S1": {
+      "instruction": "운전대 오른쪽 레버를 LO(보통 속도) 표시에 맞춰 와이퍼를 켜 주세요.",
+      "locatorText": "운전대 뒤 오른쪽 레버예요. LO는 보통 속도, OFF는 정지예요.",
+      "locatorAsset": "assets/wiper_stalk.webp",
+      "misoperationLocators": {
+        "high": "assets/wiper_stalk.webp",
+        "auto": "assets/wiper_stalk.webp"
+      }
+    },
+    "CRS-04-S2": {
+      "instruction": "운전대 오른쪽 레버를 OFF 표시에 맞춰 와이퍼를 꺼 주세요.",
+      "locatorText": "운전대 뒤 오른쪽 레버예요. LO는 보통 속도, OFF는 정지예요.",
+      "locatorAsset": "assets/wiper_stalk.webp"
+    }
+  }
+}

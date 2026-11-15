@@ -1,4 +1,4 @@
-"""아이오닉5 사진 실습을 로컬 Pleos Virtual Console에 연결한다. 외부 의존성 없음."""
+"""아이오닉5 운전석 사진 실습을 로컬 Pleos Virtual Console에 연결한다. 외부 의존성 없음."""
 import argparse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -13,6 +13,19 @@ MODEL = ROOT / 'app/src/main/assets/panels/ioniq5-2025'
 WEB = ROOT / 'tools/interior-simulator'
 PANEL = json.loads((MODEL / 'panel.json').read_text(encoding='utf-8'))
 CONTROLS = {control['id']: control for control in PANEL['controls']}
+DOMAINS = ('hvac', 'lights', 'body', 'window_lock')
+
+
+def public_state(state):
+    return {**{key: state[key] for key in DOMAINS},
+            'parked': state['gear']['actual']['value'] == 'Park'}
+
+
+def control_value(state, control):
+    value = state[control.get('domain', 'hvac')]
+    for key in control['state']:
+        value = value[key]
+    return value
 
 
 class Bridge:
@@ -35,7 +48,7 @@ class Bridge:
         # VC 2.1.0은 활성 브라우저 세션이 있어야 SDK에 값을 전달한다(tools/vc.sh와 동일).
         self.request('POST', '/browser/session', client='firstride-interior')
         state = self.request('GET', '/vehicle/state')
-        return {'hvac': state['hvac'], 'parked': state['gear']['actual']['value'] == 'Park'}
+        return public_state(state)
 
     def state(self):
         with self.lock:
@@ -49,17 +62,16 @@ class Bridge:
             raise ValueError('지원하지 않는 조작이에요.')
         if control['kind'] == 'choice':
             value = payload.get('value')
-            if type(value) is not int or value not in [choice['value'] for choice in control['choices']]:
-                raise ValueError('풍향은 얼굴·발·앞유리 중에서 선택해 주세요.')
+            if not any(type(value) is type(choice['value']) and value == choice['value']
+                       for choice in control['choices']):
+                raise ValueError('이 조작에서 제공하는 값 중에서 선택해 주세요.')
         elif 'value' in payload:
             raise ValueError('이 버튼은 선택 값을 받지 않아요.')
         with self.lock:
             state = self.read()
             if not state['parked']:
                 raise ValueError('기어를 P로 바꾼 뒤 조작해 주세요.')
-            current = state['hvac']
-            for key in control['state']:
-                current = current[key]
+            current = control_value(state, control)
             if control['kind'] in ('toggle', 'set'):
                 if type(current) is not bool:
                     raise ValueError('현재 차량 상태를 확인할 수 없어요.')
@@ -68,15 +80,14 @@ class Bridge:
                 if type(current) not in (int, float) or not control['min'] <= current <= control['max']:
                     raise ValueError('현재 차량 상태를 확인할 수 없어요.')
                 value = max(control['min'], min(control['max'], current + control['delta']))
-            self.request('PUT', '/vehicle/hvac', **{control['field']: value})
+            self.request('PUT', '/vehicle/' + control.get('endpoint', 'hvac'),
+                         **{**control.get('params', {}), control['field']: value})
             # 표시 상태는 낙관적으로 바꾸지 않고 VC에서 다시 읽는다. 앱 완료는 SDK가 판정한다.
             confirmed = self.request('GET', '/vehicle/state')
-            actual = confirmed['hvac']
-            for key in control['state']:
-                actual = actual[key]
-            if actual != value:
+            actual = control_value(confirmed, control)
+            if actual != value or (type(actual) is bool) != (type(value) is bool):
                 raise RuntimeError('변경 결과를 확인하지 못했어요. 현재 상태를 다시 확인해 주세요.')
-            return {'hvac': confirmed['hvac'], 'parked': confirmed['gear']['actual']['value'] == 'Park'}
+            return public_state(confirmed)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -121,8 +132,10 @@ class Handler(BaseHTTPRequestHandler):
         else:
             files = {'/': (WEB / 'index.html', 'text/html; charset=utf-8'),
                      '/app.js': (WEB / 'app.js', 'text/javascript; charset=utf-8'),
-                     '/style.css': (WEB / 'style.css', 'text/css; charset=utf-8'),
-                     '/assets/climate.jpg': (MODEL / PANEL['photo'], 'image/jpeg')}
+                     '/style.css': (WEB / 'style.css', 'text/css; charset=utf-8')}
+            for view in PANEL['views']:
+                photo = view['photo']
+                files['/' + photo] = (MODEL / photo, 'image/png' if photo.endswith('.png') else 'image/jpeg')
             if path not in files:
                 self.respond(404, {'error': '페이지를 찾을 수 없어요.'})
                 return
@@ -167,7 +180,7 @@ if __name__ == '__main__':
     if not all(1 <= port <= 65535 for port in (args.port, args.vc_port)):
         parser.error('포트는 1~65535 범위여야 합니다.')
     with server(args.port, args.vc_port) as app:
-        print(f'아이오닉5 공조 실습: http://127.0.0.1:{args.port}/ (종료: Ctrl+C)', flush=True)
+        print(f'아이오닉5 실내 실습: http://127.0.0.1:{args.port}/ (종료: Ctrl+C)', flush=True)
         try:
             app.serve_forever()
         except KeyboardInterrupt:

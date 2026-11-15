@@ -3,31 +3,54 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>아이오닉5 공조 실습 · 첫 탑승</title>
+  <title>아이오닉5 실내 실습 · 첫 탑승</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
   <header class="topbar"><a href="/" class="brand">첫 탑승<span>실내 조작 실습</span></a><span id="connection" role="status">차량 연결 확인 중</span></header>
   <main>
-    <div class="heading"><div><p class="model">아이오닉5 · 공조 조작부</p><h1>앱에서 안내한 버튼을 찾아보세요.</h1></div><p>같은 사진으로 위치를 익히고,<br>앱에서 조작 결과를 확인해요.</p></div>
+    <div class="heading"><div><p class="model">아이오닉5 · 2025 기준</p><h1>운전석에서 직접 익혀보세요.</h1></div><p>앱에서 실습을 시작하고,<br>같은 위치의 버튼을 눌러보세요.</p></div>
+    <nav id="views" aria-label="실내 위치"></nav>
     <div id="error" role="alert" hidden></div>
     <div class="workspace">
-      <section class="photo-section" aria-label="아이오닉5 공조 사진">
-        <div class="photo-scroll"><div id="panel" class="photo-panel"><img id="photo" alt="아이오닉5 실제 공조 패널. 노란 테두리 영역을 눌러 조작합니다." src="/assets/climate.jpg"><div id="hotspots"></div></div></div>
-        <div class="photo-caption"><span>노란 영역을 누르면 조작할 수 있어요.</span><button id="show-labels" aria-pressed="false">버튼 이름 보기</button></div>
-        <p class="subtle">사진의 숫자·표시등은 촬영 당시 모습이에요. 현재 상태는 오른쪽에서 확인해 주세요.</p>
-        <details class="all-controls"><summary>조작 버튼 전체 보기</summary><div id="control-list" class="control-list"></div></details>
-        <footer>2025년형 공조 패널 기준의 사진 실습 · <a id="source" target="_blank" rel="noreferrer">사진: 현대자동차</a><br>공조 외 조작과 최대 제상 전용 조작은 이 화면에서 제공하지 않아요.</footer>
+      <section class="photo-section" aria-labelledby="view-title">
+        <div class="scene-heading"><h2 id="view-title" tabindex="-1">운전석 전체</h2><button id="back" hidden>← 운전석 전체</button></div>
+        <div class="photo-scroll" tabindex="0" aria-label="실내 사진. 작은 화면에서는 좌우로 움직일 수 있습니다.">
+          <div id="panel" class="photo-panel"><img id="photo" alt="" src="/assets/cockpit.jpg"><div id="hotspots"></div>
+            <section id="display" aria-label="교육용 실내 디스플레이" hidden>
+              <nav id="screen-tabs" aria-label="디스플레이 화면"><button data-screen="home" aria-pressed="true">홈</button><button data-screen="climate" aria-pressed="false">공조</button><button data-screen="vehicle" aria-pressed="false">차량</button></nav>
+              <div id="screen-content"></div><span class="display-caption">교육용 화면 · 차량에서 읽은 값</span>
+            </section>
+          </div>
+        </div>
+        <div class="photo-caption"><span id="photo-hint">표시된 위치를 누르면 가까이 볼 수 있어요.</span><button id="show-labels" aria-pressed="false">버튼 이름 보기</button></div>
+        <p id="scene-description"></p>
+        <p class="subtle">작은 화면에서는 사진을 좌우로 움직이거나 아래 조작 버튼을 사용하세요. 사진 속 숫자·LED는 촬영 당시 모습이며, 추가한 디스플레이는 교육용 화면이에요.</p>
+        <footer><a id="source" target="_blank" rel="noreferrer">사진·그림: 현대자동차</a> · <a id="manual" target="_blank" rel="noreferrer" hidden>조작 설명서</a><span>실차와 사양이 다를 수 있어요. 최대 제상 전용 조작은 제공하지 않아요.</span></footer>
       </section>
       <aside>
-        <section class="direction-section" aria-labelledby="direction-title">
-          <h2 id="direction-title">바람 방향</h2><p>앱이 앞유리 방향을 안내하면 <strong>앞유리</strong>를 선택해 주세요.</p>
-          <div id="directions" class="directions" role="group" aria-label="운전석 바람 방향"></div>
-          <p class="target-note">얼굴 → 얼굴 쪽 바람<br>앞유리 → 앞유리 쪽 바람</p>
+        <section class="controls-section" aria-labelledby="controls-title"><h2 id="controls-title">실내 둘러보기</h2><div id="control-list"></div></section>
+        <section class="state-section" aria-labelledby="state-title"><h2 id="state-title">지금 차 상태</h2><dl id="vehicle-state"></dl></section>
+        <section id="wiper-preview" class="operation-preview" aria-labelledby="wiper-preview-title" hidden>
+          <h3 id="wiper-preview-title">앞유리 와이퍼 동작</h3><p id="wiper-motion-state" role="status"></p>
+          <svg viewBox="0 0 800 260" role="img" aria-label="앞유리 위를 왕복하는 두 와이퍼의 동작 예시">
+            <defs><clipPath id="glass"><path d="M120 15H680L780 245H20Z"/></clipPath></defs>
+            <path d="M120 15H680L780 245H20Z" fill="#dce9ef" stroke="#536473" stroke-width="5"/>
+            <path d="M120 205H680M170 125H630" fill="none" stroke="#b4c9d5" stroke-width="2"/>
+            <g clip-path="url(#glass)" fill="none" stroke="#232d35" stroke-linecap="round">
+              <g class="wiper-arm wiper-left"><path d="M260 235L235 215L90 200" stroke-width="7"/><path d="M75 197L243 216" stroke-width="12"/></g>
+              <g class="wiper-arm wiper-right"><path d="M580 235L550 215L350 200" stroke-width="7"/><path d="M335 198L558 216" stroke-width="12"/></g>
+            </g>
+          </svg>
+          <p class="subtle">작동을 이해하기 위한 움직임 예시예요. 실제 차량의 궤적·주기는 다를 수 있어요. AUTO의 강우 감지는 재현하지 않아요.</p>
         </section>
-        <section class="state-section" aria-labelledby="state-title"><h2 id="state-title">지금 차 상태</h2><dl id="vehicle-state"></dl><p id="feedback" role="status" aria-live="polite">차량 상태를 읽고 있어요.</p></section>
-        <p class="app-note">조작 뒤에는 앱 화면을 확인해 주세요.<br>실습 완료는 앱이 차량 신호로 판단해요.</p>
+        <section id="lights-preview" class="operation-preview" aria-label="조명과 방향지시등 동작" hidden>
+          <div class="lamp-display"><span id="blink-left" class="turn-arrow" aria-label="왼쪽 방향지시등">←</span><span id="lamp-state"></span><span id="blink-right" class="turn-arrow" aria-label="오른쪽 방향지시등">→</span></div>
+          <p class="subtle">확인된 방향지시등 모드를 점멸로 보여줘요. 핸들 복귀에 따른 자동 취소와 AUTO의 조도 판단은 재현하지 않아요.</p>
+        </section>
+        <p id="feedback" role="status" aria-live="polite">차량 상태를 읽고 있어요.</p>
+        <p class="app-note">조작 후 앱을 확인하세요.<br>실습 완료는 앱이 차량 신호로 판단해요.</p>
       </aside>
     </div>
   </main>

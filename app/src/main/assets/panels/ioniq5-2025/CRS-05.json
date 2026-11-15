@@ -1,0 +1,21 @@
+{
+  "courseId": "CRS-05",
+  "steps": {
+    "CRS-05-S1": {
+      "instruction": "운전대 왼쪽 레버를 왼쪽을 뜻하는 방향으로 끝까지 움직여 주세요.",
+      "locatorText": "조명 스위치가 달린 같은 왼쪽 레버예요. 끝의 돌림 스위치 대신 긴 레버를 움직여요.",
+      "locatorAsset": "assets/turn_signal_stalk.webp",
+      "misoperationLocators": {
+        "right": "assets/turn_signal_stalk.webp"
+      }
+    },
+    "CRS-05-S2": {
+      "instruction": "같은 레버를 오른쪽을 뜻하는 방향으로 끝까지 움직여 주세요.",
+      "locatorText": "조명 스위치가 달린 같은 왼쪽 레버예요. 끝의 돌림 스위치 대신 긴 레버를 움직여요.",
+      "locatorAsset": "assets/turn_signal_stalk.webp",
+      "misoperationLocators": {
+        "left": "assets/turn_signal_stalk.webp"
+      }
+    }
+  }
+}
