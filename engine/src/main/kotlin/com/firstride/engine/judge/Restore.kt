@@ -5,9 +5,14 @@ import com.firstride.engine.signal.Reading
 import com.firstride.engine.signal.SignalId
 import com.firstride.engine.signal.SignalSource
 import com.firstride.engine.signal.SignalValue
+import com.firstride.engine.signal.observeWithInitialTimeout
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** 실습 후 원상 복귀 안내(FR-14)의 목록. 이름은 코스 정의의 조건 라벨이다. */
 data class RestoreReport(
@@ -41,16 +46,30 @@ fun restoreReport(course: CourseDefinition, before: Map<SignalId, SignalValue>, 
 }
 
 /** 지금 값을 구독해 목록을 낸다. 사용자가 되돌리면 값 변화가 바로 목록에 반영된다(AC-14-3). 수집을 멈추면 구독이 해제된다. */
-fun observeRestore(course: CourseDefinition, before: Map<SignalId, SignalValue>, source: SignalSource): Flow<RestoreReport> {
+fun observeRestore(
+    course: CourseDefinition,
+    before: Map<SignalId, SignalValue>,
+    source: SignalSource,
+    config: JudgeConfig = JudgeConfig(),
+): Flow<RestoreReport> {
     val ids = coveredSignals(course).keys.toList()
     if (ids.isEmpty()) return flowOf(RestoreReport(emptyList(), emptyList()))
-    return combine(ids.map { id -> source.observe(id) }) { readings ->
+    return combine(ids.map { id -> source.observeWithInitialTimeout(id, config.precheckTimeout) }) { readings ->
         restoreReport(course, before, ids.zip(readings).toMap())
     }
 }
 
-/** 코스 시작 전의 값을 읽는다. 읽지 못한 신호는 담지 않는다. */
-suspend fun snapshotBefore(course: CourseDefinition, source: SignalSource): Map<SignalId, SignalValue> =
-    coveredSignals(course).keys.mapNotNull { id ->
-        (source.read(id) as? Reading.Value)?.let { id to it.value }
-    }.toMap()
+/** 코스 시작 전의 값을 동시에 읽는다. 제한 안에 읽지 못한 신호는 담지 않는다. */
+suspend fun snapshotBefore(
+    course: CourseDefinition,
+    source: SignalSource,
+    config: JudgeConfig = JudgeConfig(),
+): Map<SignalId, SignalValue> = coroutineScope {
+    coveredSignals(course).keys.map { id ->
+        async {
+            withTimeoutOrNull(config.precheckTimeout) {
+                (source.read(id) as? Reading.Value)?.let { id to it.value }
+            }
+        }
+    }.awaitAll().filterNotNull().toMap()
+}

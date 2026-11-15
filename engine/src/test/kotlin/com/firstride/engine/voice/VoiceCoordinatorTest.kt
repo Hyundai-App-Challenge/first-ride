@@ -2,6 +2,7 @@ package com.firstride.engine.voice
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -13,6 +14,30 @@ import kotlinx.coroutines.test.runTest
 @OptIn(ExperimentalCoroutinesApi::class)
 class VoiceCoordinatorTest {
     private fun TestScope.voice(tts: FakeTts) = VoiceCoordinator(tts, clock = { testScheduler.currentTime })
+
+    @Test fun `AC-06-6 STT 미연결은 진행 불가로 표시하되 안내는 읽는다`() = runTest {
+        val tts = FakeTts(100)
+        val v = voice(tts)
+        assertFalse(v.sttAvailable.value)
+        backgroundScope.launch { v.run() }
+        v.announce("안내"); advanceTimeBy(100); runCurrent()
+        assertEquals(listOf("안내"), tts.started)
+        assertTrue(v.available.value)
+        assertFalse(v.listening.value)
+    }
+
+    @Test fun `듣기 비활성은 어댑터가 있어도 진행 불가이고 요청하지 않는다`() = runTest {
+        val tts = FakeTts(100)
+        val stt = FakeStt()
+        val v = VoiceCoordinator(tts, clock = { testScheduler.currentTime }, stt = stt, listenEnabled = false)
+        assertFalse(v.sttAvailable.value)
+        backgroundScope.launch { v.run() }
+        v.announce("안내"); advanceTimeBy(100); runCurrent()
+        assertEquals(listOf("안내"), tts.started)
+        assertTrue(v.available.value)
+        assertFalse(v.listening.value)
+        assertEquals(0, stt.listenCalls)
+    }
 
     @Test fun `AC-05-1 요청한 문구를 읽는다`() = runTest {
         val tts = FakeTts()

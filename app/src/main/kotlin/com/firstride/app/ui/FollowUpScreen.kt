@@ -50,9 +50,10 @@ fun FollowUpScreen(
             Text(stringResource(R.string.followup_checking), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
         }
         is FollowUpState.Doing -> {
-            val base = course.steps.lastOrNull()?.id?.let { texts?.steps?.get(it) }
+            val baseStep = course.steps.lastOrNull()
+            val base = baseStep?.id?.let { texts?.steps?.get(it) }
             val restoreText = stringResource(R.string.followup_restore_instruction, s.step.action.joinToString(", ") { it.label.ifBlank { it.signal.key } })
-            val text = if (s.restore) base?.copy(instruction = restoreText) else texts?.steps?.get(s.step.id)
+            val text = if (s.restore) restoreStepText(s.step, baseStep, base, restoreText) else texts?.steps?.get(s.step.id)
             // StepContent는 코스 정의와 단계 번호로 단계를 찾는다. 조치 하나짜리 코스로 감싸서 넘긴다.
             val single = remember(s.step) { CourseDefinition(course.id, course.name, 0, listOf(s.step)) }
             val singleTexts = remember(s.step, text) { ModelCourseText(course.id, listOfNotNull(text?.let { s.step.id to it }).toMap()) }

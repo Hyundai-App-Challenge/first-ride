@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -137,8 +138,11 @@ private fun ConditionList(view: StepView) {
 /** 위치 안내 그림과 위치 문구. 그림이 없거나 읽지 못해도 문구는 나온다. */
 @Composable
 private fun Locator(view: StepView, loadImage: (String) -> ImageBitmap?, modifier: Modifier, wide: Boolean) {
-    val image by produceState<ImageBitmap?>(null, view.locatorAsset) {
-        value = view.locatorAsset?.let { path -> withContext(Dispatchers.IO) { loadImage(path) } }
+    // 새 조작부를 안내하는 동안 이전 그림이 남지 않도록 상태 자체를 경로에 묶는다.
+    val image by key(view.locatorAsset) {
+        produceState<ImageBitmap?>(null) {
+            value = view.locatorAsset?.let { path -> withContext(Dispatchers.IO) { loadImage(path) } }
+        }
     }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Space.s)) {
         // 가로형은 칸 높이를 다 쓰고, 세로형은 340dp로 묶는다(문서 5-2절).

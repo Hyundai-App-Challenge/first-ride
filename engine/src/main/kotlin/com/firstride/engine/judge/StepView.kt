@@ -9,7 +9,7 @@ enum class ConditionStatus {
     MET,              // 충족
     ALREADY_MET,      // 유지 조건이 시작부터 맞아 있음. 조작을 요구하지 않는다(POL-J-13)
     UNMET,            // 아직 안 맞음
-    TOGGLE_NEEDED,    // 조작 조건이 시작부터 목표 값. 껐다가 다시 켜야 한다(POL-J-11)
+    TOGGLE_NEEDED,    // 조작 조건이 시작부터 목표 값. 목표 밖으로 바꿨다가 돌아와야 한다(POL-J-11)
     UNKNOWN,          // 읽지 못함
 }
 
@@ -33,7 +33,7 @@ data class StepView(
     val locatorText: String?,              // "어디 있어요"와 힌트가 읽는 위치 문구
 )
 
-private const val ALREADY_AT_TARGET_TEXT = "이미 켜져 있어요. 한 번 껐다가 다시 켜 보세요."
+private const val ALREADY_AT_TARGET_TEXT = "이미 목표 상태예요. 다른 상태로 바꾼 뒤 다시 해 보세요."
 private const val UNVERIFIABLE_TEXT = "지금은 차량 상태를 확인할 수 없어요."
 private const val PRECHECK_TEXT = "차량 상태를 확인하고 있어요."
 private const val SKIPPED_TEXT = "건너뛰었어요."
@@ -57,10 +57,11 @@ fun stepView(state: StepState, step: StepDefinition?, text: StepText?): StepView
     val unmet = conditions.filter { it.status == ConditionStatus.UNMET || it.status == ConditionStatus.TOGGLE_NEEDED }
     val done = conditions.filter { it.status == ConditionStatus.MET }
 
+    val instruction = if (flippedAtLimit(state, step)) text?.instructionAtLimit ?: text?.instruction else text?.instruction
     val message: String? = when (state.phase) {
         Phase.PRECHECK -> PRECHECK_TEXT
-        Phase.WAITING -> if (flippedAtLimit(state, step)) text?.instructionAtLimit ?: text?.instruction else text?.instruction
-        Phase.ALREADY_AT_TARGET -> ALREADY_AT_TARGET_TEXT
+        Phase.WAITING -> instruction
+        Phase.ALREADY_AT_TARGET -> listOfNotNull(ALREADY_AT_TARGET_TEXT, instruction).joinToString(" ")
         Phase.PARTIAL -> partialText(done.map { it.label }, unmet.map { it.label })
         Phase.CORRECTION -> state.correction?.correction
         Phase.DONE -> step?.doneText

@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- debug 빌드에만 들어가는 실측 화면(기술 설계 13-2절). 실측을 위해 main에 없는 10-1절의 조회 퍼미션을 더한다. -->
+<!-- debug 전용 실측 화면과 STT 실측 퍼미션(기술 설계 13-2절). 코스의 차량 조회 퍼미션은 main에 둔다. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="pleos.car.permission.CAR_LIGHTS" />
-    <uses-permission android:name="pleos.car.permission.CAR_WINDOWS" />
-    <uses-permission android:name="pleos.car.permission.CAR_DOORS" />
+    <uses-permission android:name="pleos.car.permission.STT_SERVICE" />
 
     <application>
         <activity
