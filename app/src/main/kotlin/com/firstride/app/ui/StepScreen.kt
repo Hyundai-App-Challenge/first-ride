@@ -1,5 +1,6 @@
 package com.firstride.app.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -88,9 +90,10 @@ internal fun StepContent(
             if (maxWidth >= Size.wideBreakpoint) {
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(Space.xl)) {
                     Column(Modifier.weight(5f).fillMaxHeight()) {
+                        // 판이 길어지면 이 열만 스크롤되고 버튼 줄(Controls)은 자리를 지킨다.
                         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Space.ml)) {
                             MessageBlock(view)
-                            ConditionList(view)
+                            StatePanel(view)
                         }
                         Spacer(Modifier.height(Space.ml))
                         Controls(view, p, onSpeak, voice)
@@ -131,6 +134,24 @@ private fun ConditionList(view: StepView) {
     if (view.conditions.size < 2 || view.phase == Phase.PRECHECK) return
     Column {
         view.conditions.forEach { ConditionRow(it) }
+    }
+}
+
+/**
+ * 가로형 왼쪽 칸의 "지금 차 상태" 판. 조건이 하나여도 그린다. "완료" 버튼이 없으니(AC-02-9)
+ * 차가 알아서 확인한다는 것을 도움말로 알린다. 누를 수 없다(clickable 없음).
+ * 차량 상태를 처음 확인하는 동안(PRECHECK)과 조건이 없을 때는 그리지 않는다.
+ */
+@Composable
+private fun StatePanel(view: StepView) {
+    if (view.conditions.isEmpty() || view.phase == Phase.PRECHECK) return
+    Column(
+        Modifier.fillMaxWidth().background(appColors.card, RoundedCornerShape(Radius.card)).padding(Space.l),
+        verticalArrangement = Arrangement.spacedBy(Space.s),
+    ) {
+        Text(stringResource(R.string.step_state_title), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
+        Column { view.conditions.forEach { ConditionRow(it) } }
+        Text(stringResource(R.string.step_state_help), style = MaterialTheme.typography.bodyMedium, color = appColors.textTertiary)
     }
 }
 
