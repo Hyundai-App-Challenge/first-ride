@@ -111,6 +111,7 @@ Compose: `object Space { val s = 8.dp … }`, `object Radius { val card = 24.dp 
 | `TopBar` | `StepContent` 맨 위 `Row`(진행 위치 + 그만하기) 등 화면마다 따로 | 높이 96, 좌우 32, 아래 구분선(`border/subtle`) | DESIGN.md 3절 | 없음 | 왼쪽 뒤로·그만하기(`label`), 가운데 제목(`title`), 오른쪽 1/3(`body`) |
 | `CourseCard` | `HomeScreen.kt`의 `private fun CourseCard` | 높이 ≥ 76(실제 약 122), 안쪽 24, 모서리 24, 테두리 없음 | DESIGN.md 3절. 대표 코스(첫 실행)는 상태 알약에 "여기서 시작" | `State=Default·Pressed` | 이름 `title`, "약 1분 · 1단계" `caption`, 상태 알약(시작 전 / 완료 / 건너뜀 있음) `label-sm`·모서리 full·테두리 없음. 점수·백분율 없음 |
 | `ConditionRow` | `Components.kt`의 `ConditionRow` | 위아래 14, 간격 20, 아래 구분선(`border/subtle`) | DESIGN.md 3절 | `Status=Unmet·Met·AlreadyMet·Toggle·Wrong·Unknown·Polling` | 표시 원 44, 이름 `row`, 상태 문구 `label-sm`(오른쪽 정렬). 터치 대상 아님 |
+| `StatePanel` | `StepScreen.kt`의 `StatePanel` (가로형만) | 안쪽 24, 줄 간격 8, 모서리 24, 테두리·그림자 없음 | DESIGN.md 3절 | 없음. 조건 줄은 조건 수만큼(1~3) | 제목 "지금 차 상태" `label-sm`, 조건마다 `ConditionRow`, 도움말 `caption`. 누를 수 없다. PRECHECK 동안과 조건이 없을 때는 그리지 않는다 |
 | `ListRow` | 설정·소등 확인·SCR-11의 줄 (지금 화면마다 따로) | 높이 ≥ 76, 위아래 20, 아래 구분선(`border/subtle`) | DESIGN.md 3절 | `State=Default·Pressed` (누를 수 있는 줄만) | 이름 `row`, 설명 `caption`, 값 `body` |
 | `StateBanner` | 없음 (지금 `MessageBlock`이 문구만 그림) | 안쪽 24, 줄 간격 8, 모서리 24, 테두리 없음 | DESIGN.md 3절 | `State=` 8개 + `head`(위 줄 보이기, 기본 켬) | 위 줄: 상태 기호 40dp + 이름표(`label-sm`). 제목 `title`, 설명 `body`(없으면 숨김). SCR-04 밖(SCR-06 켜진 등, SCR-11 마무리)에서는 `head = false`로 바탕만 빌려 쓴다 |
 | `VoiceBar` | `StepScreen.kt`의 `VoiceIndicator` | 높이 64, 좌우 24, 모서리 full | DESIGN.md 3절 | `Mode=Listening·Speaking·Off` | 점 20dp: 듣는 중 = 채운 점, 재생 중 = 옅은 채운 점, 꺼짐 = 빈 원. 점은 깜박이지 않는다. 글자 `label-sm`. 터치 대상 아님(마이크 버튼은 7절) |
@@ -135,13 +136,13 @@ Compose: `object Space { val s = 8.dp … }`, `object Radius { val card = 24.dp 
 |---|---|---|
 | SCR-02 홈 | TopBar(앱 이름 · 설정) / 코스 목록(묶음 이름 + CourseCard, 세로 스크롤, 간격 14) / 아래 고정 "하차 전 소등 확인" SecondaryButton(아래 띠 높이 134) | TopBar / 두 칸: **왼쪽 코스 목록(남는 너비, 약 934)** · 간격 40 · **오른쪽 640 고정**(묶음별 완료 현황, 소등 확인 버튼 아래 붙임) |
 | SCR-03 코스 소개 | TopBar(‹ 홈) / 코스 이름(`headline`) → 설명(`body`, 3줄 이하) → 단계 수·시간(`caption`) → Locator 미리 보기(높이 340) → 정차 안내 상자 → (남는 공간) → 시작 PrimaryButton → "김이 잘 안 걷힐 때" TextButton | 두 칸 **왼쪽 721 : 오른쪽 861** (약 45:55, Compose `weight(5f)`·`weight(6f)`), 간격 32. 왼쪽: 이름·설명·정차 안내·버튼. 오른쪽: Locator 미리 보기(칸 전체 높이) |
-| SCR-04 단계 진행 | TopBar(× 그만하기 · 코스 이름 · 1/3) / 안내 문구(`instruction`) 또는 StateBanner → Locator(높이 340) → 위치 문구 → 조건 목록 → (남는 공간) → VoiceBar → 버튼 줄(다시 듣기·어디 있어요 Secondary, 건너뛰기 Text, 간격 16) | 두 칸 **왼쪽 721 : 오른쪽 861**, 간격 32. **왼쪽: 안내 문구·StateBanner·조건·VoiceBar·버튼** (운전석에 가까워 손이 닿기 쉽다). **오른쪽: Locator(칸 전체 높이) + 위치 문구** |
+| SCR-04 단계 진행 | TopBar(× 그만하기 · 코스 이름 · 1/3) / 안내 문구(`instruction`) 또는 StateBanner → Locator(높이 340) → 위치 문구 → 조건 목록 → (남는 공간) → VoiceBar → 버튼 줄(다시 듣기·어디 있어요 Secondary, 건너뛰기 Text, 간격 16) | 두 칸 **왼쪽 721 : 오른쪽 861**, 간격 32. **왼쪽: 안내 문구·StateBanner·"지금 차 상태" 판(StatePanel, 조건이 하나여도 보임)·VoiceBar·버튼** (운전석에 가까워 손이 닿기 쉽다). 판이 길어지면 문구와 판이 있는 부분만 스크롤되고 버튼 줄은 밀리지 않는다. **오른쪽: Locator(칸 전체 높이) + 위치 문구** |
 | SCR-05 코스 완료 | TopBar(코스 이름) / 결과(✓ 표시 + "조작 완료" `headline` 또는 "건너뛴 단계가 있어요") → 아직 켜져 있는 것(ListRow) → (남는 공간) → 다음 코스 Primary → 홈으로 Secondary → "아직 김이 남아 있어요" Text | 두 칸 **왼쪽(남는 너비, 약 934) : 오른쪽 640**. 왼쪽: 결과와 아직 켜져 있는 것. 오른쪽: 다음 코스(CourseCard)·묶음 현황·버튼 |
 
 - SCR-04 세로형에서 판정 상태가 바뀌면 안내 문구 자리에 StateBanner가 들어오고 안내 문구는 그 위의 작은 글자(`caption`)로 남는다(03 보드). 버튼 줄은 언제나 맨 아래에 고정하고, 내용이 넘치면 가운데 부분만 스크롤한다(지금 코드와 같음).
 - 와이어프레임 v0.1의 가로형 SCR-03·04는 그림이 왼쪽이었다. 이번에 **문구·버튼을 왼쪽, 그림을 오른쪽**으로 바꿨다: 운전석이 왼쪽이라 버튼이 가까워지고, 지금 코드(`StepContent`의 가로형)와도 같다. SCR-06 가로형도 같은 순서다.
 - 문구만 있는 화면(SCR-01·07·08·09)은 두 방향 모두 가운데 정렬. SCR-08은 바탕 `bg/blocked`, 문구 두 줄(`headline`/세로, `display`/가로 + `body`), 버튼·움직임 없음(POL-D-4). 플랫폼의 주행 중 회색 화면과 같은 회색 톤이다.
-- 늘어난 높이(1000 → 1210)는 Locator를 키우는 데(240 → 340) 쓰고, 나머지는 버튼 위 빈 공간으로 둔다(버튼이 화면 아래 같은 자리에 있게).
+- 세로형에서 늘어난 높이(1000 → 1210)는 Locator를 키우는 데(240 → 340) 쓰고, 나머지는 버튼 위 빈 공간으로 둔다(버튼이 화면 아래 같은 자리에 있게). 가로형 SCR-04 왼쪽 칸의 빈 곳은 "지금 차 상태" 판으로 채운다. 판이 차지하는 것은 빈 곳의 22~38%이고, 버튼 줄의 자리는 그대로다.
 
 ## 6. Figma 링크
 
@@ -152,6 +153,7 @@ Compose: `object Space { val s = 8.dp … }`, `object Radius { val card = 24.dp 
 - 컴포넌트: [01 컴포넌트 보드](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=3-24)
   - [PrimaryButton](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=90-494) · [SecondaryButton](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=90-499) · [TextButton](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=90-504)
   - [TopBar](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=3-33) · [CourseCard](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=91-496) · [ListRow](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=91-502)
+  - [StatePanel](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=108-826)
   - [ConditionRow](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=94-520) · [StateBanner](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=94-577) · [VoiceBar](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=91-509) · [Locator](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=3-59)
 - 화면 보드: [02 세로형](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=4-2) · [03 SCR-04 상태별](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=4-259) · [04 가로형](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=5-263)
 - 5절의 화면 프레임:
@@ -162,6 +164,7 @@ Compose: `object Space { val s = 8.dp … }`, `object Radius { val card = 24.dp 
 | SCR-03 | [4:71](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=4-71) | [9:406](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=9-406) |
 | SCR-04 WAITING | [4:273](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=4-273) | [5:336](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=5-336) |
 | SCR-04 CORRECTION | [4:421](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=4-421) | [5:379](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=5-379) |
+| SCR-04 WAITING · 조건 하나 | — | [109:886](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=109-886) |
 | SCR-05 | [4:132](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=4-132) | [5:425](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=5-425) |
 | SCR-08 | [4:207](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=4-207) | [9:439](https://www.figma.com/design/7nCbKAdriwwQWVaXXhEIyV/?node-id=9-439) |
 

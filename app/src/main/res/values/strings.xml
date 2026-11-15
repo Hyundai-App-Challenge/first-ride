@@ -40,6 +40,8 @@
     <string name="step_where">어디 있어요</string>
     <string name="step_skip">건너뛰기</string>
     <string name="step_recheck">다시 확인</string>
+    <string name="step_state_title">지금 차 상태</string>
+    <string name="step_state_help">조작하면 차가 알아서 확인해요. 누를 버튼은 없어요.</string>
     <string name="condition_met">확인됐어요</string>
     <string name="condition_already_met">이미 맞아요</string>
     <string name="condition_unmet">아직이에요</string>
