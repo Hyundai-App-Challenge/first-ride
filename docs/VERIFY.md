@@ -363,3 +363,14 @@ Pleos Connect v2.1.0 / emulator-5554 / user10 / com.firstride.qa39.
 최신 동료 UI가 모두 포함된 APK에서 최종 `python3 tools/check-courses.py --follow-ups --recovery`가 6코스·후속 조치·재개·원상 복귀·소등 모두 통과했다. 변경 대상16개 VC 필드와 신호원도 실행 전후 독립 비교해 동일했다. 새 창문·창문 잠금·도어 잠금 그림3장은 실제 앱 캡처로 올바른 강조와 문구를 확인했다. 최신 홈의 진행 현황·6코스 목록도 화면 확인했다. 로컬 로그 `.w72-latest-all.tmp`, 캡처 `captures/w72-{window-driver,window-lock,door-lock}.png`는 커밋하지 않는다.
 
 같은 최신 APK의 기존 CRS-01 쉘 명령·시연 장면·대상 패키지 터치도 다시 통과했고 등/와이퍼 그림2장을 화면 확인했다(`.w72-latest-demo.tmp`, `captures/w72-{light,wiper}-locator.png`). 최종 보존 검사에서 QA fake·font1.0·voiceTrue·기존 release 설치/갱신 시각을 유지했다.
+
+## 아이오닉5 공조 사진 실습 브랜치 검증 (2026-11-15)
+
+- 브랜치 feature/ioniq5-interior-simulator, 최신 origin/develop b1393ba에서 시작. 사용자가 직접 테스트 후 병합하며 자동 병합하지 않는다.
+- Android와 웹이 공통 사진·crop·버튼 영역을 사용함을 실제 화면으로 확인했다. captures/ioniq5-app-direction.png, ioniq5-web-desktop.png, ioniq5-web-mobile.png(로컬/커밋 제외).
+- 새 웹 API를 통해 실제 SDK의 CRS-01 부분 충족·내기 교정·완료·이미 목표 후 재조작·초기 내기 교정과 CRS-02 열선·풍량·풍향 완료를 확인했다. 운전석 FACE는 S3 WAITING을 유지했고 DEFROST로 바꾸자 CourseDone이 됐다. 임시 실행 기록 .w73-live-check.tmp의 출력으로 확인했다.
+- 차량 복원 검증의 첫 전체 딕셔너리 비교는 hvac.timestamp_ms 변경으로 실패했다. 쓰기 시각은 변경되는 메타데이터임을 차이 출력으로 확인했다. 이어서 HVAC·body·lights·gear·window_lock의 모든 상태 값(시각 메타데이터 제외), 학습·설정 파일 원본 바이트, REAL 모드를 각각 재검증해 보존을 확인했다. 원본은 captures/ioniq5-user-backup/에 있다(로컬/커밋 제외).
+- 기존 브라우저 연결 도구는 host unavailable, Windows 창 읽기는 앱 승인 시간 초과였다. 사용자 브라우저를 건드리지 않고 설치된 Chrome의 독립 headless 프로필과 가짜 VC로 사진 로딩·클릭·풍량·풍향·P 게이트·연결 오류/복구·터치 크기·키보드 포커스·가로 넘침을 검사했다. 1440px 데스크톱 및 실제 390 CSS px 모바일 프레임 모두 PASS. 모바일 초기 캡처의 최소 창 너비 문제와 테스트 프레임 차단을 각각 실제 CSS 프레임/테스트 전용 CSP로 교정했으며 제품 CSP를 완화하지 않았다.
+- 미검증: 사용자 직접 사용성 평가, 실차, 전체 실내와 다른 네 코스의 사진 교체, 최대 제상 쓰기, 모든 실차 공조 자동 연동. 원본 사진의 숫자·LED는 정적이다.
+
+최종 로컬 실행: 도구 단위 테스트 58개 PASS, Kotlin engine190/platform63/app29=282개 실패0, debug APK 빌드·release Kotlin 컴파일 성공, JS 문법 검사 성공. 최종 desktop/mobile headless 회귀도 모두 PASS. 잘못된 전체 모델 폴더에 부분 팩을 둔 첫 검증은 MISSING_TEXT로 실패했으며, 전체 모델 계약을 유지하도록 panels/ 팩으로 분리한 뒤 통과했다.

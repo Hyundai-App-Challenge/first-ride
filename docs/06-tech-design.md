@@ -870,3 +870,13 @@ fun observe(): Flow<Reading> = callbackFlow {
 | VC 변경이 일부 도메인에서 콜백으로 오지 않는다 | 해당 코스 제외 | T3을 CRS-01 신호부터 본다. 폴링으로 대체 |
 | 에뮬레이터 장비가 한 대다 | 실측과 어댑터 작업이 한 사람에게 몰린다 | 가짜 신호원으로 나머지 작업을 분리 |
 | 에뮬레이터와 실차의 동작이 다르다 | 실서비스 품질 | 실차 확인 수단이 없다(공모전이 장비를 제공하지 않음). README와 기획서에 한계로 적는다 |
+
+## 아이오닉5 공조 사진 팩과 로컬 실습 화면
+
+사용자 요청으로 공조 안내와 조작 화면의 사진을 통일했다. 전체 차종 모델은 여섯 코스를 모두 가져야 하므로 부분 공조 팩을 `assets/panels/ioniq5-2025/`에 둔다. `models/reference`를 기본으로 읽고 이 팩의 CRS-01/02 문구를 덮어쓴다. 다른 네 코스·판정 엔진·저장 형식은 유지한다.
+
+`panel.json` 계약: photo는 팩 기준 경로, photoWidth/photoHeight는 원본 크기, crop과 controls[].rect는 원본 사진 기준 [x,y,width,height]의 0~1 좌표다. Android PhotoLocators는 같은 crop에 locators[기존 locatorAsset]의 버튼만 강조하고, 웹은 같은 좌표를 실제 클릭 영역으로 쓴다. 사진·좌표는 한 곳에서만 수정한다. locators의 최대 제상은 빈 목록이며 전용 조작을 지원한다고 가정하지 않는다.
+
+로컬 서버 `tools/interior_simulator.py`는 127.0.0.1:8090에만 바인딩한다. GET /api/panel은 공통 정의, GET /api/state는 공조 상태와 P 여부, POST /api/control은 {control, value?}를 받는다. control은 공통 팩의 허용 ID만 받으며 value는 풍향 선택에만 쓴다. toggle/set/step/choice를 직렬화하고 P·범위·입력을 확인한 뒤 VC에 쓴다. 이후 읽은 값이 목표와 같을 때만 성공을 반환한다. 외부 Origin/Host·임의 파일 경로는 허용하지 않는다.
+
+VC는 기존 도구와 같은 2.1.0 HTTP 경로를 이용하며 공개 안정 API로 확인된 계약은 아니다. 앱의 INTERNET/차량 쓰기 권한은 추가하지 않는다. 화면 클릭 → VC 값 → 기존 SDK → 기존 engine이 실제 완료 경로다. 사진의 LED/숫자는 정적이므로 라이브 상태는 별도 상태판에 표시한다. 연식·트림, 실차 자동 공조 연동 전체, 최대 제상 쓰기는 후속 검증 범위다.

@@ -144,6 +144,14 @@ class CourseValidatorTest {
         assertEquals(emptyList(), blocking)
     }
 
+    @Test fun `아이오닉5 공조 안내가 기존 코스 계약을 충족한다`() {
+        for (id in listOf("CRS-01", "CRS-02")) {
+            val course = CourseParser.parseCourse(File(assets, "courses/$id.json").readText())
+            val text = CourseParser.parseModelText(File(assets, "panels/ioniq5-2025/$id.json").readText())
+            assertEquals(emptyList(), CourseValidator.validate(course, text) { File(assets, "models/reference/$it").isFile })
+        }
+    }
+
     @Test fun `CRS-01은 대표 코스의 정의 그대로 읽힌다`() {
         val c = CourseParser.parseCourse(File(assets, "courses/CRS-01.json").readText())
         val s = c.steps.single()

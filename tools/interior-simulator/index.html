@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>아이오닉5 공조 실습 · 첫 탑승</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><a href="/" class="brand">첫 탑승<span>실내 조작 실습</span></a><span id="connection" role="status">차량 연결 확인 중</span></header>
+  <main>
+    <div class="heading"><div><p class="model">아이오닉5 · 공조 조작부</p><h1>앱에서 안내한 버튼을 찾아보세요.</h1></div><p>같은 사진으로 위치를 익히고,<br>앱에서 조작 결과를 확인해요.</p></div>
+    <div id="error" role="alert" hidden></div>
+    <div class="workspace">
+      <section class="photo-section" aria-label="아이오닉5 공조 사진">
+        <div class="photo-scroll"><div id="panel" class="photo-panel"><img id="photo" alt="아이오닉5 실제 공조 패널. 노란 테두리 영역을 눌러 조작합니다." src="/assets/climate.jpg"><div id="hotspots"></div></div></div>
+        <div class="photo-caption"><span>노란 영역을 누르면 조작할 수 있어요.</span><button id="show-labels" aria-pressed="false">버튼 이름 보기</button></div>
+        <p class="subtle">사진의 숫자·표시등은 촬영 당시 모습이에요. 현재 상태는 오른쪽에서 확인해 주세요.</p>
+        <details class="all-controls"><summary>조작 버튼 전체 보기</summary><div id="control-list" class="control-list"></div></details>
+        <footer>2025년형 공조 패널 기준의 사진 실습 · <a id="source" target="_blank" rel="noreferrer">사진: 현대자동차</a><br>공조 외 조작과 최대 제상 전용 조작은 이 화면에서 제공하지 않아요.</footer>
+      </section>
+      <aside>
+        <section class="direction-section" aria-labelledby="direction-title">
+          <h2 id="direction-title">바람 방향</h2><p>앱이 앞유리 방향을 안내하면 <strong>앞유리</strong>를 선택해 주세요.</p>
+          <div id="directions" class="directions" role="group" aria-label="운전석 바람 방향"></div>
+          <p class="target-note">얼굴 → 얼굴 쪽 바람<br>앞유리 → 앞유리 쪽 바람</p>
+        </section>
+        <section class="state-section" aria-labelledby="state-title"><h2 id="state-title">지금 차 상태</h2><dl id="vehicle-state"></dl><p id="feedback" role="status" aria-live="polite">차량 상태를 읽고 있어요.</p></section>
+        <p class="app-note">조작 뒤에는 앱 화면을 확인해 주세요.<br>실습 완료는 앱이 차량 신호로 판단해요.</p>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

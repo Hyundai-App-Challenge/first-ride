@@ -1,0 +1,21 @@
+{
+  "courseId": "CRS-02",
+  "steps": {
+    "CRS-02-S1": {
+      "instruction": "직사각형 안에 물결선이 있는 뒷유리 열선 버튼을 눌러 주세요.",
+      "locatorText": "아이오닉5 공조 패널 아래 줄, 풍향 버튼 오른쪽의 직사각형 유리 모양이에요.",
+      "locatorAsset": "assets/hvac_rear_defrost.webp"
+    },
+    "CRS-02-S2": {
+      "instruction": "큰 부채 모양의 풍량 올림 버튼을 한 번 눌러 주세요.",
+      "instructionAtLimit": "풍량이 이미 가장 세요. 작은 부채 모양의 풍량 내림 버튼을 한 번 눌러 주세요.",
+      "locatorText": "아이오닉5 공조 패널 아래 줄 가운데, 작은 부채가 내림·큰 부채가 올림 버튼이에요.",
+      "locatorAsset": "assets/hvac_fan_speed.webp"
+    },
+    "CRS-02-S3": {
+      "instruction": "바람이 앞유리로 향하도록 ‘앞유리’를 선택해 주세요.",
+      "locatorText": "아이오닉5 공조 패널 아래 줄, 부채 버튼 오른쪽의 사람·앞유리 모양 풍향 버튼이에요. 사진 실습에서 이 버튼을 누른 뒤 ‘앞유리’를 선택해 주세요.",
+      "locatorAsset": "assets/hvac_fan_direction.webp"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "courseId": "CRS-01",
+  "steps": {
+    "CRS-01-S1": {
+      "instruction": "공조 패널의 앞유리 제상 버튼을 눌러 주세요.",
+      "locatorText": "아이오닉5 공조 패널 아래 줄 왼쪽의 앞유리 모양 버튼이에요. A/C와 외기 상태도 함께 확인해 주세요.",
+      "locatorAsset": "assets/hvac_front_defrost.webp",
+      "conditionLocators": {"hvac.ac":"assets/hvac_ac.webp","hvac.recirculation":"assets/hvac_recirculation.webp"},
+      "misoperationLocators": {"recirc":"assets/hvac_recirculation.webp"}
+    },
+    "CRS-01-F1": {
+      "instruction": "이 사진 실습에는 별도의 최대 제상 조작이 없어요. 건너뛰고 다음 조치를 확인해 주세요.",
+      "locatorText": "아이오닉5 공조 패널입니다. 최대 제상 전용 버튼을 가정하지 않아요.",
+      "locatorAsset": "assets/hvac_max_defrost.webp"
+    },
+    "CRS-01-F2": {
+      "instruction": "큰 부채 모양의 풍량 올림 버튼으로 바람을 가장 세게 올려 주세요.",
+      "locatorText": "아이오닉5 공조 패널 아래 줄 가운데, 크기가 다른 부채 모양 버튼 두 개 중 오른쪽이에요.",
+      "locatorAsset": "assets/hvac_fan_speed.webp"
+    },
+    "CRS-01-F3": {
+      "instruction": "운전석 온도의 빨간 위 화살표를 눌러 온도를 가장 높게 올려 주세요.",
+      "locatorText": "아이오닉5 공조 패널 왼쪽 온도 표시 옆의 위·아래 화살표예요.",
+      "locatorAsset": "assets/hvac_temperature.webp"
+    }
+  }
+}
