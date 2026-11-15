@@ -191,6 +191,7 @@ Figma 컬렉션 `color`, 모드 `Light`·`Dark`. 이름은 Figma 변수 이름, 
 | 되돌릴 수 없는 동작의 확인 버튼(기록 지우기) | 바탕 `error`, 글자 `status/on` |
 | TopBar | 바탕 `bg/surface`, 아래 선 `border/subtle`, 제목 `text/primary`, 오른쪽 1/3 `text/tertiary` |
 | CourseCard | 바탕 `bg/card`, 테두리 없음, 이름 `text/primary`, 보조 `text/tertiary`. 상태 알약은 `bg/surface-variant` + `text/secondary`. 완료한 코스는 알약 앞에 `status/confirmed` ✓ 기호. 대표 코스(첫 실행)는 알약을 `action/primary` + `text/on-primary`("여기서 시작")로 바꾼다. 테두리로 강조하지 않는다 |
+| StatePanel ("지금 차 상태" 판) | 바탕 `bg/card`, 테두리·그림자 없음. 제목 `text/primary`, 조건 줄은 ConditionRow와 같다, 도움말 `text/tertiary`. 새 색이 없다 |
 | ListRow | 이름 `text/primary`, 설명 `text/tertiary`, 값 `text/secondary`, 선 `border/subtle` |
 | VoiceBar | 바탕 `bg/surface-variant`. 점: 듣는 중 = 채운 `text/primary`, 재생 중 = 채운 `text/tertiary`, 꺼짐 = 빈 원 `text/tertiary`. 글자 `text/primary`(듣는 중)·`text/secondary`(그 밖) |
 | Locator | 판 `locator/plate`, 테두리 없음. 판 아래 위치 문구 `text/secondary` |
