@@ -14,11 +14,11 @@ say() { printf '  기대: %s\n' "$1"; }
 
 reset() {
   vc gear gear=Park
-  vc hvac ac=false recirc=false front_defroster=false rear_defroster=false fan_speed=3 driver_direction=1 driver_temp=22
+  vc hvac power=true ac=false recirc=false front_defroster=false rear_defroster=false fan_speed=3 driver_direction=1 driver_temp=22
   vc lights feature=headlamp_mode value=Off
   vc body cabin_light=false front_wiper=Off window_fl=0
   vc turn-signal mode=Off
-  echo "reset: 기어 P, 공조(에어컨 끔·외기·제상 끔·풍량 3·풍향 Face·22℃), 외부등 Off, 실내등 끔, 와이퍼 Off, 운전석 창문 닫힘, 방향지시등 끔"
+  echo "reset: 기어 P, 공조 켬(에어컨 끔·외기·제상 끔·풍량 3·풍향 Face·22℃), 외부등 Off, 실내등 끔, 와이퍼 Off, 운전석 창문 닫힘, 방향지시등 끔"
 }
 
 case "${1:-}" in
@@ -29,15 +29,18 @@ case "${1:-}" in
   3)    vc hvac front_defroster=true; say "PARTIAL \"에어컨이 남았어요\"" ;;                  # 제상만 켬
   3-1)  vc hvac recirc=true; say "CORRECTION, 교정 안내" ;;                                   # 일부러 틀리게 조작
   4)    vc hvac recirc=false ac=true; say "DONE → SCR-05" ;;                                 # 조합을 맞춤
-  5)    vc lights feature=headlamp_mode value=LowBeam; say "전조등 코스를 시작하면 ALREADY_AT_TARGET" ;;   # 전조등 코스, 하향등이 켜진 채
-  6)    vc lights feature=headlamp_mode value=Off; sleep 2; vc lights feature=headlamp_mode value=LowBeam; say "DONE" ;;   # 껐다 켜기
-  7)    say "\"다음\"이라고 말하면 SCR-05 → SCR-03 → SCR-04(와이퍼). STT(W-22·23) 뒤에만" ;;   # 음성으로 다음 코스
-  8)    say "\"어디야\"라고 말하면 위치 안내 강조" ;;                                          # 어디야
-  9)    vc body front_wiper=Low; say "DONE" ;;                                                # 와이퍼 켬
+  5)    vc lights feature=headlamp_mode value=Position; say "전조등 코스를 시작하면 미등 단계(1/3) ALREADY_AT_TARGET" ;; # 미등이 켜진 채 시작
+  6)    vc lights feature=headlamp_mode value=Off; sleep 2; vc lights feature=headlamp_mode value=Position; say "미등 DONE → 2/3 하향등 WAITING" ;; # 미등 껐다 켜기
+  6-1)  vc lights feature=headlamp_mode value=LowBeam; say "하향등 DONE → 3/3 소등 WAITING" ;; # 하향등 켬
+  6-2)  vc lights feature=headlamp_mode value=Position; say "하향등 소등 DONE → SCR-05" ;;      # 하향등 끔
+  7)    say "현재는 다음 코스·시작하기를 터치해 와이퍼로 이동한다. STT는 실제 발화 검증 전 미연결이며 완료 화면의 음성 이동은 구현되어 있지 않다" ;; # 와이퍼 코스로 이동
+  8)    say "현재는 '어디 있어요'를 터치해 위치 안내를 확인한다. 음성 '어디야'는 STT 실제 발화 검증·연결 뒤 실습 중에만" ;; # 위치 안내
+  9)    vc body front_wiper=Low; say "와이퍼 켬 DONE → 2/2 와이퍼 끄기 WAITING" ;;               # 와이퍼 켬
+  9-off) vc body front_wiper=Off; say "와이퍼 끔 DONE → SCR-05" ;;                              # 와이퍼 끔
   10)   vc hvac driver_direction=4; say "\"확인 중\" → DONE(폴링 500ms)" ;;                   # 풍향 단계
-  11)   vc body cabin_light=true; say "SCR-06 \"실내등이 켜져 있어요\"" ;;                     # 소등 확인
+  11)   vc lights feature=headlamp_mode value=Off; vc body cabin_light=true; say "SCR-06 \"실내등이 켜져 있어요\"" ;; # 소등 확인
   12)   vc gear gear=Drive; say "플랫폼 회색 화면(앱은 SCR-08, 음성·구독 멈춤). 끝나면 12-off" ;;   # 주행 전환
   12-off) vc gear gear=Park; say "이어서 하기 / 홈으로를 묻는다" ;;                              # 주행 전환 해제
-  13)   say "에뮬레이터에서 재현 방법이 없다(T11). ./gradlew :engine:test 실행 화면으로 대신하고 그렇다고 밝힌다" ;;   # 확인 불가
+  13)   say "VC로 확인 불가 장애를 직접 주입하지 못했다(T11). engine:test 회귀 결과로 대신하면 실제 SDK 장애 재현과 구분해 밝힌다" ;; # 확인 불가
   *) sed -n '2,9p' "$0"; exit 1 ;;
 esac

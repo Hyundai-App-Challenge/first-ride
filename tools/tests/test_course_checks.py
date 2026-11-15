@@ -203,6 +203,17 @@ class StateRecoveryTest(unittest.TestCase):
 
 
 class TargetTest(unittest.TestCase):
+    def test_legacy_start_text_overrides_remain_available(self):
+        device = QA.Device("adb", "one", "com.firstride.qa39")
+        suite = QA.CourseSuite(device, FakeVC())
+        with patch.dict(os.environ, {"START_TEXT": "Legacy fog", "INTRO_START": "Begin"}), \
+                patch.object(device, "call"), patch.object(device, "tap") as tap:
+            suite.start("CRS-01")
+            self.assertEqual(tap.call_args_list, [unittest.mock.call("Legacy fog"), unittest.mock.call("Begin")])
+            tap.reset_mock()
+            suite.open("CRS-01", "김이 잘 안 걷힐 때")
+            self.assertEqual(tap.call_args_list, [unittest.mock.call("Legacy fog"), unittest.mock.call("김이 잘 안 걷힐 때")])
+
     def test_recovery_without_crs02_fails_before_device_access(self):
         with patch.dict(os.environ, {"ADB": "adb"}, clear=True), patch.object(QA.subprocess, "run") as run, redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit) as result:

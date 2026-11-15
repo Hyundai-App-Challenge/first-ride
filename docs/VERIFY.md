@@ -342,3 +342,24 @@ Pleos Connect v2.1.0 / emulator-5554 / user10 / com.firstride.qa39.
 실제 Pleos Connect v2.1.0 / emulator-5554 / user10 / com.firstride.qa39에서 선택 CRS-02+recovery를 통과했다. 종료 후 VC의 변경 대상16개와 real/fake 모드를 실행 전 스냅샷과 독립 비교해 동일함을 확인했다. 이 흐름은 상태 일치와 구독·기록 경계를 확인하며 UI 반응 1초 상한을 별도 실측한 것은 아니다. 실차 조작부 배치·사람 STT·최대 제상 완료는 계속 미검증이다.
 
 최종 CLI `python3 tools/check-courses.py --follow-ups --recovery`도 6코스·후속 조치·재개·소등·원상 복귀 모두 통과, 종료 코드0이었다. 별도의 실행 전후16개 VC 필드·신호원 비교와 기존 release 설치 시각·font1.0·voiceTrue·QA fake 보존 검사도 통과했다. 최대 제상 완료의 명시적 SKIP은 W67과 같다. 로컬 실행 로그는 `.w71-all-sdk.tmp`이며 커밋하지 않는다.
+
+# W-72 QA 진입점 통합·시연 시나리오 정합성 검증
+
+검증일: 2026-11-15. 기존 CRS-01 명령을 공통 Python 실행기에 연결하고 터치·Android 사용자 선택·시연 단계를 함께 맞췄다. 앱 기능·고정 포트·JSON 형식은 변경하지 않았다.
+
+| 확인한 것 | 방법 | 결과 |
+|---|---|---|
+| 터치 오류 재현 | 다른 앱의 동일 버튼, XML 특수문자, 0크기 요소, 잘린 dump 회귀 | 수정 전 4개 실패. 수정 후 대상 앱만 선택하고 유효한 XML·좌표를 사용. APP_ID 없는 일반 화면 탐색 유지 |
+| 공통 명령 실패·복원 | 도구 단위 테스트와 실제 로컬 HTTP 서버·Bash 진입점 | 상태 조회500에서는 차량 쓰기0, 주입500에서는 실패를 전달하고 원래 신호원 복원. Windows 가짜 adb로 현재 사용자 선택 경로 확인, Linux 경로는 CI에서 검증 |
+| 현재 사용자 보존 | 가짜 사용자11·사용자 미확인, 실제 QA install/real/fake | 실행·중지는 같은 사용자에 한정. 미확인 때 설치/파일 변경0. 실제 user10의 QA 앱만 설치·전환, 진행 파일 SHA-256 동일 |
+| 기존 CRS-01 수용 기준 | 실제 tools/check-crs01.sh | 1·2·2b·2c·3·4 통과. 초기 내기 순환에서 제상을 켜면 CORRECTION. 기존 시작 문구 환경 변수 회귀도 통과 |
+| 시연 단계 일치 | 실제 demo reset, 5→6→6-1→6-2, 9→9-off, 11과 대상 패키지 tap | 공조 전원ON, 전조등3단계·와이퍼2단계·실내등만 켜진 요약을 확인. 원래16개 VC 값과 신호원 독립 비교 동일 |
+| 전체 도구 회귀 | python3 -m unittest discover -s tools/tests | 47개 통과(기존36개에서11개 증가) |
+
+작업 중 동료 PR34/38/36/37/85/86/39가 병합되어 최신 develop(1c1b7e0)을 반영했다. 우리 docs04·toolsREADME 변경을 보존한 뒤 동료 변경과 함께 적용했다. 새 원상 복귀 ListRow의 문구에도 통합 검증을 맞췄다. 최신 UI를 빌드한 `gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug :app:compileReleaseKotlin` 성공, 보고서 engine189/platform63/app29=281개 실패0이다(변경 없는 작업은 Gradle이 기존 결과 재사용).
+
+중간 전체 실행에서 시작 버튼 탐색이 한 번 시간 초과했다. 이 실행은 실패로 처리했고 원래 VC 값·신호원을 복구했다. 화면 전환을 기다리는 좌표 터치 기반 검증의 관측이며 원인을 앱 오류로 단정하지 않는다. 실제 SDK의 장애 주입·사람의 STT 정확도·실차 좌표 일치·최대 제상 완료는 이번에도 검증하지 않는다. 시연 문구는 현재 STT 미연결과 완료 화면 음성 이동 미구현을 명시한다.
+
+최신 동료 UI가 모두 포함된 APK에서 최종 `python3 tools/check-courses.py --follow-ups --recovery`가 6코스·후속 조치·재개·원상 복귀·소등 모두 통과했다. 변경 대상16개 VC 필드와 신호원도 실행 전후 독립 비교해 동일했다. 새 창문·창문 잠금·도어 잠금 그림3장은 실제 앱 캡처로 올바른 강조와 문구를 확인했다. 최신 홈의 진행 현황·6코스 목록도 화면 확인했다. 로컬 로그 `.w72-latest-all.tmp`, 캡처 `captures/w72-{window-driver,window-lock,door-lock}.png`는 커밋하지 않는다.
+
+같은 최신 APK의 기존 CRS-01 쉘 명령·시연 장면·대상 패키지 터치도 다시 통과했고 등/와이퍼 그림2장을 화면 확인했다(`.w72-latest-demo.tmp`, `captures/w72-{light,wiper}-locator.png`). 최종 보존 검사에서 QA fake·font1.0·voiceTrue·기존 release 설치/갱신 시각을 유지했다.
