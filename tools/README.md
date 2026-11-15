@@ -52,10 +52,16 @@ $env:APP_ID = 'com.firstride.qa39'
 python tools/check-courses.py
 # 실패한 코스만 다시 확인:
 python tools/check-courses.py --course CRS-05 --course CRS-06
+# 기본 조합 복구·후속 조치·중단까지 함께 확인:
+python tools/check-courses.py --follow-ups
+# CRS-01과 후속 조치만 확인:
+python tools/check-courses.py --course CRS-01 --follow-ups
 ```
 
 기어 P에서 실행한다. 코스는 실제 SDK 신호로 판정하며 debug 진행 기록이 완료로 바뀔 수 있다. 앱·설정 데이터를 삭제하지 않고, 종료·실패·Ctrl+C에서 원래 공조·등·와이퍼·창문·잠금 값과 real/fake 표식을 복원한다. VC의 all 제어로 복원할 수 없는 혼합 잠금 상태에서는 변경 전에 중단한다. 복원 실패도 비정상 종료하며 다른 도메인과 신호원 복원은 계속 시도한다.
 
 CRS-01은 부분 충족·교정·이미 목표, CRS-02는 상대 풍량·폴링 풍향, CRS-03은 등 켜기/끄기, CRS-04는 HIGH/AUTO 교정, CRS-05는 반대 방향 교정, CRS-06은 상대 창문·창문/도어 잠금을 확인한다. 방향지시등의 사각지대 카메라 포커스는 Off 복귀 후 앱 UI를 다시 선택해 처리한다. 모든 선택 코스와 복원이 끝나야 최종 성공 문구·종료 코드 0이 나온다. 상세 CRS-01 수용 기준은 기존 `check-crs01.sh`도 유지한다.
+
+`--follow-ups`는 CRS-01을 선택한 경우에만 쓴다. 에어컨 복구 중 제상 유지 조건이 바뀌면 완료하지 않는지, 실제 지원 최댓값의 풍량·온도 조치, 해결/미해결 응답, 이미 최대인 조치 제외, 백그라운드·D→P 중단 후 새 점검을 확인한다. 후속 조치 전후 저장된 진행 파일의 SHA-256이 같아야 통과한다. 이 옵션은 운전석 온도·기어도 원래 값으로 복원한다. VC 2.1.0에는 최대 제상 쓰기 항목이 없어 해당 조치의 완료 검증은 `SKIP`을 출력하고 건너뛰기 경로를 확인한다. `ALL SELECTED COURSES PASSED`가 이 미검증 항목까지 보장하지는 않는다.
 
 이 검증은 Pleos Connect v2.1.0의 VC 필드와 reference 코스를 기준으로 한다. 실차·다른 모델의 조작부 배치·사람의 STT 정확도를 대신하지 않는다. WSL의 Python은 Windows adb 포트에 직접 닿지 않을 수 있으므로 이 도구는 Windows Python 또는 같은 네트워크의 Linux/macOS Python으로 실행한다.

@@ -109,7 +109,7 @@ class Device:
         x, y = wait_for(find, "app control " + text)
         self.call("shell", "input", "tap", str(x), str(y))
 
-    def phase(self, expected):
+    def process_id(self):
         if self._pid is None:
             def find_process():
                 processes = self.call("shell", "ps", "-A", "-o", "USER,PID,NAME").stdout
@@ -119,11 +119,31 @@ class Device:
                         return parts[1]
                 return None
             self._pid = wait_for(find_process, "target app process")
-        def matches():
-            trace = self.call("logcat", "-d", "--pid=" + self._pid, "-s", "FR-TRACE:D").stdout
-            phases = re.findall(r"step \d+/\d+ [A-Z_]+|screen CourseDone", trace)
-            return phases and expected in phases[-1]
-        wait_for(matches, expected)
+        return self._pid
+
+    def current_phase(self):
+        trace = self.call("logcat", "-d", "--pid=" + self.process_id(), "-s", "FR-TRACE:D").stdout
+        phases = re.findall(r"step \d+/\d+ [A-Z_]+|screen CourseDone|follow-up [^\r\n]+|drive [A-Z_]+", trace)
+        return phases[-1] if phases else ""
+
+    def phase(self, expected):
+        wait_for(lambda: expected in self.current_phase(), expected)
+
+    def wait_text(self, text):
+        wait_for(lambda: any(n.get("text") == text for n in self.nodes()), "app text " + text)
+
+    def subscriptions(self):
+        trace = self.call("logcat", "-d", "--pid=" + self.process_id(), "-s", "FR-SIGNALS:D").stdout
+        counts = re.findall(r"active=(\d+)", trace)
+        return int(counts[-1]) if counts else None
+
+    def progress_hash(self):
+        result = self.call("shell", "run-as", self.app_id, "--user", self.user,
+                           "sha256sum", "files/datastore/progress.preferences_pb").stdout
+        parts = result.split()
+        if not parts or not re.fullmatch(r"[0-9a-f]{64}", parts[0]):
+            raise RuntimeError("Could not verify saved progress")
+        return parts[0]
 
 
 class VirtualConsole:
@@ -167,7 +187,7 @@ class VirtualConsole:
         self.heartbeat.join(timeout=6)
 
 
-def restore_commands(state):
+def restore_commands(state, follow_ups=False):
     hvac, body, lights = state["hvac"], state["body"], state["lights"]
     locks = state["window_lock"]["locked"]
     if state["gear"]["actual"]["value"] != "Park":
@@ -175,7 +195,7 @@ def restore_commands(state):
     # VC의 all 제어로 정확히 복원할 수 없는 혼합 잠금 상태에서는 시작하지 않는다.
     if len(set(locks.values())) != 1 or len(set(body["door_locks"].values())) != 1:
         raise RuntimeError("Mixed lock states cannot be restored through VC all controls")
-    return [
+    commands = [
         ("turn-signal", {"mode": lights["turn_signal_mode"]}),
         ("hvac", {"power": hvac["power_on"], "ac": hvac["ac_on"], "recirc": hvac["recirc_on"],
                   "front_defroster": hvac["front_defroster_on"], "rear_defroster": hvac["rear_defroster_on"],
@@ -185,17 +205,24 @@ def restore_commands(state):
                   "doors_locked": body["door_locks"]["all"]}),
         ("window-lock", {"area": "all", "locked": locks["all"]}),
     ]
+    if follow_ups:
+        commands[1][1]["driver_temp"] = hvac["driver"]["temp_c"]
+        commands.insert(0, ("gear", {"gear": state["gear"]["actual"]["value"]}))
+    return commands
 
 
 class CourseSuite:
     def __init__(self, device, vc):
         self.device, self.vc = device, vc
 
-    def start(self, course_id):
+    def open(self, course_id, action):
         name = json.loads((ROOT / "app/src/main/assets/courses" / (course_id + ".json")).read_text(encoding="utf-8"))["name"]
         self.device.call("logcat", "-c")
         self.device.tap(name)
-        self.device.tap("시작하기")
+        self.device.tap(action)
+
+    def start(self, course_id):
+        self.open(course_id, "시작하기")
 
     def home(self):
         self.device.phase("screen CourseDone")
@@ -255,15 +282,98 @@ class CourseSuite:
         else:
             raise RuntimeError("No scenario for " + course_id)
 
-    def run(self, courses):
+    def _next_offer(self, include_max=True):
+        ids = ("F1", "F2", "F3") if include_max else ("F2", "F3")
+        allowed = {f"follow-up CRS-01-{step} WAITING" for step in ids}
+        if include_max:
+            allowed.add("follow-up CRS-01-F1 UNVERIFIABLE")
+        allowed.add("follow-up Exhausted")
+        return wait_for(lambda: (phase if (phase := self.device.current_phase()) in allowed else None), "next follow-up")
+
+    def _after_max_defrost(self):
+        phase = self._next_offer()
+        if phase.startswith("follow-up CRS-01-F1 "):
+            # v2.1.0의 공개 VC catalog에는 최대 제상 쓰기 제어가 없다.
+            print("SKIP CRS-01-F1 completion: no max-defrost write control in VC 2.1.0", flush=True)
+            self.device.call("logcat", "-c")
+            self.device.tap("건너뛰기")
+            phase = self._next_offer(include_max=False)
+        return phase
+
+    def _follow_up_home(self):
+        self.device.foreground()
+        self.device.wait_text("설정")
+        if any(n.get("text") == "이어서 하기" for n in self.device.nodes()):
+            raise RuntimeError("Interrupted follow-up must not offer resume")
+
+    def follow_ups(self):
+        d, v = self.device, self.vc
+        before = d.progress_hash()
+        limits = v.state()["hvac"]["limits"]
+        fan_min, fan_max = limits["fan_speed"]
+        temp_min, temp_max = limits["temperature_c"]
+        if fan_min >= fan_max or temp_min >= temp_max:
+            raise RuntimeError("Follow-up checks require adjustable fan and temperature ranges")
+        fan_below, temp_below = max(fan_min, fan_max - 1), max(temp_min, temp_max - 1)
+
+        def prepare(fan=fan_below, temperature=temp_below, ac=True):
+            v.set("hvac", power=True, front_defroster=True, ac=ac, recirc=False,
+                  fan_speed=fan, driver_temp=temperature)
+
+        # 기본 조합 복구 중 유지 조건이 바뀌면 완료하지 않는다.
+        prepare(ac=False)
+        self.open("CRS-01", "김이 잘 안 걷힐 때")
+        d.phase("follow-up CRS-01-S1-restore WAITING")
+        self.change("hvac", "follow-up CRS-01-S1-restore WAITING", front_defroster=False)
+        self.change("hvac", "follow-up CRS-01-S1-restore PARTIAL", ac=True)
+        d.call("logcat", "-c"); v.set("hvac", front_defroster=True)
+        phase = self._after_max_defrost()
+        if phase != "follow-up CRS-01-F2 WAITING":
+            raise RuntimeError("Expected fan follow-up after restoring all base conditions")
+        self.change("hvac", "follow-up Asking", fan_speed=fan_max)
+        d.tap("아직이요"); d.phase("follow-up CRS-01-F3 WAITING")
+        self.change("hvac", "follow-up Asking", driver_temp=temp_max)
+        d.tap("아직이요"); d.phase("follow-up Exhausted"); d.tap("홈으로")
+
+        # 이미 최대인 풍량은 다시 제안하지 않고 온도 조치 뒤 해결 답으로 끝낸다.
+        prepare(fan=fan_max)
+        self.open("CRS-01", "김이 잘 안 걷힐 때")
+        if self._after_max_defrost() != "follow-up CRS-01-F3 WAITING":
+            raise RuntimeError("Already-max fan was offered again")
+        self.change("hvac", "follow-up Asking", driver_temp=temp_max)
+        d.tap("걷혔어요"); d.phase("follow-up Resolved"); d.tap("홈으로")
+
+        prepare(fan=fan_max, temperature=temp_max)
+        self.open("CRS-01", "김이 잘 안 걷힐 때")
+        if self._after_max_defrost() != "follow-up Exhausted":
+            raise RuntimeError("Already-complete follow-ups should be exhausted")
+        d.tap("홈으로")
+
+        # 후속 조치는 백그라운드·주행 중단 후 이어서 하기를 제안하지 않는다.
+        prepare()
+        self.open("CRS-01", "김이 잘 안 걷힐 때"); self._next_offer()
+        d.call("shell", "am", "start", "--user", d.user, "-a", "android.settings.SETTINGS")
+        wait_for(lambda: d.subscriptions() == 0, "background follow-up subscriptions 0")
+        self._follow_up_home()
+        self.open("CRS-01", "김이 잘 안 걷힐 때"); self._next_offer()
+        self.change("gear", "drive RESTRICTED", gear="Drive")
+        wait_for(lambda: d.subscriptions() == 0, "driving follow-up subscriptions 0")
+        self.change("gear", "drive PARKED", gear="Park"); self._follow_up_home()
+        if d.progress_hash() != before:
+            raise RuntimeError("Follow-ups changed saved progress")
+        print("PASS CRS-01 follow-ups: restore, hold, fan, temperature, answers, interruption, progress unchanged", flush=True)
+
+    def run(self, courses, follow_ups=False):
         original_mode = self.device.real_mode()
-        restore = restore_commands(self.vc.state())
+        restore = restore_commands(self.vc.state(), follow_ups)
         failure, cleanup_errors = None, []
         try:
             self.device.set_mode(True)
             for course_id in courses:
                 try:
                     self.course(course_id)
+                    if follow_ups and course_id == "CRS-01":
+                        self.follow_ups()
                 except Exception as exc:
                     raise RuntimeError(f"{course_id}: {exc}") from exc
                 print("PASS " + course_id, flush=True)
@@ -294,11 +404,14 @@ def main(argv=None):
     parser.add_argument("--app-id", default=os.environ.get("APP_ID"), help="installed debug package (required)")
     parser.add_argument("--serial", default=os.environ.get("ANDROID_SERIAL"))
     parser.add_argument("--course", action="append", choices=COURSES, help="repeat to select courses; default all six")
+    parser.add_argument("--follow-ups", action="store_true", help="also check CRS-01 follow-ups and interruptions")
     args = parser.parse_args(argv)
     if not args.app_id:
         parser.error("Set APP_ID or --app-id explicitly")
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+", args.app_id):
         parser.error("Invalid Android applicationId")
+    if args.follow_ups and "CRS-01" not in (args.course or COURSES):
+        parser.error("--follow-ups requires CRS-01 in the selected courses")
     adb = os.environ.get("ADB") or shutil.which("adb")
     if not adb:
         parser.error("Set ADB to the adb executable")
@@ -309,7 +422,7 @@ def main(argv=None):
         port = int(os.environ.get("VC_PORT", "8088"))
         device.call("forward", f"tcp:{port}", f"tcp:{port}")
         with VirtualConsole(port) as vc:
-            CourseSuite(device, vc).run(args.course or COURSES)
+            CourseSuite(device, vc).run(args.course or COURSES, follow_ups=args.follow_ups)
         print("ALL SELECTED COURSES PASSED; ORIGINAL STATE RESTORED")
         return 0
     except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as exc:

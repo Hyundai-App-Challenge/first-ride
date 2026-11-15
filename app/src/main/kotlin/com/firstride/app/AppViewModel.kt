@@ -12,6 +12,7 @@ import com.firstride.engine.course.StepText
 import com.firstride.engine.drive.DriveState
 import com.firstride.engine.judge.CourseRunner
 import com.firstride.engine.judge.FollowUpRunner
+import com.firstride.engine.judge.FollowUpState
 import com.firstride.engine.judge.RestoreReport
 import com.firstride.engine.judge.StepRunner
 import com.firstride.engine.judge.observeRestore
@@ -214,6 +215,19 @@ class AppViewModel(
         practice = launchPractice {
             val voice = VoiceCoordinator(container.tts, voiceEnabled = { voiceEnabled.value }).also { this@AppViewModel.voice = it }
             launch { voice.run() }      // 끝난 뒤에도 마지막 문구를 읽을 수 있게 취소될 때까지 둔다
+            launch {
+                runner.state.collectLatest { state ->
+                    when (state) {
+                        is FollowUpState.Doing -> state.progress.runner.state.collect {
+                            Variant.trace("follow-up ${state.step.id} ${it.phase}")
+                        }
+                        FollowUpState.Checking -> Variant.trace("follow-up Checking")
+                        FollowUpState.Asking -> Variant.trace("follow-up Asking")
+                        FollowUpState.Exhausted -> Variant.trace("follow-up Exhausted")
+                        FollowUpState.Resolved -> Variant.trace("follow-up Resolved")
+                    }
+                }
+            }
             runner.run()
         }
     }
