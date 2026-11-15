@@ -18,5 +18,5 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: python3 -m unittest discover -s tools/tests
       # :engine은 순수 Kotlin이라 에뮬레이터 없이 돈다(기술 설계 9-4절). :platform, :app은 단위 테스트와 debug 빌드까지 본다.
-      # release 빌드는 서명 키가 저장소 밖에 있어 여기서 하지 않는다.
-      - run: ./gradlew :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest assembleDebug --stacktrace
+      # release는 서명 키 없이 Kotlin 컴파일까지 확인한다. 전체 release 빌드는 여기서 하지 않는다.
+      - run: ./gradlew :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest assembleDebug :app:compileReleaseKotlin --stacktrace

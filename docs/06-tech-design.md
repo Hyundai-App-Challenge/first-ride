@@ -486,6 +486,7 @@ interface SttPort { suspend fun listenOnce(): ListenResult         /* 최종 텍
 ```
 
 - `speak`는 재생이 끝날 때까지 기다리는 `suspend` 함수다. SDK의 `speak()` 호출 뒤 `EventListener.onDone()`/`onStop()`/`onError()`를 기다려 결과로 돌려준다.
+- TTS는 `TtsPlayback`이 문장별 결과를 소유하되 SDK 연결을 재사용한다. SDK의 play/stop은 내부에서 비동기로 실행되므로 재생 시작 전 취소는 START 뒤 STOP을 보내고, 다음 문장 전에는 실제 STOP 응답을 기다린다. STOP을 보낸 뒤의 DONE만으로는 중지를 확인하지 않는다. 5초 안에 확인이 없으면 새 재생을 막고, 늦은 STOP 뒤 복구할 수 있다. 시간 경과로 이벤트를 추측하지 않는다. 정상 DONE 뒤에는 stop을 추가하지 않으며 연결 해제도 초기화·중지 확인 뒤에 한다. 초기화는 5초, 재생은 기존 T8의 3초+글자당150ms 제한이다.
 - `listenOnce`는 SDK의 `request()` 호출 뒤 `ResultListener.onUpdated(stt, completed = true)`의 텍스트를 돌려준다. 중간 결과(`completed = false`)는 쓰지 않는다. `onEndedRecognition()`만으로는 완료하지 않는다. 실측 T9에서 종료 뒤 약 3~5ms 후 최종 텍스트가 왔다. 빈 최종 결과 또는 명시적 stop은 무음이며, 최종 결과가 없으면 15초 제한 뒤 오류다.
 - STT SDK는 요청 ID를 주지 않으므로 `OneShotStt`가 요청마다 SDK 인스턴스와 결과를 함께 소유한다. 초기화 제한은 5초이며 정상·실패·취소·시간 초과 모두 리스너를 제거하고 stop/release한 후 다음 요청을 시작한다. 이미 닫힌 인식기의 콜백은 다음 요청을 완료할 수 없다. 임의의 유예 시간에 의존하지 않는다.
 - STT 어댑터가 없거나 듣기가 비활성이면 `sttAvailable`은 처음부터 false다. 현재 앱의 STT는 실제 발화 검증 전까지 미연결이며, 화면에 음성 진행 꺼짐·터치 진행을 표시한다. TTS 안내는 독립적으로 유지한다(AC-06-6).
