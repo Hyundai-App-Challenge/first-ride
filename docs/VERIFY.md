@@ -1,3 +1,20 @@
+# 사진 기준 조명·레버 좌표 수정 (2026-11-15)
+
+요청: 조명 회전과 각 방향이 그림에 맞지 않는 문제를 고치고 현실감을 높여 main에 반영한다. fix/ioniq5-control-alignment에서 작업하며 기존 develop→release/0.1.0→main 경로를 따른다.
+
+| 무엇을 | 이번 실행과 결과 |
+|---|---|
+| 실패 재현 | 기존 구현에서 실제 입력 검사에 사진 기준 선택 마커가 없어 FAIL. 평면 atan2와 -135~45도 CSS 포인터가 원통형 스위치/사진의 표시를 따르지 않는 것을 확인 |
+| 사진 좌표와 입력 | 독립 Chrome `check-interior-ui.py --gestures`와 `--gestures --mobile` PASS. 조명 네 모드의 원본 중심(366,267/238/205/177), 와이퍼·방향지시 각 위치를 2 CSS px 이내로 비교. 좌우 시작점의 동일 상하 굴림, 가로 이동 쓰기0, 인쇄 표시 탭 한 번=쓰기 한 번, 키보드 Enter·터치 취소·창문 정지·모션 검증 |
+| 화면 회귀 | 같은 도구의 기본 desktop1440/390px mobile 검사 PASS. 7장면 사진·parent 복귀·전용 방향지시 그림·P/연결 실패/복구·포커스·넘침 확인 |
+| 실제 SDK 영향 코스 | 로컬 .w75-live-check.tmp에서 새 웹 API로 CRS-03 미등/전조등/미등, CRS-04 HI/AUTO 교정 후 LO/OFF, CRS-05 아래=왼쪽/위=오른쪽 완료 PASS |
+| 사용자 데이터 | 위 SDK 실행 뒤 원본19개 제어 값·학습/설정 바이트·신호 모드 복원 PASS. captures/ioniq5-cockpit-backup-20261115-174322/에 직전 원본 보관. QA39만 업데이트 설치 |
+| 계약·회귀·빌드 | `python -m unittest discover -s tools/tests` 60개 PASS. Gradle의 engine/platform/app 테스트와 debug APK/release Kotlin 컴파일 성공(190/63/29, 실패0; 변경 없는 결과 재사용 포함). JS2개 문법·git diff 검사 PASS |
+
+추가로 모바일 포커스 이동에서 overflow:hidden인 사진 crop의 scrollTop이41로 바뀌는 것을 수치 재현했다. crop은 overflow:clip으로 고정하고 바깥 보기 영역만 스크롤하게 수정했으며 내부 스크롤0을 회귀 검사에 포함했다. Chrome 마우스 검사에서 clickCount 기본0으로 클릭이 생성되지 않는 문제는 실제 클릭 설정으로 보완했다. 모바일에서는 포인터 종료까지 전달돼도 호환 click이 누락되는 경우를 확인해 사진 표시는 pointerup으로 한 번 확정하고, 후속 click 중복을 막으면서 키보드 활성화는 유지했다. 네 모드의 실제 마우스·터치 탭과 한 번 쓰기·취소 검사를 모두 통과했다.
+
+사진 원본은 수정하지 않았다. 공통 choices[].rect와 방향지시 전용 공식 그림을 사용하며, 원통형 조명에는 평면 원 회전 입력을 더 이상 사용하지 않는다. 실차3D·센서 판단·B 원터치·조향 자동 취소·MIST/와셔액·최대 제상 쓰기는 재현하지 않는다. 이전 잘못된 제안은 docs/DECISIONS.md에 기록했다. PR CI 통과 후 병합하며 서명 APK/태그는 갱신하지 않는다.
+
 # 아이오닉5 운전석 사진 실습 확장 (2026-11-15)
 
 브랜치: feature/ioniq5-interior-simulator. develop 최신 b1393ba를 fetch로 확인했으며 동료의 추가 변경은 없었다. 사용자가 동작을 확인한 뒤 레버 조작 확장과 develop·main 병합을 요청했다. 아래는 공조만 제공하던 이전 기록 이후의 확장 검증이다.

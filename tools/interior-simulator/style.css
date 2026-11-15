@@ -163,7 +163,7 @@ h2 {
 .photo-panel {
   position:relative;
   isolation:isolate;
-  overflow:hidden;
+  overflow:clip;
   width:100%;
   min-width:760px
 }
@@ -171,6 +171,12 @@ h2 {
   min-width:1060px
 }
 .photo-panel[data-view=lights],.photo-panel[data-view=wipers],.photo-panel[data-view=locks] {
+  min-width:550px
+}
+.photo-panel[data-view=lights] {
+  min-width:900px
+}
+.photo-panel[data-view=turn] {
   min-width:550px
 }
 #photo {
@@ -524,7 +530,6 @@ dd {
 .hotspot[data-interaction] {
   touch-action:none;
   cursor:ns-resize;
-  --position:0;
   background:#ffcc3308;
 }
 .hotspot[data-interaction]:hover:not(:disabled),.hotspot[data-interaction]:focus-visible {
@@ -543,37 +548,53 @@ dd {
   padding:3px 8px;
   border-radius:4px;
 }
-.hotspot[data-interaction=lever]:before {
-  content:"";
-  position:absolute;
-  left:12%;
-  width:76%;
-  height:20%;
-  min-height:22px;
-  top:calc(8% + (1 - var(--position)) * 64%);
-  border:3px solid #bd8500;
-  background:#ffcc3340;
-  border-radius:12px;
-  pointer-events:none;
-}
 .hotspot[data-interaction=dial] {
-  border-radius:50%;
+  border-radius:40%;
   cursor:grab;
 }
 .hotspot[data-interaction=dial]:active {
   cursor:grabbing;
 }
-.hotspot[data-interaction=dial]:before {
+.selection-marker {
+  position:absolute;
+  border:3px solid #bd8500;
+  background:#ffcc3324;
+  border-radius:6px;
+  pointer-events:none;
+  z-index:3;
+}
+.selection-marker:before {
   content:"";
   position:absolute;
-  width:35%;
-  height:5px;
-  left:50%;
+  left:-12px;
   top:50%;
-  background:#bd8500;
-  transform-origin:0 50%;
-  transform:rotate(calc(-135deg + var(--position) * 180deg));
-  border-radius:3px;
+  transform:translateY(-50%);
+  border-top:6px solid transparent;
+  border-bottom:6px solid transparent;
+  border-left:8px solid #bd8500;
+}
+.selection-marker.preview {
+  border-color:#315cff;
+  border-style:dashed;
+  background:#315cff12;
+}
+.mode-target {
+  touch-action:none;
+  position:absolute;
+  transform:translate(-50%,-50%);
+  min-width:44px;
+  min-height:44px;
+  padding:0;
+  border:1px dashed #bd850080;
+  background:transparent;
+  border-radius:4px;
+}
+.mode-target[aria-pressed=true] {
+  background:transparent;
+  border-color:#bd8500;
+}
+.mode-target:hover:not(:disabled),.mode-target:focus-visible {
+  background:#ffcc3330;
 }
 .operation-preview {
   background:white;
