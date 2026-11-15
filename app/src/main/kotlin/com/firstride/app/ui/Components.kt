@@ -296,8 +296,11 @@ private fun ConditionMark(status: ConditionStatus) {
     }
 }
 
-/** 조건 줄 밖에서 쓰는 상태 기호(소등 확인, 연결 오류). DESIGN.md 2-6절. */
-enum class Mark { CONFIRMED, ATTENTION, ERROR, UNKNOWN }
+/**
+ * 조건 줄 밖에서 쓰는 상태 기호(소등 확인, 연결 오류, 홈 진행 현황). DESIGN.md 2-6절.
+ * SKIPPED(건너뜀 있음)와 EMPTY(시작 전)는 홈 진행 현황에서 코스 결과를 보인다. 색 없이 모양으로 구분된다(POL-U-4).
+ */
+enum class Mark { CONFIRMED, ATTENTION, ERROR, UNKNOWN, SKIPPED, EMPTY }
 
 @Composable
 fun StatusMark(mark: Mark, size: Dp = Size.mark) {
@@ -309,6 +312,8 @@ fun StatusMark(mark: Mark, size: Dp = Size.mark) {
         Mark.ATTENTION -> Glyph(size, fill = app.statusAttention, ring = app.onStatus, ringWidth = 2.dp, letter = "!", letterColor = app.onStatus)
         Mark.ERROR -> Glyph(size, fill = cs.error, letter = "!", letterColor = app.onStatus)
         Mark.UNKNOWN -> Glyph(size, ring = app.textTertiary, dashed = true, letter = "?", letterColor = app.textTertiary)
+        Mark.SKIPPED -> Glyph(size, ring = cs.onSurfaceVariant) { chevrons(cs.onSurfaceVariant) }
+        Mark.EMPTY -> Glyph(size, ring = app.textTertiary)
     }
 }
 

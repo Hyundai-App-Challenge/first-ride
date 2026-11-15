@@ -196,11 +196,15 @@ Figma 컬렉션 `color`, 모드 `Light`·`Dark`. 이름은 Figma 변수 이름, 
 | VoiceBar | 바탕 `bg/surface-variant`. 점: 듣는 중 = 채운 `text/primary`, 재생 중 = 채운 `text/tertiary`, 꺼짐 = 빈 원 `text/tertiary`. 글자 `text/primary`(듣는 중)·`text/secondary`(그 밖) |
 | Locator | 판 `locator/plate`, 테두리 없음. 판 아래 위치 문구 `text/secondary` |
 | 진행 표시 | `text/secondary` |
+| StatusMark (홈 진행 현황) | 완료 = `status/confirmed` 채운 원 + ✓(`status/on`). 건너뜀 있음 = 빈 원 3dp + », `text/secondary`. 시작 전 = 빈 원 3dp, `text/tertiary`. 색 없이 모양으로 구분된다 |
+| 진행 현황 ("익힌 조작") | 바탕 `bg/card`, 테두리 없음, 제목 `text/primary` |
+| NextCourseCard | CourseCard와 같다(바탕 `bg/card`, 누름 `action/secondary-pressed`). 이름표 알약은 `bg/surface-variant` + `text/secondary`, 기록이 없으면 `action/primary` + `text/on-primary`("여기서 시작"). 그림 판 `locator/plate`. 이름 `text/primary`, 설명 `text/secondary`, 분량 `text/tertiary` |
 
 ### 화면별
 
 | 화면 | 규칙 |
 |---|---|
+| SCR-02 홈 (가로형) | 진행 현황의 초록은 완료한 코스의 ✓ 기호에만 쓴다. 숫자·막대가 없다. 모두 완료면 카드 대신 문구 한 줄(`text/secondary`) |
 | SCR-04 `DONE` | 배너의 초록 ✓ 기호와 "조작 완료". 화면 전체를 초록으로 칠하지 않는다 |
 | SCR-05 코스 완료 | 결과 기호는 `status/confirmed` 채운 원 + ✓. 건너뛴 단계가 있으면 빈 원 + » |
 | SCR-06 소등 확인 | 켜져 있는 등은 노랑 ! 기호 + "켜져 있어요"(`text/primary`), 꺼진 등은 초록 ✓, 읽지 못한 등은 점선 ? |
