@@ -269,3 +269,39 @@ QA 신호원 fake·기어 P·글자 크기를 복구했다. 실제 SDK의 지원
 - 방향지시등을 Off로 직접 되돌린 후 목록에서 사라지는 것을 UI 노드로 확인하고 홈으로 돌아왔다. 원래 등·방향지시등 값과 QA fake 모드를 복구했다.
 
 좌우 목표·단계 안내·완료 문구는 그대로다. 실차 AUTO 조건·차종별 스위치 형상은 미검증이다.
+
+
+# W-66 앱·시뮬레이터 통합 안정화 검증
+
+검증일: 2026-11-15. TTS 중지 인계·6개 코스 통합 도구·debug 실측·CI를 한 기능 묶음으로 검증했다. 고정 TtsPort·신호·코스 JSON 형식·테마·그림은 유지한다.
+
+## TTS 재현과 결정
+
+- 기존 공유 pending·1초 유예 알고리즘을 SDK 경계로 옮긴 재현 테스트에서 4개 중 3개가 실패했다. 초기화 중 stop, 이전 오류, 이전 완료의 요청 경계다.
+- 첫 요청별 SDK 설계는 순수 회귀 15개와 첫 실제 T8을 통과했으나, 확장 실측에서 취소 뒤 speak#4가 8ms에 INTERRUPTED, rapid#3이 ERROR가 됐다. SDK의 stop은 내부 코루틴에서 연결을 기다린 뒤 실행되어 release 후에도 다음 연결을 끊을 수 있음을 로그·로컬 SDK 바이트코드로 확인했다.
+- 최종 TtsPlayback은 연결을 유지하며 문장별 결과를 소유한다. 재생 전 취소는 START 뒤 STOP을 보내고 실제 STOP 응답 뒤 다음 문장을 시작한다. STOP을 보낸 뒤 DONE만 받은 경우는 인계하지 않는다. 미응답은 5초 제한 뒤 새 재생을 막고 늦은 STOP 뒤 복구한다. 정상 완료에는 추가 stop을 보내지 않으며 초기화·중지 확인 전에 연결을 끊지 않는다.
+
+## 자동 검증
+
+| 무엇을 | 명령·방법 | 결과 |
+|---|---|---|
+| SDK 비동기 재생·중지 경계 | TtsPlaybackTest | 신규 22개 통과. 초기화 중지/취소·미응답 후 연결 재사용, 늦은 이벤트, START 전 취소, STOP 전 DONE, 누락/지연 STOP, 대기 문장 교체, 오류·시간 제한·연결 해제 포함 |
+| 전체 Kotlin·앱 빌드 | gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug :app:compileReleaseKotlin | 성공. 보고서 engine187/platform63/app10=260개 실패0. 변경 없는 작업의 Gradle 결과는 재사용 |
+| 도구 대상·실패·복원 | python3 -m unittest discover -s tools/tests | 총24개 통과(신규13개). 명시 APP_ID, 비모호 기기 선택, debug 확인, 대상 패키지 UI·Android 사용자·프로세스 선택, HTTP 실패, 중단/중간 실패 복원, 한 복원 실패 후 다른 도메인·신호원 복원 지속, 이전 phase 로그 배제 포함 |
+| CI 범위 | 기존 도구 테스트·Kotlin/debug 빌드에 compileReleaseKotlin 추가 | 서명 키 없이 release 소스 컴파일을 확인하도록 구성 |
+
+## 실제 Pleos/VC 검증
+
+Pleos Connect v2.1.0 / emulator-5554 / user10 / com.firstride.qa39.
+
+- 최종 T8을 새 프로세스에서 연속 3회 통과했다. 정상 speak#1 DONE, 명시적 중지 #2 INTERRUPTED, #3 코루틴 취소 뒤 #4 DONE, 100ms 간격 rapid#1·2 INTERRUPTED 뒤 rapid#3 DONE. 중지 요청→결과는 각각 2/2/3ms였다. Main 첫 안내의 SDK initialize 로그→리스너 등록 로그는 단일 샘플 34ms였다.
+- Main은 fake 차량 신호+실제 TTS에서 빠른 다시 듣기 3회, SDK 연결 재사용, Settings 백그라운드의 stop·신호 구독0·새 발화 요청0, 복귀 확인→재개 시 새 안내, 그만하기 후 구독0을 확인했다.
+- 소등 화면은 real 차량 SDK+TTS에서 음성 OFF의 요청0·상태 갱신, 음성 ON 재생, 백그라운드 stop/구독0, 복귀 시 최신 요약만, D→P 재조회와 닫기 후 구독0을 통과했다.
+- 최종 코드의 `python3 tools/check-courses.py`가 실제 VC/SDK로 CRS-01~06 모두 PASS했다. CRS-01 부분 충족·교정·이미 목표, CRS-02 상대 풍량·폴링 풍향, CRS-03 등 ON/OFF, CRS-04 HIGH/AUTO 교정, CRS-05 반대 방향 교정·좌우, CRS-06 상대 창문·창문/도어 잠금을 확인한다.
+- 원래 real 표식인 상태에서도 `--course CRS-04` 선택 실행이 통과하고 real 표식을 유지했다. 별도의 finally로 검증 전 fake 상태를 복구했다. 최종 VC의 변경 대상 13개 값을 시작 전 JSON과 독립 비교해 모두 같음을 확인했다.
+
+최종 도구 검토에서 전역 FR-TRACE와 기본 사용자 Activity 호출을 배제하는 새 회귀가 먼저 실패했다. 실행·중지는 확인한 사용자로 고정하고, ps의 사용자·패키지에 맞는 PID의 로그만 읽도록 수정했다. 다른 앱·사용자의 판정을 성공으로 오인하지 않는다.
+
+`tools/check-courses.py`는 설치·데이터 삭제를 하지 않으며 실행 중의 debug 진행 기록은 완료로 바뀔 수 있다. 기어 P와 복원 가능한 잠금 상태에서 실행한다. HTTP 오류·중간 실패·Ctrl+C·복원 실패는 비정상 종료하고, 가능한 다른 도메인·신호원 복원을 계속 시도한다. 상세 실행법은 tools/README.md에 있다.
+
+검증 종료 후 원래 음성 설정(true)·VC 값·기어 P·QA fake·글자 크기1.0을 유지했다. 기존 release 앱의 설치·갱신 시각도 동일하다. release 서명·설치, 실차의 조작부 일치, 사람의 STT 정확도, 실제 SDK의 STOP 미응답 장애는 미검증이다. 미응답 경계는 가짜 SDK로 검증하며 앱 STT는 미연결을 유지한다.

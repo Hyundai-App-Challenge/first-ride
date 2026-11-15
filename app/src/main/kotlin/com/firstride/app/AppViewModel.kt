@@ -139,7 +139,6 @@ class AppViewModel(
     /**
      * SCR-01: 지원 여부를 확인하고 홈 또는 연결 오류로 간다(FR-01). 주행 제한 중이면 풀릴 때까지 아무것도 하지 않는다
      * (POL-D-8, POL-P-1). 연결 오류에서는 사용자가 "다시 시도"를 누를 때만 다시 부른다(POL-E-3).
-     * 확인하는 동안 음성 엔진도 미리 깨운다(첫 안내가 늦지 않게).
      */
     fun start() {
         if (startup?.isActive == true) return
@@ -147,7 +146,6 @@ class AppViewModel(
         if (!inForeground) return
         startup = viewModelScope.launch {
             driveState.first { it == DriveState.PARKED }
-            container.tts
             when (val result = checkCourses(courses(), container.signals)) {
                 is StartupResult.Ready -> {
                     _catalog.value = result
