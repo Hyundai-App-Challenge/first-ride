@@ -41,6 +41,7 @@
 - **내비게이션과 나눠 쓰는 화면 흉내(debug)**: `adb shell am start -n com.firstride/.MainActivity --ez nav_mock true`. 가로형 앱 창의 왼쪽 반에 내비게이션 mock을, 오른쪽 반(841dp)에 앱의 세로형 화면을 그린다(Figma 05 보드). 가짜 신호원일 때는 개발자 패널의 "내비 mock 켜기"로도 켠다. release에는 없다.
 - **실측 화면**: `adb shell am start -n com.firstride/.measure.MeasureActivity` (debug). `--ez tts true`면 TTS 정상·중지·취소·100ms 간격 교체 후 마지막 완료를 확인한다. `--ez stt true`면 STT 확인.
 - **시간 재기**: logcat 시각(에뮬레이터)과 PC 시각은 어긋나고 중간에 튄다. 지연은 `adb shell 'echo $EPOCHREALTIME'`로 에뮬레이터 시계 기준으로 잰다.
+- **단계 빨리 넘기기(debug, 가짜 신호원)**: 단계 화면 오른쪽 아래의 "지금 단계 조작"을 누르면 그 단계의 목표 조작을 가짜 신호원에 대신 넣는다. 신호 이름을 몰라도 되고 VC도 필요 없다. `tools/tap.sh "지금 단계 조작"`으로도 누를 수 있다. 값만 바꾸고 판정은 신호로 하므로 완료 화면까지 평소와 같은 길을 지난다. 차량 SDK 신호(`signals.sh real`)에서는 보이지 않고 release에는 없다.
 
 ## 여섯 코스 통합 검증
 

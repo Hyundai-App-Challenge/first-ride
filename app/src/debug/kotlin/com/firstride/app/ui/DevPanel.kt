@@ -17,12 +17,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.firstride.app.AppViewModel
+import com.firstride.app.StepOperator
 import com.firstride.app.Variant
 import com.firstride.engine.signal.FailReason
 import com.firstride.engine.signal.FakeSignalSource
@@ -30,6 +34,7 @@ import com.firstride.engine.signal.Reading
 import com.firstride.engine.signal.SignalId
 import com.firstride.engine.signal.SignalValue
 import com.firstride.engine.signal.Signals
+import kotlinx.coroutines.launch
 
 /**
  * debug 개발자 패널: 가짜 신호원의 값을 바꾼다. 에뮬레이터 없이 화면의 모든 상태를 만든다(기술 설계 4-2절).
@@ -41,7 +46,10 @@ fun DevPanel() {
     var open by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
         if (!open) {
-            TextButton(onClick = { open = true }) { Text("DEV", fontSize = 14.sp) }
+            Row {
+                OperateStepButton(fake)
+                TextButton(onClick = { open = true }) { Text("DEV", fontSize = 14.sp) }
+            }
         } else {
             Surface(Modifier.width(520.dp).heightIn(max = 560.dp).padding(8.dp), tonalElevation = 8.dp, shadowElevation = 8.dp) {
                 Column(Modifier.padding(12.dp).verticalScroll(rememberScrollState())) {
@@ -56,6 +64,22 @@ fun DevPanel() {
             }
         }
     }
+}
+
+/**
+ * "지금 단계 조작": 지금 단계의 목표 조작을 가짜 신호원에 대신 넣는다([StepOperator]). 단계가 돌고 있을 때만 보인다.
+ * 신호 이름을 몰라도 단계를 넘길 수 있다. 완료로 바꾸는 버튼이 아니라 값만 바꾸고, 판정은 신호로 한다(AC-02-9).
+ * 글자로 누를 수 있다: tools/tap.sh "지금 단계 조작"
+ */
+@Composable
+private fun OperateStepButton(fake: FakeSignalSource) {
+    val vm: AppViewModel = viewModel()      // MainActivity가 만든 것을 받는다
+    val runner by remember(vm) { StepOperator.currentStep(vm) }.collectAsState(initial = null)
+    val scope = rememberCoroutineScope()
+    val step = runner ?: return
+    TextButton(onClick = {
+        scope.launch { Variant.trace("dev operate ${if (StepOperator.operate(step, fake)) "written" else "nothing"}") }
+    }) { Text("지금 단계 조작", fontSize = 14.sp) }
 }
 
 @Composable
@@ -87,4 +111,4 @@ private fun SignalRow(fake: FakeSignalSource, id: SignalId) {
     }
 }
 
-private val DEFAULT_DIRECTIONS = setOf("FACE", "FLOOR", "DEFROST")
+internal val DEFAULT_DIRECTIONS = setOf("FACE", "FLOOR", "DEFROST")
