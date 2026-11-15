@@ -5,11 +5,13 @@ import com.firstride.engine.drive.DrivingGate
 import com.firstride.engine.progress.ProgressStore
 import com.firstride.engine.settings.SettingsStore
 import com.firstride.engine.signal.SignalSource
+import com.firstride.engine.voice.SttPort
 import com.firstride.engine.voice.TtsPort
 import com.firstride.platform.drive.CarDrivingGate
 import com.firstride.platform.progress.DataStoreProgressStore
 import com.firstride.platform.settings.DataStoreSettingsStore
 import com.firstride.platform.vehicle.VehicleConnection
+import com.firstride.platform.voice.PleosStt
 import com.firstride.platform.voice.PleosTts
 
 /**
@@ -27,6 +29,8 @@ class AppContainer(context: Context) {
 
     val signals: SignalSource = Variant.signalSource(app) { vehicle.signals }
     val tts: TtsPort by lazy { PleosTts(app) }
+    /** 음성 진행(FR-06)의 듣기. 기기 안의 엔진만 쓰고, 한 번 듣기마다 SDK 인스턴스를 새로 만들어 정리한다. */
+    val stt: SttPort by lazy { PleosStt(app) }
     val progress: ProgressStore = DataStoreProgressStore.create(app)
     /** 설정값(음성 켜기/끄기). 기록과 다른 파일이라 기록 지우기로 지워지지 않는다(POL-S-5). */
     val settings: SettingsStore = DataStoreSettingsStore.create(app)

@@ -94,8 +94,11 @@ class AppViewModel(
     private val _voiceStatus = MutableStateFlow(VoiceStatus())
     val voiceStatus: StateFlow<VoiceStatus> = _voiceStatus.asStateFlow()
 
-    /** 실제 발화 정확도 게이트(T9) 통과 전까지 연결하지 않는다. null이면 TTS 안내와 터치만 쓴다. */
-    private val stt: SttPort? = null
+    /**
+     * 음성 진행(FR-06)의 듣기. 듣기에 실패하면 [VoiceCoordinator.sttAvailable]이 꺼지고 "음성 진행 꺼짐 · 터치로 진행"으로
+     * 바뀐다(AC-06-6). 터치 버튼은 늘 있다.
+     */
+    private val stt: SttPort get() = container.stt
 
     private var inForeground = false
     private var startup: Job? = null
