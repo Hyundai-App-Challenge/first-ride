@@ -72,6 +72,34 @@ class FakeVC:
 
 
 class StateRecoveryTest(unittest.TestCase):
+    def follow_up_vc(self):
+        vc = FakeVC()
+        vc.snapshot["hvac"]["driver"]["temp_c"] = 24.5
+        vc.original.update(driver_temp=24.5, gear="Park")
+        vc.values = dict(vc.original)
+        return vc
+
+    def test_follow_up_failure_also_restores_temperature_and_gear(self):
+        device, vc = FakeDevice(), self.follow_up_vc()
+        suite = QA.CourseSuite(device, vc)
+        def fail():
+            vc.values = {key: "changed" for key in vc.values}
+            raise RuntimeError("follow-up failed")
+        with patch.object(suite, "course"), patch.object(suite, "follow_ups", side_effect=fail), redirect_stdout(io.StringIO()):
+            with self.assertRaisesRegex(RuntimeError, "follow-up failed"):
+                suite.run(["CRS-01"], follow_ups=True)
+        self.assertEqual(vc.values, vc.original)
+        self.assertFalse(device.mode)
+
+    def test_follow_ups_run_once_for_crs01_and_preserve_other_course_selection(self):
+        device, vc = FakeDevice(), self.follow_up_vc()
+        suite = QA.CourseSuite(device, vc)
+        with patch.object(suite, "course") as course, patch.object(suite, "follow_ups") as follow, redirect_stdout(io.StringIO()):
+            suite.run(["CRS-01", "CRS-03"], follow_ups=True)
+        self.assertEqual(course.call_args_list, [unittest.mock.call("CRS-01"), unittest.mock.call("CRS-03")])
+        follow.assert_called_once_with()
+        self.assertEqual(vc.values, vc.original)
+
     def test_mid_course_failure_restores_every_control_and_original_fake_mode(self):
         device, vc = FakeDevice(), FakeVC()
         suite = QA.CourseSuite(device, vc)
@@ -135,6 +163,53 @@ class StateRecoveryTest(unittest.TestCase):
 
 
 class TargetTest(unittest.TestCase):
+    def test_follow_up_flag_without_crs01_never_touches_device(self):
+        with patch.dict(os.environ, {"ADB": "adb"}, clear=True), patch.object(QA.subprocess, "run") as run, redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as result:
+                QA.main(["--app-id", "com.firstride.qa39", "--course", "CRS-03", "--follow-ups"])
+            self.assertEqual(result.exception.code, 2)
+            run.assert_not_called()
+
+    def test_follow_up_phase_and_subscriptions_use_same_target_process(self):
+        device = QA.Device("adb", "one", "com.firstride.qa39")
+        device.user = "10"
+        def call(*args, **kwargs):
+            if args[:2] == ("shell", "ps"):
+                value = "USER PID NAME\nu10_a1 222 com.firstride.qa39\n"
+            elif args[-1] == "FR-SIGNALS:D":
+                value = "active=3\nactive=0\n"
+            else:
+                value = "follow-up CRS-01-S1-restore PARTIAL\nfollow-up Asking\n"
+            return subprocess.CompletedProcess(args, 0, value)
+        with patch.object(device, "call", side_effect=call) as run:
+            self.assertEqual(device.current_phase(), "follow-up Asking")
+            self.assertEqual(device.subscriptions(), 0)
+            self.assertIn(unittest.mock.call("logcat", "-d", "--pid=222", "-s", "FR-SIGNALS:D"), run.call_args_list)
+
+    def test_unavailable_vc_max_control_is_explicitly_skipped_without_vehicle_write(self):
+        device, vc = QA.Device("adb", "one", "com.firstride.qa39"), FakeVC()
+        suite = QA.CourseSuite(device, vc)
+        with patch.object(device, "current_phase", side_effect=["follow-up CRS-01-F1 WAITING", "follow-up CRS-01-F2 WAITING"]), \
+                patch.object(device, "call"), patch.object(device, "tap") as tap, redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(suite._after_max_defrost(), "follow-up CRS-01-F2 WAITING")
+            tap.assert_called_once_with("건너뛰기")
+            self.assertIn("SKIP CRS-01-F1 completion", output.getvalue())
+        with patch.object(device, "current_phase", return_value="follow-up CRS-01-F3 WAITING"), patch.object(device, "tap") as tap:
+            self.assertEqual(suite._after_max_defrost(), "follow-up CRS-01-F3 WAITING")
+            tap.assert_not_called()
+        self.assertEqual(vc.calls, [])
+
+    def test_progress_integrity_reads_only_digest_of_selected_user_store(self):
+        device = QA.Device("adb", "one", "com.firstride.qa39")
+        device.user = "10"
+        with patch.object(device, "call", return_value=subprocess.CompletedProcess([], 0, "a" * 64 + "  progress.preferences_pb")) as run:
+            self.assertEqual(device.progress_hash(), "a" * 64)
+            self.assertEqual(run.call_args.args, ("shell", "run-as", device.app_id, "--user", "10", "sha256sum",
+                                                  "files/datastore/progress.preferences_pb"))
+        with patch.object(device, "call", return_value=subprocess.CompletedProcess([], 0, "")):
+            with self.assertRaisesRegex(RuntimeError, "saved progress"):
+                device.progress_hash()
+
     def test_phase_and_activity_use_only_selected_android_user_process(self):
         device = QA.Device("adb", "one", "com.firstride.qa39")
         device.user = "10"

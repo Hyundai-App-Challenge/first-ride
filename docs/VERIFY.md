@@ -305,3 +305,21 @@ Pleos Connect v2.1.0 / emulator-5554 / user10 / com.firstride.qa39.
 `tools/check-courses.py`는 설치·데이터 삭제를 하지 않으며 실행 중의 debug 진행 기록은 완료로 바뀔 수 있다. 기어 P와 복원 가능한 잠금 상태에서 실행한다. HTTP 오류·중간 실패·Ctrl+C·복원 실패는 비정상 종료하고, 가능한 다른 도메인·신호원 복원을 계속 시도한다. 상세 실행법은 tools/README.md에 있다.
 
 검증 종료 후 원래 음성 설정(true)·VC 값·기어 P·QA fake·글자 크기1.0을 유지했다. 기존 release 앱의 설치·갱신 시각도 동일하다. release 서명·설치, 실차의 조작부 일치, 사람의 STT 정확도, 실제 SDK의 STOP 미응답 장애는 미검증이다. 미응답 경계는 가짜 SDK로 검증하며 앱 STT는 미연결을 유지한다.
+
+# W-67 후속 조치 판정·복구 안내 검증
+
+검증일: 2026-11-15. 기본 조합 복구의 유지 조건과 안내 그림을 수정하고, 후속 조치 전체 통합 검증을 같은 작업에 포함했다. 고정 신호·포트·JSON 형식·테마·그림 파일은 유지한다.
+
+| 성공 기준 | 재현·검증 | 결과 |
+|---|---|---|
+| 복구 중 기본 조합 유지 | 기존 FollowUpTest의 유지 조건·유지 실패·미확인 회귀, 실제 SDK 에어컨 복구 중 제상 OFF→AC ON | 수정 전 회귀 3개 실패·실제 F1으로 잘못 진행. 수정 후 제상 OFF는 PARTIAL에 머물며 ON 후 진행 |
+| 복구 조작과 그림 일치 | FollowUpTextTest와 실제 앱 캡처 | 수정 전 회귀 2개 실패·AC 안내에 제상 그림. 수정 후 AC 그림, 제상만 남으면 제상 그림으로 전환. 교정·명시적 조건 자산·자산 누락도 6개 회귀 통과 |
+| 전체 Kotlin·빌드 | gradlew.bat :engine:test :platform:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug :app:compileReleaseKotlin | 성공. engine189/platform63/app16=268개 실패0. 변경 없는 작업의 기존 결과는 Gradle이 재사용 |
+| 도구 실패·복원 경계 | python3 -m unittest discover -s tools/tests | 30개 통과(신규6개). 온도·기어 복원, 옵션 조합 사전 거부, 대상 PID 후속 로그, 미지원 조작 SKIP, 현재 사용자 진행 파일 해시 확인 포함 |
+| 후속 조치 실제 진행 | python3 tools/check-courses.py --course CRS-01 --follow-ups | PASS. 복구·유지 조건, 실제 지원 최대 풍량/온도, 해결/미해결 답, 이미 최대인 조치 제외·모두 소진, 백그라운드·D→P 중단 후 이어서 하기 없음 |
+| 학습 기록 불변 | 후속 조치 전후 현재 사용자의 progress.preferences_pb SHA-256 비교 | 동일. 응답·수행 조치를 학습 기록에 저장하지 않음 |
+| 그림 육안 확인·원복 | captures/w67-after-ac-restore.png, w67-after-defrost-remains.png | 로컬 화면 확인. VC 변경 대상 15개와 QA fake 복구, 진행 파일 동일 |
+
+실제 환경은 Pleos Connect v2.1.0 / emulator-5554 / user10 / com.firstride.qa39다. VC 공개 catalog에는 최대 제상 쓰기 항목이 없어 F1 완료는 SKIP으로 명시하고 건너뛰기만 확인했다. 최대 제상 완료·실차 배치·차종별 취급설명서에 따른 후속 조치 내용 확정은 미검증이다. 통합 성공 문구가 이 항목을 보장하지 않는다.
+
+최종 `python3 tools/check-courses.py --follow-ups`도 CRS-01~06과 후속 조치를 모두 통과하고 종료 코드 0이었다. 실행 후 원래 13개 VC 값은 이전 스냅샷과 독립 비교해 동일했고 운전석22℃·기어P도 확인했다. QA fake·글자 크기1.0·음성 설정true·기존 release의 설치/갱신 시각을 유지했다. 로컬 로그 `.w67-all-sdk.tmp`, `.w67-images-output.tmp`, 보존 검사 `.w67-preserve.tmp`는 커밋하지 않는다.
